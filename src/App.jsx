@@ -267,7 +267,7 @@ function Badge({ status }) {
 }
 
 async function aiCall(prompt) {
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
+  const r = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{role:"user",content:prompt}] })
   });
