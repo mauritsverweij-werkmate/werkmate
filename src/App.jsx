@@ -268,7 +268,7 @@ function Badge({ status }) {
 
 async function aiCall(prompt) {
   const r = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
-    method:"POST", headers:{"Content-Type":"application/json"},
+    method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer " + import.meta.env.VITE_SUPABASE_KEY},
     body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{role:"user",content:prompt}] })
   });
   const d = await r.json();
