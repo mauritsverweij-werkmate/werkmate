@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WerkMate — Jij bent goed in je vak. Wij regelen de rest.</title>
+  <meta name="description" content="WerkMate is het complete bedrijfsplatform voor vakmensen. Offertes, facturen, planning en meer — beheer je bedrijf in minuten per dag." />
+  <meta property="og:title" content="WerkMate — Jij bent goed in je vak. Wij regelen de rest." />
+  <meta property="og:description" content="Van offerte tot factuur, van planning tot klantenbeheer. Alles op één plek, met AI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --dark:    #07071B;
+      --dark2:   #0D0D25;
+      --primary: #6366F1;
+      --p2:      #8B5CF6;
+      --light:   #F9FAFB;
+      --muted:   #94A3B8;
+      --border:  rgba(255,255,255,0.07);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--dark); color: #fff; overflow-x: hidden; }
+    a { text-decoration: none; }
+
+    /* ── Utilities ── */
+    .syne { font-family: 'Syne', sans-serif; }
+    .grad-text { background: linear-gradient(135deg, #fff 0%, #A5B4FC 45%, #C4B5FD 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .center { text-align: center; }
+    .section-inner { max-width: 1200px; margin: 0 auto; }
+    section { padding: 96px 48px; }
+
+    /* ── Scroll animation ── */
+    .fade-up { opacity: 0; transform: translateY(28px); transition: opacity .65s ease, transform .65s ease; }
+    .fade-up.in { opacity: 1; transform: none; }
+    .d1 { transition-delay: .08s; } .d2 { transition-delay: .16s; } .d3 { transition-delay: .24s; }
+    .d4 { transition-delay: .32s; } .d5 { transition-delay: .40s; } .d6 { transition-delay: .48s; }
+
+    /* ── Buttons ── */
+    .btn-pri {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--primary), var(--p2));
+      color: #fff; border: none; border-radius: 12px; padding: 14px 28px;
+      font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+      box-shadow: 0 8px 28px rgba(99,102,241,.38);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .btn-pri:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(99,102,241,.55); }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,.07); color: #fff;
+      border: 1px solid rgba(255,255,255,.16); border-radius: 12px;
+      padding: 14px 24px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.13); }
+
+    /* ── Section label ── */
+    .s-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.25);
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 12.5px; font-weight: 600; color: #818CF8;
+      margin-bottom: 14px;
+    }
+    .s-h2 { font-family: 'Syne', sans-serif; font-size: clamp(28px,4vw,46px); font-weight: 800; line-height: 1.13; margin-bottom: 14px; }
+    .s-sub { font-size: 17px; color: var(--muted); line-height: 1.75; max-width: 600px; }
+    .center .s-sub { margin: 0 auto; }
+
+    /* ════════════════════════════════════════
+       NAV
+    ════════════════════════════════════════ */
+    #nav {
+      position: fixed; inset: 0 0 auto; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 48px;
+      background: rgba(7,7,27,.82);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+      transition: background .3s, box-shadow .3s;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; }
+    .nav-icon  { width: 34px; height: 34px; background: linear-gradient(135deg,var(--primary),var(--p2)); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .nav-name  { font-family: 'Syne',sans-serif; font-weight: 800; font-size: 20px; }
+    .nav-cta   { background: linear-gradient(135deg,var(--primary),var(--p2)); color: #fff; border: none; border-radius: 10px; padding: 10px 22px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: transform .2s, opacity .2s; }
+    .nav-cta:hover { transform: translateY(-1px); opacity: .9; }
+
+    /* ════════════════════════════════════════
+       HERO
+    ════════════════════════════════════════ */
+    #hero {
+      min-height: 100vh; display: flex; align-items: center;
+      padding: 110px 48px 80px; position: relative; overflow: hidden;
+    }
+    #hero-canvas { position: absolute; inset: 0; z-index: 0; }
+    .glow  { position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; }
+    .glow1 { width: 700px; height: 700px; background: radial-gradient(circle, rgba(99,102,241,.22) 0%, transparent 65%); top: -140px; left: -120px; }
+    .glow2 { width: 450px; height: 450px; background: radial-gradient(circle, rgba(139,92,246,.18) 0%, transparent 65%); bottom: -60px; right: 80px; }
+
+    .hero-grid {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+      max-width: 1200px; margin: 0 auto; width: 100%;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(99,102,241,.14); border: 1px solid rgba(99,102,241,.28);
+      border-radius: 20px; padding: 5px 14px; font-size: 12.5px; font-weight: 600;
+      color: #A5B4FC; margin-bottom: 20px;
+    }
+    .badge-dot { width: 6px; height: 6px; background: #A5B4FC; border-radius: 50%; animation: blink 2s infinite; }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.25; } }
+
+    .hero-h1 { font-family: 'Syne',sans-serif; font-size: clamp(36px,5vw,64px); font-weight: 800; line-height: 1.08; margin-bottom: 22px; }
+    .hero-sub { font-size: 17px; color: var(--muted); line-height: 1.75; max-width: 480px; margin-bottom: 36px; }
+    .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .hero-note { font-size: 12px; color: #475569; margin-top: 14px; }
+
+    /* 3-D mockup */
+    .hero-vis { display: flex; justify-content: center; align-items: center; }
+    .mock-scene { perspective: 1100px; }
+    .mock-card {
+      width: 520px; max-width: 100%;
+      background: #12122A;
+      border: 1px solid rgba(99,102,241,.3);
+      border-radius: 20px;
+      box-shadow: 0 50px 120px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.05), inset 0 1px 0 rgba(255,255,255,.07);
+      overflow: hidden;
+      animation: float3d 7s ease-in-out infinite;
+    }
+    @keyframes float3d {
+      0%,100% { transform: rotateX(7deg) rotateY(-13deg) translateY(0); }
+      50%      { transform: rotateX(4deg) rotateY(-7deg) translateY(-18px); }
+    }
+    .mock-bar { background: #0A0A1E; padding: 10px 16px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .mock-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .mock-url { font-size: 11px; color: #334155; margin-left: 8px; font-weight: 500; }
+    .mock-body { padding: 18px; }
+    .mock-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; margin-bottom: 14px; }
+    .mock-st { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 11px; }
+    .mock-st-l { font-size: 9px; color: #475569; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+    .mock-st-v { font-family: 'Syne',sans-serif; font-size: 19px; font-weight: 800; }
+    .mock-row { display: flex; gap: 9px; }
+    .mock-mini { flex: 1; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05); border-radius: 10px; padding: 11px; }
+    .mock-ttl { font-size: 9px; color: #475569; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .mock-task { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+    .mock-td { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .mock-tx { font-size: 9.5px; color: #CBD5E1; }
+    .mock-chart { display: flex; align-items: flex-end; gap: 5px; height: 50px; }
+    .mock-b { flex: 1; border-radius: 3px 3px 0 0; background: rgba(99,102,241,.4); }
+    .mock-b.hi { background: linear-gradient(to top,#6366F1,#A855F7); }
+
+    /* ════════════════════════════════════════
+       PAIN POINTS
+    ════════════════════════════════════════ */
+    #pain { background: #fff; color: #111; }
+    #pain .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
+    #pain .s-h2 { color: #0F172A; }
+    #pain .s-sub { color: #64748B; }
+    .pain-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 52px; }
+    .pain-card {
+      background: #F8FAFC; border: 1.5px solid #E8EEF6; border-radius: 18px; padding: 26px;
+      transition: transform .3s, box-shadow .3s, border-color .3s;
+    }
+    .pain-card:hover { transform: translateY(-5px); box-shadow: 0 18px 48px rgba(0,0,0,.08); border-color: #C7D2FE; }
+    .pain-ico { font-size: 30px; margin-bottom: 12px; }
+    .pain-ttl { font-weight: 700; font-size: 15px; color: #0F172A; margin-bottom: 7px; }
+    .pain-txt { font-size: 13.5px; color: #64748B; line-height: 1.65; }
+
+    /* ════════════════════════════════════════
+       FEATURES
+    ════════════════════════════════════════ */
+    #features { background: #0A0A1E; }
+    .feat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 54px; }
+    .feat-card {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 18px; padding: 28px; position: relative; overflow: hidden;
+      transition: transform .3s, border-color .3s;
+    }
+    .feat-card::after {
+      content:''; position:absolute; inset:0;
+      background: linear-gradient(135deg,rgba(99,102,241,.09) 0%,transparent 55%);
+      opacity:0; transition:opacity .3s;
+    }
+    .feat-card:hover { transform: translateY(-5px); border-color: rgba(99,102,241,.35); }
+    .feat-card:hover::after { opacity: 1; }
+    .feat-ico { width: 48px; height: 48px; background: linear-gradient(135deg,rgba(99,102,241,.2),rgba(139,92,246,.2)); border: 1px solid rgba(99,102,241,.22); border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
+    .feat-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 16px; color: #F1F5F9; margin-bottom: 8px; }
+    .feat-txt { font-size: 13.5px; color: #64748B; line-height: 1.65; }
+
+    /* ════════════════════════════════════════
+       HOW IT WORKS
+    ════════════════════════════════════════ */
+    #how { background: #F8FAFC; color: #111; }
+    #how .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
+    #how .s-h2 { color: #0F172A; }
+    #how .s-sub { color: #64748B; }
+    .how-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; margin-top: 56px; }
+    .how-step { text-align: center; }
+    .how-num { width: 56px; height: 56px; background: linear-gradient(135deg,var(--primary),var(--p2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Syne',sans-serif; font-weight: 800; font-size: 22px; color: #fff; margin: 0 auto 18px; box-shadow: 0 8px 24px rgba(99,102,241,.35); }
+    .how-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 17px; color: #0F172A; margin-bottom: 8px; }
+    .how-txt { font-size: 14px; color: #64748B; line-height: 1.65; max-width: 260px; margin: 0 auto; }
+
+    /* ════════════════════════════════════════
+       SECTORS
+    ════════════════════════════════════════ */
+    #sectors { background: #07071B; }
+    .sect-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 48px; }
+    .sect-chip {
+      display: flex; align-items: center; gap: 9px;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 100px; padding: 11px 20px;
+      font-size: 14px; font-weight: 600; color: #CBD5E1;
+      cursor: default; transition: all .25s;
+    }
+    .sect-chip:hover { background: rgba(99,102,241,.16); border-color: rgba(99,102,241,.4); color: #A5B4FC; transform: scale(1.05); }
+    .sect-chip .si { font-size: 20px; }
+
+    /* ════════════════════════════════════════
+       PRICING
+    ════════════════════════════════════════ */
+    #pricing { background: #F8FAFC; color: #111; }
+    #pricing .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
+    #pricing .s-h2 { color: #0F172A; }
+    #pricing .s-sub { color: #64748B; }
+    .price-wrap { max-width: 460px; margin: 48px auto 0; }
+    .price-card {
+      background: #fff; border-radius: 24px; border: 2px solid #E8EEF6;
+      padding: 40px; box-shadow: 0 24px 64px rgba(0,0,0,.1); position: relative; overflow: hidden;
+    }
+    .price-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#6366F1,#8B5CF6,#A855F7); }
+    .price-lbl  { display: inline-block; background: linear-gradient(135deg,#EEF2FF,#EDE9FE); color: #6366F1; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 20px; }
+    .price-name { font-family: 'Syne',sans-serif; font-weight: 800; font-size: 22px; color: #0F172A; margin-bottom: 10px; }
+    .price-row  { display: flex; align-items: baseline; gap: 4px; margin-bottom: 6px; }
+    .price-amt  { font-family: 'Syne',sans-serif; font-size: 54px; font-weight: 800; color: #0F172A; }
+    .price-per  { font-size: 17px; color: #64748B; }
+    .price-trial{ font-size: 13.5px; color: #6366F1; font-weight: 600; margin-bottom: 26px; }
+    .price-div  { height: 1px; background: #F1F5F9; margin: 22px 0; }
+    .price-list { list-style: none; display: flex; flex-direction: column; gap: 11px; margin-bottom: 30px; }
+    .price-list li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #374151; }
+    .price-list li::before {
+      content:'✓'; width:20px; height:20px; flex-shrink:0;
+      background: linear-gradient(135deg,#6366F1,#8B5CF6);
+      border-radius: 50%; display:flex; align-items:center; justify-content:center;
+      font-size: 11px; font-weight:800; color:#fff;
+    }
+    .price-cta { display:block; width:100%; background:linear-gradient(135deg,#6366F1,#8B5CF6); color:#fff; border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; text-align:center; box-shadow:0 8px 24px rgba(99,102,241,.35); transition:transform .2s,box-shadow .2s; }
+    .price-cta:hover { transform:translateY(-2px); box-shadow:0 14px 36px rgba(99,102,241,.52); }
+    .price-note { text-align:center; font-size:12px; color:#94A3B8; margin-top:14px; }
+
+    /* ════════════════════════════════════════
+       CTA BANNER
+    ════════════════════════════════════════ */
+    #cta-end { background: linear-gradient(135deg,#07071B 0%,#12103A 50%,#07071B 100%); text-align:center; }
+    #cta-end .s-h2 { color: #F1F5F9; }
+    #cta-end .s-sub { color: var(--muted); }
+    .cta-btns { display: flex; gap: 14px; justify-content: center; margin-top: 36px; flex-wrap: wrap; }
+
+    /* ════════════════════════════════════════
+       FOOTER
+    ════════════════════════════════════════ */
+    footer { background: #040410; padding: 36px 48px; border-top: 1px solid rgba(255,255,255,.05); }
+    .foot { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; }
+    .foot-logo { display:flex; align-items:center; gap:8px; }
+    .foot-ico   { width:28px; height:28px; background:linear-gradient(135deg,#6366F1,#8B5CF6); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+    .foot-name  { font-family:'Syne',sans-serif; font-weight:800; font-size:16px; color:#fff; }
+    .foot-copy  { font-size:13px; color:#334155; }
+    .foot-links { display:flex; gap:20px; }
+    .foot-links a { font-size:13px; color:#475569; text-decoration:none; transition:color .2s; }
+    .foot-links a:hover { color:#A5B4FC; }
+
+    /* ════════════════════════════════════════
+       RESPONSIVE
+    ════════════════════════════════════════ */
+    @media (max-width: 960px) {
+      section { padding: 72px 24px; }
+      #hero { padding: 100px 24px 72px; }
+      #nav  { padding: 14px 24px; }
+      .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+      .hero-vis { order: -1; }
+      .mock-card { max-width: 420px; }
+      .pain-grid, .feat-grid { grid-template-columns: 1fr 1fr; }
+      .how-grid  { grid-template-columns: 1fr; gap: 36px; }
+      footer { padding: 28px 24px; }
+      .foot { flex-direction: column; text-align: center; }
+      .foot-links { flex-wrap: wrap; justify-content: center; }
+    }
+    @media (max-width: 600px) {
+      .pain-grid, .feat-grid { grid-template-columns: 1fr; }
+      .hero-btns { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAV ══════════════════════════════════════════════════════ -->
+<nav id="nav">
+  <div class="nav-logo">
+    <div class="nav-icon">⚡</div>
+    <span class="nav-name syne">WerkMate</span>
+  </div>
+  <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="nav-cta syne">Start gratis →</a>
+</nav>
+
+<!-- ══ HERO ══════════════════════════════════════════════════════ -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="glow glow1"></div>
+  <div class="glow glow2"></div>
+  <div class="hero-grid">
+
+    <div>
+      <div class="hero-badge"><span class="badge-dot"></span> Nu beschikbaar voor vakmensen in NL</div>
+      <h1 class="hero-h1">
+        Jij bent goed<br>in je vak.<br>
+        <span class="grad-text">Wij regelen<br>de rest.</span>
+      </h1>
+      <p class="hero-sub">WerkMate is het complete bedrijfsplatform voor vakmensen. Van offerte tot factuur, van planning tot klantenbeheer — alles op één plek, aangedreven door AI.</p>
+      <div class="hero-btns">
+        <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="btn-pri">🚀 Start 14 dagen gratis</a>
+        <a href="#features" class="btn-ghost">Bekijk features</a>
+      </div>
+      <p class="hero-note">Geen creditcard nodig &nbsp;·&nbsp; Opzegbaar per maand &nbsp;·&nbsp; Daarna €99/maand</p>
+    </div>
+
+    <div class="hero-vis">
+      <div class="mock-scene">
+        <div class="mock-card" id="mockCard">
+          <div class="mock-bar">
+            <div class="mock-dot" style="background:#FF5F57"></div>
+            <div class="mock-dot" style="background:#FEBC2E"></div>
+            <div class="mock-dot" style="background:#28C840"></div>
+            <span class="mock-url">WerkMate — Dashboard</span>
+          </div>
+          <div class="mock-body">
+            <div class="mock-stats">
+              <div class="mock-st">
+                <div class="mock-st-l">Omzet</div>
+                <div class="mock-st-v" style="color:#10B981">€8.240</div>
+              </div>
+              <div class="mock-st">
+                <div class="mock-st-l">Openstaand</div>
+                <div class="mock-st-v" style="color:#F59E0B">€1.950</div>
+              </div>
+              <div class="mock-st">
+                <div class="mock-st-l">Offertes</div>
+                <div class="mock-st-v" style="color:#6366F1">12</div>
+              </div>
+            </div>
+            <div class="mock-row">
+              <div class="mock-mini" style="flex:1.5">
+                <div class="mock-ttl">Planning vandaag</div>
+                <div class="mock-task"><div class="mock-td" style="background:#10B981"></div><span class="mock-tx">08:00 · De Wit — Dakwerk</span></div>
+                <div class="mock-task"><div class="mock-td" style="background:#6366F1"></div><span class="mock-tx">11:00 · Jansen BV — Installatie</span></div>
+                <div class="mock-task"><div class="mock-td" style="background:#F59E0B"></div><span class="mock-tx">14:30 · Smit — Inspectie</span></div>
+                <div class="mock-task"><div class="mock-td" style="background:#8B5CF6"></div><span class="mock-tx">16:00 · Van den Berg</span></div>
+              </div>
+              <div class="mock-mini" style="flex:1">
+                <div class="mock-ttl">Omzet / week</div>
+                <div class="mock-chart">
+                  <div class="mock-b" style="height:52%"></div>
+                  <div class="mock-b" style="height:68%"></div>
+                  <div class="mock-b" style="height:44%"></div>
+                  <div class="mock-b hi" style="height:92%"></div>
+                  <div class="mock-b" style="height:63%"></div>
+                  <div class="mock-b" style="height:78%"></div>
+                  <div class="mock-b" style="height:55%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══ PAIN POINTS ════════════════════════════════════════════ -->
+<section id="pain">
+  <div class="section-inner">
+    <div class="center">
+      <div class="s-badge fade-up">😤 Herken jij dit?</div>
+      <h2 class="s-h2 syne fade-up d1">Stop met tijd verspillen<br>aan administratie</h2>
+      <p class="s-sub fade-up d2">Elke vakman kent de frustratie. Uren kwijt aan papierwerk in plaats van je echte werk doen.</p>
+    </div>
+    <div class="pain-grid">
+      <div class="pain-card fade-up d1">
+        <div class="pain-ico">📝</div>
+        <div class="pain-ttl">"Een offerte maken kost me uren"</div>
+        <div class="pain-txt">Word-documenten, rekenmachines, handmatig tellen. Terwijl de klant al wacht op je prijsopgave.</div>
+      </div>
+      <div class="pain-card fade-up d2">
+        <div class="pain-ico">💸</div>
+        <div class="pain-ttl">"Klanten betalen altijd te laat"</div>
+        <div class="pain-txt">Facturen kwijt, herinneringen vergeten. Je werkt hard maar de kas blijft leeg.</div>
+      </div>
+      <div class="pain-card fade-up d3">
+        <div class="pain-ico">📅</div>
+        <div class="pain-ttl">"Mijn planning is chaos"</div>
+        <div class="pain-txt">Afspraken in je hoofd, blaadjes kwijt, berichten van klanten door elkaar. Iets vergeten is een kwestie van tijd.</div>
+      </div>
+      <div class="pain-card fade-up d4">
+        <div class="pain-ico">🌙</div>
+        <div class="pain-ttl">"Ik doe administratie in het weekend"</div>
+        <div class="pain-txt">Na een zware werkweek nog uren achter de laptop. Je gezin ziet je nauwelijks.</div>
+      </div>
+      <div class="pain-card fade-up d5">
+        <div class="pain-ico">📱</div>
+        <div class="pain-ttl">"Geen tijd voor social media"</div>
+        <div class="pain-txt">Je weet dat reviews en posts klanten opleveren, maar het verzinnen kost uren die je gewoon niet hebt.</div>
+      </div>
+      <div class="pain-card fade-up d6">
+        <div class="pain-ico">👷</div>
+        <div class="pain-ttl">"Mijn team weet niet wat ze doen"</div>
+        <div class="pain-txt">Elke ochtend bellen, taken via WhatsApp, niemand weet exact wie waar naartoe gaat.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FEATURES ═══════════════════════════════════════════════ -->
+<section id="features">
+  <div class="section-inner">
+    <div class="center">
+      <div class="s-badge fade-up">⚡ Features</div>
+      <h2 class="s-h2 syne fade-up d1" style="color:#F1F5F9">Alles wat je nodig hebt,<br><span class="grad-text">niets wat je niet nodig hebt</span></h2>
+      <p class="s-sub fade-up d2">De tools van een groot bedrijf, zonder de complexiteit. Simpel, snel, effectief.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card fade-up d1">
+        <div class="feat-ico">🤖</div>
+        <div class="feat-ttl">AI Offerte in 30 seconden</div>
+        <div class="feat-txt">Beschrijf de klus en onze AI maakt een professionele offerte met de juiste prijs. Verstuur als PDF direct naar de klant.</div>
+      </div>
+      <div class="feat-card fade-up d2">
+        <div class="feat-ico">💶</div>
+        <div class="feat-ttl">Facturen & Boekhouding</div>
+        <div class="feat-txt">Facturen aanmaken, BTW berekenen, herinneringen sturen. Altijd weten wat er open staat en wat er binnenkomt.</div>
+      </div>
+      <div class="feat-card fade-up d3">
+        <div class="feat-ico">📅</div>
+        <div class="feat-ttl">Slimme Planning</div>
+        <div class="feat-txt">Maand- en weekoverzicht, terugkerende taken, feestdagen. Wijs opdrachten toe aan teamleden en navigeer direct naar de klant.</div>
+      </div>
+      <div class="feat-card fade-up d4">
+        <div class="feat-ico">👥</div>
+        <div class="feat-ttl">CRM & Klantenbeheer</div>
+        <div class="feat-txt">Alle klantgegevens op één plek. Offertes, facturen en contacthistorie per klant netjes bijgehouden.</div>
+      </div>
+      <div class="feat-card fade-up d5">
+        <div class="feat-ico">📸</div>
+        <div class="feat-ttl">AI Social Media Posts</div>
+        <div class="feat-txt">AI schrijft je Instagram en TikTok posts op basis van je project. Professionele uitstraling zonder dat het je tijd kost.</div>
+      </div>
+      <div class="feat-card fade-up d6">
+        <div class="feat-ico">👷</div>
+        <div class="feat-ttl">Teambeheer</div>
+        <div class="feat-txt">Nodig medewerkers uit, wijs rollen toe en zie wie wat doet. Iedereen werkt vanuit dezelfde planning, altijd up-to-date.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ HOW IT WORKS ═══════════════════════════════════════════ -->
+<section id="how">
+  <div class="section-inner">
+    <div class="center">
+      <div class="s-badge fade-up">🚀 Zo werkt het</div>
+      <h2 class="s-h2 syne fade-up d1">In 3 stappen<br>aan de slag</h2>
+      <p class="s-sub fade-up d2">Geen ingewikkelde installatie, geen handleidingen. Vandaag aanmelden, morgen al tijd besparen.</p>
+    </div>
+    <div class="how-grid">
+      <div class="how-step fade-up d1">
+        <div class="how-num">1</div>
+        <div class="how-ttl">Maak een account aan</div>
+        <div class="how-txt">Registreer gratis, vul je bedrijfsgegevens in en je bent direct klaar om te starten. Duurt minder dan 2 minuten.</div>
+      </div>
+      <div class="how-step fade-up d2">
+        <div class="how-num">2</div>
+        <div class="how-ttl">Voeg je eerste klant toe</div>
+        <div class="how-txt">Importeer klantgegevens of voeg ze handmatig in. Maak direct je eerste AI-offerte en verstuur hem per e-mail.</div>
+      </div>
+      <div class="how-step fade-up d3">
+        <div class="how-num">3</div>
+        <div class="how-ttl">Bespaar uren per week</div>
+        <div class="how-txt">Planning, facturen, herinneringen — WerkMate regelt het voor je. Jij focust op je vak, wij op de rest.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SECTORS ════════════════════════════════════════════════ -->
+<section id="sectors">
+  <div class="section-inner center">
+    <div class="s-badge fade-up" style="display:inline-flex">🏆 Voor elk vak</div>
+    <h2 class="s-h2 syne fade-up d1" style="color:#F1F5F9">Speciaal gemaakt voor<br><span class="grad-text">de echte vakman</span></h2>
+    <p class="s-sub fade-up d2" style="margin:0 auto 48px">Of je nu bouwt, installeert, schoonmaakt of iets heel anders doet — WerkMate past zich aan jouw vak aan.</p>
+    <div class="sect-chips fade-up d3">
+      <div class="sect-chip"><span class="si">🔨</span> Bouw & Renovatie</div>
+      <div class="sect-chip"><span class="si">🔧</span> Loodgieter</div>
+      <div class="sect-chip"><span class="si">⚡</span> Elektricien</div>
+      <div class="sect-chip"><span class="si">🌿</span> Tuinieren</div>
+      <div class="sect-chip"><span class="si">🧹</span> Schoonmaak</div>
+      <div class="sect-chip"><span class="si">❄️</span> Airco & Klimaat</div>
+      <div class="sect-chip"><span class="si">🛡️</span> Beveiliging</div>
+      <div class="sect-chip"><span class="si">🚚</span> Transport</div>
+      <div class="sect-chip"><span class="si">🎨</span> Schilder</div>
+      <div class="sect-chip"><span class="si">🍽️</span> Catering</div>
+      <div class="sect-chip"><span class="si">🪵</span> Timmerman</div>
+      <div class="sect-chip"><span class="si">🏠</span> Dakdekker</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PRICING ════════════════════════════════════════════════ -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="center">
+      <div class="s-badge fade-up">💳 Prijzen</div>
+      <h2 class="s-h2 syne fade-up d1">Één plan. Alles inbegrepen.<br>Geen verrassingen.</h2>
+      <p class="s-sub fade-up d2">Geen dure consultants, geen ingewikkelde pakketten. Gewoon alles wat je nodig hebt voor één vaste prijs.</p>
+    </div>
+    <div class="price-wrap fade-up d3">
+      <div class="price-card">
+        <div class="price-lbl">⚡ Meest gekozen</div>
+        <div class="price-name">WerkMate Pro</div>
+        <div class="price-row">
+          <div class="price-amt">€99</div>
+          <div class="price-per">/maand</div>
+        </div>
+        <div class="price-trial">✨ 14 dagen gratis uitproberen — geen creditcard nodig</div>
+        <div class="price-div"></div>
+        <ul class="price-list">
+          <li>Onbeperkt offertes & facturen</li>
+          <li>AI offerte generator</li>
+          <li>Planning kalender (maand & week)</li>
+          <li>CRM & klantenbeheer</li>
+          <li>Werkbonnen digitaal</li>
+          <li>AI social media posts</li>
+          <li>Teambeheer & uitnodigingen</li>
+          <li>PDF export & e-mailen</li>
+          <li>BTW & boekhoudingoverzicht</li>
+          <li>Support via e-mail & chat</li>
+        </ul>
+        <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="price-cta">🚀 Start 14 dagen gratis</a>
+        <p class="price-note">Na 14 dagen €99/maand &nbsp;·&nbsp; Altijd opzegbaar &nbsp;·&nbsp; Geen verborgen kosten</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CTA BOTTOM ══════════════════════════════════════════════ -->
+<section id="cta-end">
+  <div class="section-inner center">
+    <div class="s-badge fade-up" style="display:inline-flex">🔥 Klaar om te starten?</div>
+    <h2 class="s-h2 syne fade-up d1">Stop met papierwerk.<br><span class="grad-text">Begin vandaag gratis.</span></h2>
+    <p class="s-sub fade-up d2" style="margin:0 auto">Sluit je aan bij vakmensen die al uren per week besparen met WerkMate.</p>
+    <div class="cta-btns fade-up d3">
+      <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="btn-pri" style="font-size:16px;padding:16px 34px">🚀 Start 14 dagen gratis</a>
+    </div>
+    <p style="color:#334155;font-size:13px;margin-top:16px">Geen creditcard nodig &nbsp;·&nbsp; Direct aan de slag &nbsp;·&nbsp; Opzegbaar per maand</p>
+  </div>
+</section>
+
+<!-- ══ CONTACT ════════════════════════════════════════════════ -->
+<section id="contact" style="background:#fff;color:#111">
+  <div class="section-inner">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start">
+
+      <div>
+        <div class="s-badge" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.18);color:#6366F1" class="fade-up">✉️ Contact</div>
+        <h2 class="s-h2 syne fade-up" style="color:#0F172A;margin-top:14px">Vragen? Wij<br>helpen je graag.</h2>
+        <p class="s-sub fade-up d1" style="color:#64748B;margin-bottom:36px">Neem gerust contact op. We reageren doorgaans binnen één werkdag.</p>
+
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <a href="tel:0610362420" style="display:flex;align-items:center;gap:16px;padding:18px 22px;background:#F8FAFC;border:1.5px solid #E8EEF6;border-radius:16px;text-decoration:none;transition:border-color .2s,box-shadow .2s" onmouseover="this.style.borderColor='#C7D2FE';this.style.boxShadow='0 8px 24px rgba(99,102,241,.1)'" onmouseout="this.style.borderColor='#E8EEF6';this.style.boxShadow='none'">
+            <div style="width:46px;height:46px;background:linear-gradient(135deg,#EEF2FF,#EDE9FE);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📞</div>
+            <div>
+              <div style="font-size:11.5px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Bel ons</div>
+              <div style="font-size:16px;font-weight:700;color:#0F172A">06-10362420</div>
+            </div>
+          </a>
+          <a href="mailto:info@werkmate.tech" style="display:flex;align-items:center;gap:16px;padding:18px 22px;background:#F8FAFC;border:1.5px solid #E8EEF6;border-radius:16px;text-decoration:none;transition:border-color .2s,box-shadow .2s" onmouseover="this.style.borderColor='#C7D2FE';this.style.boxShadow='0 8px 24px rgba(99,102,241,.1)'" onmouseout="this.style.borderColor='#E8EEF6';this.style.boxShadow='none'">
+            <div style="width:46px;height:46px;background:linear-gradient(135deg,#EEF2FF,#EDE9FE);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📧</div>
+            <div>
+              <div style="font-size:11.5px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Mail ons</div>
+              <div style="font-size:16px;font-weight:700;color:#0F172A">info@werkmate.tech</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="fade-up d2">
+        <div style="background:#F8FAFC;border:1.5px solid #E8EEF6;border-radius:22px;padding:36px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#0F172A;margin-bottom:6px">Stuur een bericht</div>
+          <div style="font-size:13.5px;color:#94A3B8;margin-bottom:24px">We reageren binnen één werkdag.</div>
+          <form id="contact-form">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Naam</label>
+                <input id="cf-naam" type="text" placeholder="Jan de Vries" required
+                  style="width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#111;transition:border-color .2s,box-shadow .2s"
+                  onfocus="this.style.borderColor='#6366F1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.12)'"
+                  onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'" />
+              </div>
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">E-mailadres</label>
+                <input id="cf-email" type="email" placeholder="jan@bedrijf.nl" required
+                  style="width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#111;transition:border-color .2s,box-shadow .2s"
+                  onfocus="this.style.borderColor='#6366F1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.12)'"
+                  onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'" />
+              </div>
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Bericht</label>
+                <textarea id="cf-bericht" placeholder="Vertel ons hoe we je kunnen helpen…" required rows="4"
+                  style="width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#111;resize:vertical;transition:border-color .2s,box-shadow .2s"
+                  onfocus="this.style.borderColor='#6366F1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.12)'"
+                  onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'"></textarea>
+              </div>
+              <button type="submit" id="cf-btn"
+                style="width:100%;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:11px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:0 6px 20px rgba(99,102,241,.32);transition:transform .2s,box-shadow .2s"
+                onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 28px rgba(99,102,241,.48)'"
+                onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(99,102,241,.32)'">
+                Verstuur bericht →
+              </button>
+              <div id="cf-success" style="display:none;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 16px;font-size:14px;font-weight:600;color:#15803D;text-align:center">
+                ✓ Bericht verstuurd! We nemen snel contact op.
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══════════════════════════════════════════════════ -->
+<footer>
+  <div class="foot">
+    <div class="foot-logo">
+      <div class="foot-ico">⚡</div>
+      <span class="foot-name">WerkMate</span>
+    </div>
+    <div class="foot-copy">© 2025 WerkMate · Gemaakt voor de Nederlandse vakman</div>
+    <div class="foot-links">
+      <a href="https://werkmate.vercel.app" target="_blank">App</a>
+      <a href="mailto:info@werkmate.tech">Contact</a>
+      <a href="#">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── Particle canvas ────────────────────────────────────────────
+const canvas = document.getElementById('hero-canvas');
+const ctx    = canvas.getContext('2d');
+let W, H, pts = [];
+
+function resize() {
+  W = canvas.width  = canvas.offsetWidth;
+  H = canvas.height = canvas.offsetHeight;
+}
+function initPts() {
+  pts = Array.from({ length: 90 }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    r: Math.random() * 1.4 + 0.3,
+    vx: (Math.random() - .5) * .35,
+    vy: (Math.random() - .5) * .35,
+    o: Math.random() * .45 + .1
+  }));
+}
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  pts.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(165,180,252,${p.o})`;
+    ctx.fill();
+  });
+  for (let i = 0; i < pts.length; i++) {
+    for (let j = i + 1; j < pts.length; j++) {
+      const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+      const d  = Math.sqrt(dx * dx + dy * dy);
+      if (d < 110) {
+        ctx.beginPath();
+        ctx.moveTo(pts[i].x, pts[i].y);
+        ctx.lineTo(pts[j].x, pts[j].y);
+        ctx.strokeStyle = `rgba(99,102,241,${.13 * (1 - d / 110)})`;
+        ctx.lineWidth = .5;
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(draw);
+}
+window.addEventListener('resize', () => { resize(); initPts(); });
+resize(); initPts(); draw();
+
+// ── Scroll fade-in ─────────────────────────────────────────────
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+
+// ── Nav scroll effect ─────────────────────────────────────────
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('nav');
+  if (window.scrollY > 40) {
+    nav.style.background    = 'rgba(7,7,27,.97)';
+    nav.style.boxShadow     = '0 4px 28px rgba(0,0,0,.5)';
+  } else {
+    nav.style.background    = 'rgba(7,7,27,.82)';
+    nav.style.boxShadow     = 'none';
+  }
+});
+
+// ── Mockup mouse parallax ─────────────────────────────────────
+const mc = document.getElementById('mockCard');
+let animating = true;
+document.addEventListener('mousemove', e => {
+  if (!mc) return;
+  const cx = window.innerWidth  / 2;
+  const cy = window.innerHeight / 2;
+  const dx = (e.clientX - cx) / cx;
+  const dy = (e.clientY - cy) / cy;
+  mc.style.animation  = 'none';
+  mc.style.transform  = `rotateX(${7 - dy * 6}deg) rotateY(${-13 + dx * 8}deg)`;
+});
+document.addEventListener('mouseleave', () => {
+  if (mc) { mc.style.animation = 'float3d 7s ease-in-out infinite'; mc.style.transform = ''; }
+});
+
+// ── Contact form ───────────────────────────────────────────────
+document.getElementById('contact-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const naam    = document.getElementById('cf-naam').value.trim();
+  const email   = document.getElementById('cf-email').value.trim();
+  const bericht = document.getElementById('cf-bericht').value.trim();
+  const subject = encodeURIComponent(`WerkMate contact van ${naam}`);
+  const body    = encodeURIComponent(`Naam: ${naam}\nE-mail: ${email}\n\nBericht:\n${bericht}`);
+  window.location.href = `mailto:info@werkmate.tech?subject=${subject}&body=${body}`;
+  document.getElementById('cf-success').style.display = 'block';
+  document.getElementById('cf-btn').textContent = '✓ Verstuurd!';
+  document.getElementById('cf-btn').style.opacity = '.7';
+  document.getElementById('cf-btn').disabled = true;
+});
+
+// ── Contact section responsive ─────────────────────────────────
+function contactResponsive() {
+  const grid = document.querySelector('#contact .section-inner > div');
+  if (!grid) return;
+  grid.style.gridTemplateColumns = window.innerWidth < 820 ? '1fr' : '1fr 1fr';
+}
+window.addEventListener('resize', contactResponsive);
+contactResponsive();
+</script>
+</body>
+</html>
