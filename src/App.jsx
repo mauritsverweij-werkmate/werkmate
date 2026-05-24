@@ -1,30 +1,92 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { jsPDF } from "jspdf";
+import * as XLSX from "xlsx";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_KEY
 );
 
+const STRIPE_URL = "https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00";
+const SUBSCRIPTION_WHITELIST = ["mauritsverweij2010@gmail.com"];
+const inviteStorageKey = "wm_invite_token";
+const inviteEmailStorageKey = "wm_invite_email";
+
+function storageGet(key) { try { return localStorage.getItem(key); } catch(e) { return null; } }
+function storageSet(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
+function storageRemove(key) { try { localStorage.removeItem(key); } catch(e) {} }
+
+async function acceptInviteToken(token, userId) {
+  if (!token || !userId) return;
+  await supabase.from("team")
+    .update({ accepted_user_id: userId, accepted_at: new Date().toISOString() })
+    .eq("invite_token", token);
+  storageRemove(inviteStorageKey);
+  storageRemove(inviteEmailStorageKey);
+}
+
+async function logEmail(userId, to, subject, type, body, status) {
+  try {
+    await supabase.from("emails_log").insert({ user_id: userId, to_email: to, subject, type, body: body || "", status, sent_at: new Date().toISOString() });
+  } catch(e) { console.warn("logEmail failed:", e); }
+}
+
 // ── Login scherm ──────────────────────────────────────────────
 function Auth({ onLogin }) {
   const [email, setEmail] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
   const [isRegistreren, setIsRegistreren] = useState(false);
+  const [inviteToken, setInviteToken] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [bericht, setBericht] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("invite_token");
+    const emailParam = params.get("email");
+    if (token) {
+      setInviteToken(token);
+      setIsRegistreren(true);
+      if (emailParam) {
+        setEmail(emailParam);
+        setInviteEmail(emailParam);
+      }
+      storageSet(inviteStorageKey, token);
+      if (emailParam) storageSet(inviteEmailStorageKey, emailParam);
+    }
+  }, []);
+
+  const handleInviteAcceptance = async (userObject) => {
+    const token = inviteToken || storageGet(inviteStorageKey);
+    if (!token || !userObject) return;
+    await acceptInviteToken(token, userObject.id);
+  };
 
   const handleSubmit = async () => {
     setLoading(true);
     setBericht("");
     if (isRegistreren) {
-      const { error } = await supabase.auth.signUp({ email, password: wachtwoord });
-      if (error) setBericht(error.message);
-      else setBericht("✅ Account aangemaakt! Je kunt nu inloggen.");
+      const { data, error } = await supabase.auth.signUp({ email, password: wachtwoord });
+      if (error) {
+        setBericht(error.message);
+      } else {
+        if (data?.user) await handleInviteAcceptance(data.user);
+        if (data?.session) {
+          onLogin(data.user);
+        } else {
+          setBericht("✅ Account aangemaakt! Controleer je e-mail om je account te bevestigen.");
+        }
+      }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
-      if (error) setBericht("❌ Email of wachtwoord klopt niet");
-      else onLogin(data.user);
+      if (error) {
+        setBericht("❌ Email of wachtwoord klopt niet");
+      } else {
+        if (data?.user) await handleInviteAcceptance(data.user);
+        onLogin(data.user);
+      }
     }
     setLoading(false);
   };
@@ -67,6 +129,19 @@ function Auth({ onLogin }) {
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [inviteReady, setInviteReady] = useState(true);
+
+  // Capture invite token from URL as early as possible, before auth state resolves.
+  // This handles the case where a logged-in user clicks an invite link.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("invite_token");
+    const emailParam = params.get("email");
+    if (token) {
+      storageSet(inviteStorageKey, token);
+      if (emailParam) storageSet(inviteEmailStorageKey, emailParam);
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -79,7 +154,15 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) return (
+  useEffect(() => {
+    if (!user) return;
+    const token = storageGet(inviteStorageKey);
+    if (!token) { setInviteReady(true); return; }
+    setInviteReady(false);
+    acceptInviteToken(token, user.id).then(() => setInviteReady(true));
+  }, [user]);
+
+  if (loading || !inviteReady) return (
     <div style={{ minHeight:"100vh", background:"#0F0F14", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:18, fontFamily:"sans-serif" }}>
       ⚡ Laden...
     </div>
@@ -96,13 +179,26 @@ const NAV_ITEMS = [
   { id:"prijslijst",      icon:"🏷️", label:"Prijslijst" },
   { id:"planning",        icon:"📅", label:"Planning" },
   { id:"crm",             icon:"👥", label:"Klanten" },
+  { id:"profiel",         icon:"🏢", label:"Profiel" },
   { id:"facturen",        icon:"💶", label:"Financiën" },
   { id:"mail",            icon:"✉️", label:"Mail" },
   { id:"social",          icon:"📱", label:"Social Media" },
-  { id:"website",         icon:"🌐", label:"Website & SEO" },
+  
   { id:"werkregistratie", icon:"🔧", label:"Werkbonnen" },
-  { id:"team",            icon:"⚙️", label:"Team" },
+  { id:"team",            icon:"👷", label:"Team" },
+  { id:"instellingen",    icon:"⚙️", label:"Instellingen" },
 ];
+
+const MOBILE_PRIMARY = ["dashboard","offertes","planning","crm","facturen"];
+const MOBILE_NAV = [
+  { id:"dashboard",  icon:"⊞",  label:"Dashboard" },
+  { id:"offertes",   icon:"📋", label:"Offertes" },
+  { id:"planning",   icon:"📅", label:"Planning" },
+  { id:"crm",        icon:"👥", label:"Klanten" },
+  { id:"facturen",   icon:"💶", label:"Financiën" },
+  { id:"meer",       icon:"☰",  label:"Meer" },
+];
+const MORE_NAV = NAV_ITEMS.filter(i => !MOBILE_PRIMARY.includes(i.id));
 
 const DEFAULT_PRIJSLIJST = [
   { id:1, dienst:"Arbeid (uurloon)",          eenheid:"uur", prijs:85,  categorie:"Arbeid"      },
@@ -113,18 +209,101 @@ const DEFAULT_PRIJSLIJST = [
   { id:6, dienst:"Materiaal (inkoop +20%)",   eenheid:"st",  prijs:0,   categorie:"Materiaal"   },
 ];
 
+const SECTOR_PRIJSLIJST_TEMPLATES = {
+  bouw: [
+    { id:101, dienst:"Sloopwerk",                 eenheid:"m²", prijs:45,  categorie:"Bouw" },
+    { id:102, dienst:"Fundering en betonwerk",    eenheid:"m²", prijs:85,  categorie:"Bouw" },
+    { id:103, dienst:"Betonvloer storten",       eenheid:"m²", prijs:55,  categorie:"Bouw" },
+    { id:104, dienst:"Wand- en plafondafwerking", eenheid:"m²", prijs:32,  categorie:"Bouw" },
+    { id:105, dienst:"Kozijnen plaatsen",        eenheid:"st", prijs:220, categorie:"Bouw" },
+    { id:106, dienst:"Verhoogde service uren",    eenheid:"uur", prijs:78,  categorie:"Bouw" },
+  ],
+  schoonmaak: [
+    { id:201, dienst:"Kantoor schoonmaak",       eenheid:"uur", prijs:42,  categorie:"Schoonmaak" },
+    { id:202, dienst:"Dieptereiniging vloer",     eenheid:"m²", prijs:3.2, categorie:"Schoonmaak" },
+    { id:203, dienst:"Ramen wassen",             eenheid:"m²", prijs:4.5, categorie:"Schoonmaak" },
+    { id:204, dienst:"Eindschoonmaak",           eenheid:"uur", prijs:48,  categorie:"Schoonmaak" },
+    { id:205, dienst:"Oven- en keukenreiniging", eenheid:"st", prijs:65,  categorie:"Schoonmaak" },
+  ],
+  catering: [
+    { id:301, dienst:"Bedrijfslunch per persoon", eenheid:"st", prijs:14, categorie:"Catering" },
+    { id:302, dienst:"Buffet op locatie",         eenheid:"persoon", prijs:27, categorie:"Catering" },
+    { id:303, dienst:"Koffie & thee service",     eenheid:"dag", prijs:95, categorie:"Catering" },
+    { id:304, dienst:"Borrelplank verzorgen",     eenheid:"st", prijs:18, categorie:"Catering" },
+    { id:305, dienst:"Chef op locatie",          eenheid:"uur", prijs:65, categorie:"Catering" },
+  ],
+  tuinieren: [
+    { id:401, dienst:"Tuinonderhoud",            eenheid:"uur", prijs:55, categorie:"Tuinieren" },
+    { id:402, dienst:"Grasmaaien",               eenheid:"m²", prijs:0.24, categorie:"Tuinieren" },
+    { id:403, dienst:"Snoeiwerk",                eenheid:"uur", prijs:52, categorie:"Tuinieren" },
+    { id:404, dienst:"Bestrating vernieuwen",    eenheid:"m²", prijs:35, categorie:"Tuinieren" },
+    { id:405, dienst:"Beplanting leveren",       eenheid:"st", prijs:18, categorie:"Tuinieren" },
+  ],
+  beveiliging: [
+    { id:501, dienst:"Alarm installatie",         eenheid:"st", prijs:495, categorie:"Beveiliging" },
+    { id:502, dienst:"Camerabewaking",           eenheid:"st", prijs:225, categorie:"Beveiliging" },
+    { id:503, dienst:"Sleutel- en toegangscontrole", eenheid:"st", prijs:32, categorie:"Beveiliging" },
+    { id:504, dienst:"Beveiligingsscan",         eenheid:"uur", prijs:85, categorie:"Beveiliging" },
+    { id:505, dienst:"Inspectie onderhoud",      eenheid:"uur", prijs:72, categorie:"Beveiliging" },
+  ],
+  transport: [
+    { id:601, dienst:"Transport per km",         eenheid:"km", prijs:1.75, categorie:"Transport" },
+    { id:602, dienst:"Los- en laadservice",       eenheid:"uur", prijs:58, categorie:"Transport" },
+    { id:603, dienst:"Koerierdiensten",          eenheid:"st", prijs:45, categorie:"Transport" },
+    { id:604, dienst:"Palletvervoer",            eenheid:"st", prijs:68, categorie:"Transport" },
+    { id:605, dienst:"Uitzonderlijk transport",   eenheid:"uur", prijs:82, categorie:"Transport" },
+  ],
+  airco: [
+    { id:701, dienst:"Airco onderhoud",           eenheid:"uur", prijs:72, categorie:"Airco" },
+    { id:702, dienst:"Reiniging filters",         eenheid:"st", prijs:55, categorie:"Airco" },
+    { id:703, dienst:"Installatie split unit",    eenheid:"st", prijs:725, categorie:"Airco" },
+    { id:704, dienst:"Systeemcontrole",          eenheid:"uur", prijs:68, categorie:"Airco" },
+    { id:705, dienst:"Monteur voor service",      eenheid:"uur", prijs:78, categorie:"Airco" },
+  ],
+  loodgieter: [
+    { id:801, dienst:"Lekkage reparatie",         eenheid:"uur", prijs:65, categorie:"Loodgieter" },
+    { id:802, dienst:"CV ketel installatie",      eenheid:"st", prijs:845, categorie:"Loodgieter" },
+    { id:803, dienst:"Rioolontstopping",          eenheid:"uur", prijs:72, categorie:"Loodgieter" },
+    { id:804, dienst:"Kraan vervangen",           eenheid:"st", prijs:95, categorie:"Loodgieter" },
+    { id:805, dienst:"Watermeter inspectie",      eenheid:"st", prijs:38, categorie:"Loodgieter" },
+  ],
+  elektricien: [
+    { id:901, dienst:"Verlichting installeren",   eenheid:"st", prijs:85, categorie:"Elektricien" },
+    { id:902, dienst:"Groepenkast uitbreiding",   eenheid:"st", prijs:420, categorie:"Elektricien" },
+    { id:903, dienst:"Stopcontact plaatsing",    eenheid:"st", prijs:62, categorie:"Elektricien" },
+    { id:904, dienst:"Laadpaal aansluiting",      eenheid:"st", prijs:725, categorie:"Elektricien" },
+    { id:905, dienst:"Storingsdienst",           eenheid:"uur", prijs:79, categorie:"Elektricien" },
+  ],
+  overig: [
+    { id:1001, dienst:"Uurloon algemene dienst",  eenheid:"uur", prijs:65, categorie:"Overig" },
+    { id:1002, dienst:"Materiaalafhandeling",     eenheid:"st", prijs:0,  categorie:"Overig" },
+    { id:1003, dienst:"Voorrijkosten",           eenheid:"rit", prijs:35, categorie:"Overig" },
+    { id:1004, dienst:"Consultatie",             eenheid:"uur", prijs:72, categorie:"Overig" },
+    { id:1005, dienst:"Advies op locatie",        eenheid:"uur", prijs:85, categorie:"Overig" },
+  ],
+};
+
+const getPrijslijstTemplate = (sector) => {
+  return SECTOR_PRIJSLIJST_TEMPLATES[sector] || SECTOR_PRIJSLIJST_TEMPLATES.overig;
+};
+
 const SC = {
-  "In afwachting":{ bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
-  "Ondertekend":  { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
-  "Verstuurd":    { bg:"#DBEAFE", text:"#1E40AF", dot:"#3B82F6" },
-  "Afgewezen":    { bg:"#FEE2E2", text:"#991B1B", dot:"#EF4444" },
-  "Actief":       { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
-  "Lead":         { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
-  "Betaald":      { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
-  "Openstaand":   { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
-  "Herinnering":  { bg:"#FEE2E2", text:"#991B1B", dot:"#EF4444" },
-  "Onderweg":     { bg:"#EDE9FE", text:"#5B21B6", dot:"#8B5CF6" },
-  "Ingepland":    { bg:"#F1F5F9", text:"#475569", dot:"#94A3B8" },
+  "In afwachting":    { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
+  "Ondertekend":      { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
+  "Verstuurd":        { bg:"#DBEAFE", text:"#1E40AF", dot:"#3B82F6" },
+  "Afgewezen":        { bg:"#FEE2E2", text:"#991B1B", dot:"#EF4444" },
+  "Actief":           { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
+  "Lead":             { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
+  "Potentiële klant": { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
+  "Prospect":         { bg:"#DBEAFE", text:"#1E40AF", dot:"#3B82F6" },
+  "Geïnteresseerd":   { bg:"#DBEAFE", text:"#1E40AF", dot:"#3B82F6" },
+  "Betaald":          { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
+  "Openstaand":       { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
+  "Herinnering":      { bg:"#FEE2E2", text:"#991B1B", dot:"#EF4444" },
+  "Onderweg":         { bg:"#EDE9FE", text:"#5B21B6", dot:"#8B5CF6" },
+  "Ingepland":        { bg:"#F1F5F9", text:"#475569", dot:"#94A3B8" },
+  "Concept":          { bg:"#F3F4F6", text:"#6B7280", dot:"#9CA3AF" },
+  "Verlopen":         { bg:"#FEE2E2", text:"#991B1B", dot:"#EF4444" },
 };
 
 const css = `
@@ -216,12 +395,32 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .off-hdr{background:linear-gradient(135deg,#6366F1,#8B5CF6);border-radius:11px;padding:16px 18px;margin-bottom:15px;color:#fff}
 .off-dienst{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}
 .off-omschr{font-size:12px;opacity:.85;line-height:1.5}
-.off-tbl{border:1px solid #F0F0F0;border-radius:9px;overflow:hidden;margin-bottom:12px}
+.off-tbl{border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;margin-bottom:12px}
+.off-tbl-grid{display:grid;grid-template-columns:2fr 80px 100px 100px 80px 40px;align-items:center;gap:0}
+.off-tbl-hdr{background:#F8FAFC;border-bottom:1px solid #E5E7EB}
+.off-tbl-hdr .off-cell{padding:9px 10px;color:#475569;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.off-tbl-row{border-bottom:1px solid #F0F0F0}
+.off-tbl-row:last-child{border-bottom:none}
+.off-tbl-row:hover{background:#FAFBFF}
+.off-cell{padding:7px 8px;display:flex;align-items:center}
+.off-cell.right{justify-content:flex-end}
+.off-cell.center{justify-content:center}
+.off-cell.del{justify-content:center}
+.off-cell-totaal{font-size:13px;font-weight:700;color:#111;text-align:right;justify-content:flex-end}
+.off-inp{height:36px;width:100%;box-sizing:border-box;border:1.5px solid #E5E7EB;border-radius:7px;padding:0 9px;font-family:'DM Sans',sans-serif;font-size:13px;color:#111;outline:none;background:#fff;transition:border-color .14s}
+.off-inp:focus{border-color:#6366F1}
+.off-inp.right{text-align:right}
+.off-inp.center{text-align:center}
+.off-inp::-webkit-outer-spin-button,.off-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.off-inp{-moz-appearance:textfield}
 .tot-box{text-align:right;font-size:12.5px;color:#555;line-height:2;padding:11px 14px;background:#FAFAFA;border-radius:9px;margin-bottom:12px}
 .note-box{background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;padding:11px 13px;font-size:12px;color:#78350F;margin-bottom:14px;line-height:1.5}
 .pl-row{display:flex;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid #F5F5F5}
 .pl-inp{border:1.5px solid #E5E7EB;border-radius:7px;padding:6px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:#111;outline:none;transition:border-color .14s;background:#fff}
 .pl-inp:focus{border-color:#6366F1}
+.pl-inp.no-spinner::-webkit-outer-spin-button,
+.pl-inp.no-spinner::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.pl-inp.no-spinner{ -moz-appearance:textfield; }
 .pl-cat{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#94A3B8;padding:3px 7px;background:#F3F4F6;border-radius:5px;white-space:nowrap}
 .mail-tabs{display:flex;gap:6px;margin-bottom:18px}
 .mail-tab{padding:7px 15px;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:#555;transition:all .14s}
@@ -259,6 +458,102 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .dot{display:inline-block;animation:blink 1s infinite}
 .tip-row{font-size:12px;color:#6366F1;cursor:pointer;padding:3px 0}
 .tip-row:hover{text-decoration:underline}
+.cal-wrap{background:#fff;border-radius:13px;border:1px solid #EAECF0;overflow:hidden;margin-bottom:20px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #F0F0F0}
+.cal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#0F0F14}
+.cal-nav-btn{background:#F3F4F6;border:none;border-radius:7px;width:30px;height:30px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;line-height:1;transition:all .14s}
+.cal-nav-btn:hover{background:#E5E7EB}
+.cal-view-toggle{display:flex;background:#F3F4F6;border-radius:9px;padding:3px;gap:2px}
+.cal-vt-btn{background:transparent;border:none;border-radius:7px;padding:5px 14px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;color:#666;transition:all .14s}
+.cal-vt-btn.on{background:#fff;color:#0F0F14;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:#F8FAFC;border-bottom:1px solid #E5E7EB}
+.cal-dow-cell{padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-day{min-height:82px;padding:6px 7px;border-right:1px solid #F0F0F0;border-bottom:1px solid #F0F0F0;cursor:pointer;transition:background .1s;box-sizing:border-box}
+.cal-day:nth-child(7n){border-right:none}
+.cal-day:hover{background:#F9FAFB}
+.cal-day.empty{background:#FAFAFA;cursor:default;pointer-events:none}
+.cal-day.today .cal-dn{background:#6366F1;color:#fff;border-radius:50%}
+.cal-dn{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#374151;margin-bottom:3px}
+.cal-task{border-radius:4px;padding:2px 5px;font-size:10.5px;font-weight:600;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#EEF2FF;color:#4338CA}
+.cal-task.onderweg{background:#FEF3C7;color:#92400E}
+.cal-task.klaar{background:#F3F4F6;color:#9CA3AF;text-decoration:line-through}
+.cal-more{font-size:9.5px;color:#94A3B8;padding-left:2px}
+.cal-day.feestdag{background:#FFFBEB}
+.cal-feestdag{font-size:9px;color:#92400E;font-weight:600;margin-bottom:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cal-week-hdr.feestdag{background:#FFFBEB}
+.cal-week-feestdag{font-size:9px;color:#92400E;font-weight:600;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cal-week{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-week-col{border-right:1px solid #F0F0F0;box-sizing:border-box}
+.cal-week-col:last-child{border-right:none}
+.cal-week-hdr{text-align:center;padding:10px 6px 8px;border-bottom:1px solid #E5E7EB;cursor:pointer;transition:background .1s}
+.cal-week-hdr:hover{background:#F9FAFB}
+.cal-week-day{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.cal-week-dn{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#0F0F14}
+.cal-week-hdr.today .cal-week-dn{color:#6366F1}
+.cal-week-hdr.today .cal-week-day{color:#6366F1}
+.cal-week-tasks{padding:8px 6px;min-height:160px;display:flex;flex-direction:column;gap:5px}
+.cal-task-wk{border-radius:7px;padding:6px 8px;background:#EEF2FF;color:#4338CA}
+.cal-task-wk.onderweg{background:#FEF3C7;color:#92400E}
+.cal-task-wk.klaar{opacity:.55}
+.cal-task-wk.klaar .cal-task-name{text-decoration:line-through}
+.cal-task-time{font-size:10px;font-weight:700;margin-bottom:2px;opacity:.8}
+.cal-task-name{font-size:12px;font-weight:700}
+.cal-task-dienst{font-size:10.5px;opacity:.75;margin-top:1px}
+.cal-done-btn{background:none;border:1.5px solid currentColor;border-radius:50%;width:18px;height:18px;min-width:18px;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;padding:0;opacity:.45;transition:all .14s;flex-shrink:0}
+.cal-done-btn:hover{opacity:1}
+.cal-herhaal-tag{font-size:9px;opacity:.65;margin-top:1px}
+.cal-filter-bar{display:flex;gap:6px;padding:9px 18px;border-bottom:1px solid #F0F0F0;flex-wrap:wrap;align-items:center}
+.cal-filter-lbl{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.cal-fp{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1.5px solid #E5E7EB;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;color:#555;transition:all .14s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.cal-fp:hover{border-color:#6366F1;color:#6366F1}
+.cal-fp.on{background:#0F0F14;color:#fff;border-color:#0F0F14}
+.cal-fp-av{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:700;color:#fff;flex-shrink:0}
+.cal-task-av{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:7.5px;font-weight:700;color:#fff;flex-shrink:0}
+.cat-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F5F5F5}
+.cat-row:last-child{border-bottom:none}
+.cat-swatch{width:26px;height:26px;border-radius:7px;flex-shrink:0;border:2px solid rgba(0,0,0,.08)}
+.cat-inp-color{width:38px;height:38px;border:1.5px solid #E5E7EB;border-radius:9px;cursor:pointer;padding:2px;flex-shrink:0;background:#fff}
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:#0F0F14;border-top:1px solid rgba(255,255,255,.12);padding-bottom:env(safe-area-inset-bottom)}
+.mob-nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 2px 6px;border:none;background:transparent;color:rgba(255,255,255,.38);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;cursor:pointer;transition:color .14s;-webkit-tap-highlight-color:transparent}
+.mob-nb.mob-nb-on{color:#A5B4FC}
+.mob-nb-ic{font-size:22px;line-height:1}
+@media(max-width:768px){
+.shell{height:100dvh;overflow:hidden}
+.sidebar{display:none !important}
+.mob-nav{display:block}
+.main{flex:1;overflow-y:auto;padding:16px 14px;padding-bottom:calc(68px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.pg-title{font-size:20px}
+.ph{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:16px}
+.overlay{padding:0;align-items:flex-end}
+.modal,.modal-lg{width:100% !important;max-width:100% !important;height:100% !important;max-height:100% !important;border-radius:0 !important;overflow-y:auto}
+.btn{min-height:44px}
+.btn-sm{min-height:36px}
+.mc{width:36px;height:36px}
+.inp{font-size:16px}
+.fg{grid-template-columns:1fr}
+.sg{grid-template-columns:1fr 1fr !important}
+.mb div[style*="1fr"]{grid-template-columns:1fr !important}
+.card.cp>div[style*="1fr"]{grid-template-columns:1fr !important}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;display:block}
+table{min-width:540px}
+.cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cal-dow{min-width:460px}
+.cal-grid{min-width:460px}
+.cal-week{min-width:500px}
+.cal-day{min-height:56px;padding:3px 2px}
+.cal-dn{font-size:10px;width:18px;height:18px}
+.cal-week-tasks{min-height:60px}
+.cal-week-dn{font-size:15px}
+.cal-week-hdr{padding:7px 2px 5px}
+.cal-filter-bar{padding:7px 10px;gap:5px;flex-wrap:nowrap;overflow-x:auto}
+.off-tbl{overflow-x:auto}
+.mail-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.mail-tabs::-webkit-scrollbar{display:none}
+.cp{padding:14px 13px}
+.dash-banner{padding:18px 16px}
+.pl-row{flex-wrap:wrap}
+}
 `;
 
 function Badge({ status }) {
@@ -267,13 +562,203 @@ function Badge({ status }) {
 }
 
 async function aiCall(prompt) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || import.meta.env.VITE_SUPABASE_KEY;
   const r = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ prompt: prompt })
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+    body: JSON.stringify({ prompt })
   });
   const d = await r.json();
   return d.content.map(i=>i.text||"").join("");
 }
+
+const formatMoney = (value) => {
+  const num = typeof value === "string"
+    ? parseFloat(value.toString().replace(/[€\s]/g, "").replace(/,/g, "."))
+    : Number(value);
+  return isNaN(num) ? "0,00" : num.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const parseOfferRules = (offer) => {
+  if (!offer) return [];
+  if (Array.isArray(offer.regels)) return offer.regels;
+  if (typeof offer.regels === "string") {
+    try { return JSON.parse(offer.regels); } catch { }
+  }
+  if (offer.regels && typeof offer.regels === "object") return [offer.regels];
+  const prijs = parseFloat((offer.bedrag||"0").toString().replace(/[€\s]/g, "").replace(/,/g, "."));
+  return [{ omschrijving: offer.dienst || "Offerte", aantal: 1, eenheid: "", prijs: isNaN(prijs) ? 0 : prijs }];
+};
+
+const createOfferPdfDocument = (offer, bedrijf) => {
+  const company = {
+    bedrijfsnaam: bedrijf?.bedrijfsnaam || "WerkMate Bedrijf",
+    telefoon: bedrijf?.telefoon || "",
+    email: bedrijf?.email || "",
+    adres: bedrijf?.adres || "",
+  };
+  const regels = parseOfferRules(offer);
+  const subtotal = offer.subtotaal != null ? Number(offer.subtotaal) : regels.reduce((sum, r) => sum + ((Number(r.aantal) || 0) * (Number(r.prijs) || 0)), 0);
+  const btw = offer.btw != null ? Number(offer.btw) : Math.round(subtotal * 0.21 * 100) / 100;
+  const total = offer.totaal != null ? Number(offer.totaal) : subtotal + btw;
+  const today = new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text(company.bedrijfsnaam, 20, 25);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Datum: ${today}`, 20, 34);
+  doc.text(`Offerte voor: ${offer.klant || "klant"}`, 20, 42);
+  doc.text(`Geachte ${offer.klant || "heer/mevrouw"},`, 20, 52);
+  doc.text(`Hierbij ontvangt u onze offerte voor ${offer.dienst || "uw aanvraag"}.`, 20, 58);
+
+  const startY = 70;
+  const rowX = [20, 85, 115, 145, 175];
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Omschrijving", rowX[0], startY);
+  doc.text("Aantal", rowX[1], startY);
+  doc.text("Eenheid", rowX[2], startY);
+  doc.text("Prijs", rowX[3], startY);
+  doc.text("Totaal", rowX[4], startY);
+  doc.setDrawColor(200);
+  doc.line(20, startY + 2, 190, startY + 2);
+
+  let y = startY + 10;
+  doc.setFont("helvetica", "normal");
+  const descriptionWidth = rowX[1] - rowX[0] - 2;
+  const lineHeight = 5.5;
+  regels.forEach((regel) => {
+    const regelTotaal = (Number(regel.aantal) || 0) * (Number(regel.prijs) || 0);
+    const omschrijving = String(regel.omschrijving || "");
+    const beschrijvingLines = doc.splitTextToSize(omschrijving, descriptionWidth);
+    const rowHeight = Math.max(beschrijvingLines.length * lineHeight, 8);
+
+    if (y + rowHeight > 250) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.text(beschrijvingLines, rowX[0], y);
+    doc.text(String(regel.aantal || ""), rowX[1], y, { align: "right" });
+    doc.text(String(regel.eenheid || ""), rowX[2], y, { align: "right" });
+    doc.text(`€ ${formatMoney(regel.prijs)}`, rowX[3], y, { align: "right" });
+    doc.text(`€ ${formatMoney(regelTotaal)}`, rowX[4], y, { align: "right" });
+    y += rowHeight + 3;
+  });
+
+  const summaryY = y + 12;
+  doc.setFont("helvetica", "bold");
+  doc.text(`Subtotaal:`, 140, summaryY);
+  doc.text(`€ ${formatMoney(subtotal)}`, 190, summaryY, { align: "right" });
+  doc.text(`BTW (21%):`, 140, summaryY + 8);
+  doc.text(`€ ${formatMoney(btw)}`, 190, summaryY + 8, { align: "right" });
+  doc.setFontSize(13);
+  doc.text(`Totaal:`, 140, summaryY + 18);
+  doc.text(`€ ${formatMoney(total)}`, 190, summaryY + 18, { align: "right" });
+
+  const footerY = summaryY + 34;
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("Contact", 20, footerY);
+  doc.text(`Telefoon: ${company.telefoon}`, 20, footerY + 6);
+  doc.text(`Email: ${company.email}`, 20, footerY + 12);
+  doc.text(`Adres: ${company.adres}`, 20, footerY + 18);
+
+  return doc;
+};
+
+const createOfferPdfBase64 = (offer, bedrijf) => createOfferPdfDocument(offer, bedrijf).output("datauristring").split(",")[1];
+
+const createFactuurPdf = (factuur, bedrijf) => {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const company = bedrijf || {};
+  const margin = 20;
+  const pageW = 210;
+
+  doc.setFillColor(17, 24, 39);
+  doc.rect(0, 0, pageW, 38, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  doc.text(company.bedrijfsnaam || "Bedrijf", margin, 24);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("FACTUUR", pageW - margin, 24, { align: "right" });
+
+  doc.setTextColor(50, 50, 50);
+  doc.setFontSize(10);
+  let y = 50;
+  doc.setFont("helvetica", "bold"); doc.text("Factuurnummer:", margin, y);
+  doc.setFont("helvetica", "normal"); doc.text(factuur.nummer || "-", 72, y); y += 7;
+  doc.setFont("helvetica", "bold"); doc.text("Factuurdatum:", margin, y);
+  doc.setFont("helvetica", "normal"); doc.text(factuur.datum || "-", 72, y); y += 7;
+  doc.setFont("helvetica", "bold"); doc.text("Vervaldatum:", margin, y);
+  doc.setFont("helvetica", "normal"); doc.text(factuur.vervaldatum || "-", 72, y);
+
+  let cy = 50;
+  doc.setFont("helvetica", "bold"); doc.text("Aan:", pageW / 2, cy);
+  doc.setFont("helvetica", "normal"); cy += 7;
+  doc.text(factuur.klant || "-", pageW / 2, cy);
+  if (factuur.klant_email) { cy += 7; doc.text(factuur.klant_email, pageW / 2, cy); }
+
+  y = 90;
+  doc.setDrawColor(229, 231, 235); doc.setLineWidth(0.5);
+  doc.line(margin, y, pageW - margin, y);
+  y += 10;
+
+  doc.setFillColor(248, 250, 252);
+  doc.rect(margin, y - 6, pageW - 2 * margin, 10, "F");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+  doc.text("Omschrijving", margin + 2, y);
+  doc.text("Aantal", 120, y, { align: "right" });
+  doc.text("Eenheid", 142, y, { align: "right" });
+  doc.text("Prijs", 164, y, { align: "right" });
+  doc.text("Totaal", pageW - margin - 2, y, { align: "right" });
+  y += 8;
+
+  const regels = Array.isArray(factuur.regels) ? factuur.regels : [];
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(30, 30, 30);
+  regels.forEach((r, i) => {
+    if (i % 2 === 1) { doc.setFillColor(249, 250, 251); doc.rect(margin, y - 5, pageW - 2 * margin, 8, "F"); }
+    const qty = Number(r.aantal) || 0, price = Number(r.prijs) || 0, tot = qty * price;
+    doc.text(r.omschrijving || "-", margin + 2, y);
+    doc.text(String(qty), 120, y, { align: "right" });
+    doc.text(r.eenheid || "stuk", 142, y, { align: "right" });
+    doc.text(`€ ${price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, 164, y, { align: "right" });
+    doc.text(`€ ${tot.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" });
+    y += 9;
+  });
+
+  y += 5;
+  doc.setDrawColor(229, 231, 235); doc.line(pageW / 2, y, pageW - margin, y); y += 8;
+  const sub = regels.reduce((s, r) => s + (Number(r.aantal) || 0) * (Number(r.prijs) || 0), 0);
+  const btwAmt = sub * 0.21, tot = sub + btwAmt;
+
+  doc.setFontSize(9.5); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 80, 80);
+  doc.text("Subtotaal:", pageW / 2 + 5, y);
+  doc.text(`€ ${sub.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" }); y += 7;
+  doc.text("BTW 21%:", pageW / 2 + 5, y);
+  doc.text(`€ ${btwAmt.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" }); y += 4;
+  doc.setDrawColor(100, 100, 100); doc.line(pageW / 2, y, pageW - margin, y); y += 7;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(17, 24, 39);
+  doc.text("Totaal:", pageW / 2 + 5, y);
+  doc.text(`€ ${tot.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" });
+
+  const footerY = 270;
+  doc.setDrawColor(229, 231, 235); doc.line(margin, footerY - 5, pageW - margin, footerY - 5);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(120, 120, 120);
+  doc.text(`${company.bedrijfsnaam || ""}  |  ${company.email || ""}  |  ${company.telefoon || ""}`, margin, footerY);
+  if (company.adres) doc.text(company.adres, margin, footerY + 6);
+  doc.text("Gelieve het bedrag over te maken binnen 14 dagen na factuurdatum.", margin, footerY + 12);
+
+  return doc;
+};
+
+const createFactuurPdfBase64 = (factuur, bedrijf) => createFactuurPdf(factuur, bedrijf).output("datauristring").split(",")[1];
 
 // ── Leeg scherm component ─────────────────────────────────────
 function LeegScherm({ icon, titel, sub, actie, onActie }) {
@@ -290,12 +775,13 @@ function LeegScherm({ icon, titel, sub, actie, onActie }) {
 // ── Onboarding Wizard ─────────────────────────────────────────
 function OnboardingWizard({ onDone }) {
   const [step, setStep] = useState(0);
-  const [data, setData] = useState({ bedrijfsnaam:"", sector:"", stad:"", telefoon:"", email:"", diensten:"" });
+  const [data, setData] = useState({ bedrijfsnaam:"", sector:"", stad:"", adres:"", telefoon:"", email:"", diensten:"", logo:"" });
   const sectoren = [
-    {id:"hovenier",icon:"🌿",label:"Hovenier"},{id:"loodgieter",icon:"🔧",label:"Loodgieter"},
-    {id:"elektricien",icon:"⚡",label:"Elektricien"},{id:"schilder",icon:"🖌️",label:"Schilder"},
-    {id:"schoonmaak",icon:"🧹",label:"Schoonmaak"},{id:"airco",icon:"❄️",label:"Airco/Klimaat"},
-    {id:"timmerman",icon:"🪚",label:"Timmerman"},{id:"overig",icon:"🔨",label:"Overig"},
+    {id:"bouw",icon:"🔨",label:"Bouw"},{id:"schoonmaak",icon:"🧹",label:"Schoonmaak"},
+    {id:"catering",icon:"🍽️",label:"Catering"},{id:"tuinieren",icon:"🌿",label:"Tuinieren"},
+    {id:"beveiliging",icon:"🛡️",label:"Beveiliging"},{id:"transport",icon:"🚚",label:"Transport"},
+    {id:"airco",icon:"❄️",label:"Airco/Klimaat"},{id:"loodgieter",icon:"🔧",label:"Loodgieter"},
+    {id:"elektricien",icon:"⚡",label:"Elektricien"},{id:"overig",icon:"🔨",label:"Overig"},
   ];
   const steps = ["Sector","Bedrijf","Diensten","Klaar"];
   return (
@@ -313,8 +799,16 @@ function OnboardingWizard({ onDone }) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div className="ig"><label className="ilbl">Bedrijfsnaam</label><input className="inp" value={data.bedrijfsnaam} onChange={e=>setData({...data,bedrijfsnaam:e.target.value})} placeholder="Bijv: Jansen Installatie"/></div>
             <div className="ig"><label className="ilbl">Stad</label><input className="inp" value={data.stad} onChange={e=>setData({...data,stad:e.target.value})} placeholder="Bijv: Rotterdam"/></div>
+            <div className="ig"><label className="ilbl">Adres</label><input className="inp" value={data.adres} onChange={e=>setData({...data,adres:e.target.value})} placeholder="Straat 12, 1011AB Amsterdam"/></div>
             <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" value={data.telefoon} onChange={e=>setData({...data,telefoon:e.target.value})} placeholder="06-12345678"/></div>
             <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={data.email} onChange={e=>setData({...data,email:e.target.value})} placeholder="info@bedrijf.nl"/></div>
+            <div className="ig"><label className="ilbl">Logo upload</label><input className="inp" type="file" accept="image/*" onChange={async(e)=>{
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => setData({...data,logo: reader.result?.toString() || data.logo});
+                reader.readAsDataURL(file);
+              }} /></div>
           </div>
           <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setStep(0)}>← Terug</button><button className="btn btn-dark btn-full" onClick={()=>setStep(2)} disabled={!data.bedrijfsnaam||!data.stad}>Volgende →</button></div>
         </>}
@@ -333,37 +827,300 @@ function OnboardingWizard({ onDone }) {
   );
 }
 
+function ProfielTab({ userId, bedrijf, onSaved }) {
+  const [profile, setProfile] = useState({
+    bedrijfsnaam: bedrijf?.bedrijfsnaam || "",
+    sector: bedrijf?.sector || "",
+    stad: bedrijf?.stad || "",
+    adres: bedrijf?.adres || "",
+    telefoon: bedrijf?.telefoon || "",
+    email: bedrijf?.email || "",
+    diensten: bedrijf?.diensten || "",
+    logo: bedrijf?.logo || "",
+    kvk_nummer: bedrijf?.kvk_nummer || "",
+    btw_nummer: bedrijf?.btw_nummer || "",
+    website: bedrijf?.website || "",
+    iban: bedrijf?.iban || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
+  const [logoLightbox, setLogoLightbox] = useState(false);
+  useEffect(() => {
+    setProfile({
+      bedrijfsnaam: bedrijf?.bedrijfsnaam || "",
+      sector: bedrijf?.sector || "",
+      stad: bedrijf?.stad || "",
+      adres: bedrijf?.adres || "",
+      telefoon: bedrijf?.telefoon || "",
+      email: bedrijf?.email || "",
+      diensten: bedrijf?.diensten || "",
+      logo: bedrijf?.logo || "",
+      kvk_nummer: bedrijf?.kvk_nummer || "",
+      btw_nummer: bedrijf?.btw_nummer || "",
+      website: bedrijf?.website || "",
+      iban: bedrijf?.iban || "",
+    });
+  }, [bedrijf]);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    setSaveMsg({ type: "", text: "" });
+    const payload = { ...profile, user_id: userId };
+    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban"];
+    const filteredPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => allowedColumns.includes(key)));
+    console.log("[saveProfile] payload", filteredPayload);
+    console.log("[saveProfile] bedrijf", bedrijf);
+
+    try {
+      let result;
+      if (bedrijf?.id) {
+        result = await supabase.from("bedrijfsprofiel").update(filteredPayload).eq("id", bedrijf.id).select();
+      } else if (bedrijf?.user_id) {
+        result = await supabase.from("bedrijfsprofiel").update(filteredPayload).eq("user_id", bedrijf.user_id).select();
+      } else {
+        result = await supabase.from("bedrijfsprofiel").upsert(filteredPayload, { onConflict: "user_id" }).select();
+      }
+      console.log("[saveProfile] result", result);
+
+      if (result.error) {
+        console.error("[saveProfile] fout", result.error);
+        setSaveMsg({ type: "error", text: `Opslaan mislukt: ${result.error.message}` });
+        return;
+      }
+
+      if (!result.data || result.data.length === 0) {
+        console.warn("[saveProfile] geen rijen bijgewerkt — mogelijk RLS-blokkering of verkeerde id");
+        setSaveMsg({ type: "error", text: "Opslaan mislukt: geen rijen bijgewerkt. Controleer of je ingelogd bent als eigenaar." });
+        return;
+      }
+
+      const updatedProfile = result.data[0];
+      console.log("[saveProfile] opgeslagen", updatedProfile);
+      setSaveMsg({ type: "ok", text: "Profiel opgeslagen." });
+      onSaved && onSaved(updatedProfile);
+    } catch (error) {
+      console.error("[saveProfile] onverwachte fout", error);
+      setSaveMsg({ type: "error", text: `Onverwachte fout: ${error?.message || error}` });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="ph"><div><div className="pg-title">Bedrijfsprofiel</div><div className="pg-sub">Bewerk je bedrijfsgegevens en logo</div></div></div>
+      <div className="card cp">
+        {profile.logo && (
+          <div style={{marginBottom:18,textAlign:"center"}}>
+            <img
+              src={profile.logo}
+              alt="Bedrijfslogo"
+              style={{maxWidth:"100%",maxHeight:140,objectFit:"contain",borderRadius:10,cursor:"pointer",border:"1px solid #E5E7EB"}}
+              onClick={() => setLogoLightbox(true)}
+              title="Klik om te vergroten"
+            />
+          </div>
+        )}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="ig"><label className="ilbl">Bedrijfsnaam</label><input className="inp" value={profile.bedrijfsnaam} onChange={e=>setProfile({...profile,bedrijfsnaam:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">Sector</label><input className="inp" value={profile.sector} onChange={e=>setProfile({...profile,sector:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">Stad</label><input className="inp" value={profile.stad} onChange={e=>setProfile({...profile,stad:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">Adres</label><input className="inp" value={profile.adres} onChange={e=>setProfile({...profile,adres:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" value={profile.telefoon} onChange={e=>setProfile({...profile,telefoon:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={profile.email} onChange={e=>setProfile({...profile,email:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">KvK nummer</label><input className="inp" value={profile.kvk_nummer} onChange={e=>setProfile({...profile,kvk_nummer:e.target.value})} placeholder="12345678"/></div>
+          <div className="ig"><label className="ilbl">BTW nummer</label><input className="inp" value={profile.btw_nummer} onChange={e=>setProfile({...profile,btw_nummer:e.target.value})} placeholder="NL123456789B01"/></div>
+          <div className="ig"><label className="ilbl">Website</label><input className="inp" value={profile.website} onChange={e=>setProfile({...profile,website:e.target.value})} placeholder="https://jouwbedrijf.nl"/></div>
+          <div className="ig"><label className="ilbl">IBAN</label><input className="inp" value={profile.iban} onChange={e=>setProfile({...profile,iban:e.target.value})} placeholder="NL00 BANK 0000 0000 00"/></div>
+          <div className="ig"><label className="ilbl">Diensten</label><input className="inp" value={profile.diensten} onChange={e=>setProfile({...profile,diensten:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">Logo upload</label><input className="inp" type="file" accept="image/*" onChange={async(e)=>{
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => setProfile({...profile,logo: reader.result?.toString() || profile.logo});
+            reader.readAsDataURL(file);
+          }} /></div>
+        </div>
+      </div>
+      {saveMsg.text && (
+        <div style={{marginTop:12,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500,background:saveMsg.type==="ok"?"#DCFCE7":"#FEE2E2",color:saveMsg.type==="ok"?"#15803D":"#B91C1C"}}>
+          {saveMsg.text}
+        </div>
+      )}
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}><button className="btn btn-dark" onClick={saveProfile} disabled={saving}>{saving ? "Opslaan…" : "Opslaan"}</button></div>
+
+      <div className="sec-ttl" style={{marginTop:28}}>💳 Abonnement</div>
+      <div className="card cp" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:20,flexWrap:"wrap"}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15,color:"#111",marginBottom:4}}>WerkMate Pro — €99/maand</div>
+          <div style={{fontSize:13,color:"#64748B",lineHeight:1.5}}>14 dagen gratis uitproberen. Inclusief offertes, facturen, planning, CRM, AI assistent en meer.</div>
+        </div>
+        <a href={STRIPE_URL} target="_blank" rel="noopener noreferrer"
+          style={{display:"inline-block",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",color:"#fff",borderRadius:10,padding:"11px 22px",fontSize:13.5,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap",flexShrink:0}}>
+          🚀 Start 14 dagen gratis
+        </a>
+      </div>
+
+      {logoLightbox && (
+        <div
+          style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.9)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}}
+          onClick={() => setLogoLightbox(false)}
+        >
+          <img
+            src={profile.logo}
+            alt="Logo"
+            style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",borderRadius:12}}
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLogoLightbox(false)}
+            style={{position:"fixed",top:20,right:24,background:"none",border:"none",color:"#fff",fontSize:36,cursor:"pointer",lineHeight:1}}
+          >✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── AI Offerte ─────────────────────────────────────────────────
-function AIOfferte({ onClose, prijslijst, userId, onSaved }) {
-  const [step,setStep]=useState(0);const [vraag,setVraag]=useState("");const [loading,setLoading]=useState(false);const [off,setOff]=useState(null);
+function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
+  const [step,setStep]=useState(0);const [vraag,setVraag]=useState("");const [loading,setLoading]=useState(false);const [off,setOff]=useState(null);const [selectedKlantId,setSelectedKlantId]=useState("");const [newKlantEmail,setNewKlantEmail]=useState("");
+  const selectedKlant = klanten?.find(k=>k.id?.toString()===selectedKlantId);
+  useEffect(()=>{if(!selectedKlantId && klanten?.length){setSelectedKlantId(klanten[0].id?.toString()||"");} },[klanten, selectedKlantId]);
   const px=prijslijst.map(p=>`${p.dienst}: €${p.prijs} per ${p.eenheid}`).join(", ");
+
+  const recalcTotals = (offer) => {
+    if (!offer?.regels) return offer;
+    const subtotaal = offer.regels.reduce((sum,r) => {
+      const aantal = parseFloat(r.aantal) || 0;
+      const prijs = parseFloat(r.prijs) || 0;
+      return sum + aantal * prijs;
+    }, 0);
+    const btw = parseFloat((subtotaal * 0.21).toFixed(2));
+    const totaal = parseFloat((subtotaal + btw).toFixed(2));
+    return { ...offer, subtotaal, btw, totaal };
+  };
+
+  const updateOff = (patch) => setOff((prev) => prev ? recalcTotals({ ...prev, ...patch }) : prev);
+  const updateRule = (index, field, value) => setOff((prev) => {
+    if (!prev) return prev;
+    const regels = (prev.regels || []).map((regel, i) => i === index ? { ...regel, [field]: field === "aantal" || field === "prijs" ? Number(value) : value } : regel);
+    return recalcTotals({ ...prev, regels });
+  });
+  const addRule = () => setOff((prev) => {
+    const regels = [...(prev?.regels || []), { omschrijving: "Nieuwe regel", aantal: 1, eenheid: "uur", prijs: 0 }];
+    return recalcTotals({ ...(prev || {}), regels });
+  });
+  const removeRule = (index) => setOff((prev) => {
+    if (!prev) return prev;
+    const regels = (prev.regels || []).filter((_, i) => i !== index);
+    return recalcTotals({ ...prev, regels });
+  });
   const gen=async()=>{if(!vraag.trim())return;setLoading(true);setStep(1);
-    try{const txt=await aiCall(`Offerte-assistent voor vakman NL. Prijslijst: ${px}. Genereer voor: "${vraag}". ALLEEN JSON: {"dienst":"..","omschrijving":"2 zinnen","regels":[{"omschrijving":"..","aantal":1,"eenheid":"uur","prijs":85}],"subtotaal":285,"btw":59.85,"totaal":344.85,"geldigheid":"30 dagen","opmerkingen":"garantie"}`);
-    setOff(JSON.parse(txt.replace(/```json|```/g,"").trim()));setStep(2);}catch{setOff({dienst:"Fout",omschrijving:"Mislukt.",regels:[],subtotaal:0,btw:0,totaal:0});setStep(2);}setLoading(false);};
+    try{const txt=await aiCall(`Offerte-assistent voor vakman NL. Prijslijst: ${px}. Gebruik exact de prijzen uit deze prijslijst wanneer de dienst overeenkomt met een bestaande dienst. Genereer alleen nieuwe prijzen voor diensten die niet in de prijslijst staan. Nooit afwijken van de prijslijst prijzen. Genereer voor: "${vraag}". ALLEEN JSON: {"dienst":"..","omschrijving":"2 zinnen","regels":[{"omschrijving":"..","aantal":1,"eenheid":"uur","prijs":85}],"subtotaal":285,"btw":59.85,"totaal":344.85,"geldigheid":"30 dagen","opmerkingen":"garantie"}`);
+    setOff(recalcTotals(JSON.parse(txt.replace(/```json|```/g,"").trim())));setStep(2);}catch{setOff({dienst:"Fout",omschrijving:"Mislukt.",regels:[],subtotaal:0,btw:0,totaal:0});setStep(2);}setLoading(false);};
+
+  const sendOfferEmail = async (email, name, dienst, regels, subtotaal, btw, totaal) => {
+    const payload = {
+      action: "send-offer-email",
+      customer_email: email,
+      customer_name: name,
+      company_name: bedrijf?.bedrijfsnaam,
+      dienst,
+      regels,
+      subtotaal,
+      btw,
+      totaal,
+      attachments: [
+        {
+          type: "application/pdf",
+          filename: `offerte-${name.replace(/\s+/g, "_")}.pdf`,
+          content: createOfferPdfBase64({ klant: name, dienst, regels, subtotaal, btw, totaal }, bedrijf),
+        }
+      ]
+    };
+    const { data: { session: s } } = await supabase.auth.getSession();
+    const token = s?.access_token || import.meta.env.VITE_SUPABASE_KEY;
+    const response = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => null);
+    await logEmail(userId, email, `Offerte voor ${name}`, "offerte", `Offerte — ${dienst}`, response.ok ? "verzonden" : "mislukt");
+    return data;
+  };
 
   const opslaan = async () => {
     if (!off || !userId) return;
+    const updatedOff = recalcTotals(off);
+    setOff(updatedOff);
+    const klant = selectedKlant?.naam || vraag;
+    const klantEmail = selectedKlant?.email || newKlantEmail.trim();
     const vandaag = new Date().toLocaleDateString("nl-NL", {day:"numeric", month:"short"});
-    await supabase.from("offertes").insert({
+    console.log("AIOfferte opslaan: klant", klant, "klantEmail", klantEmail, "offerte", updatedOff);
+    const insertPayload = {
       user_id: userId,
-      klant: vraag,
-      dienst: off.dienst,
-      bedrag: `€ ${off.totaal}`,
+      klant,
+      dienst: updatedOff.dienst,
+      bedrag: `€ ${updatedOff.totaal}`,
       status: "In afwachting",
       datum: vandaag,
-    });
+      regels: updatedOff.regels || [],
+      subtotaal: updatedOff.subtotaal || 0,
+      btw: updatedOff.btw || 0,
+      totaal: updatedOff.totaal || 0,
+    };
+    console.log("offerte insert payload:", JSON.stringify(insertPayload, null, 2));
+    const insertResult = await supabase.from("offertes").insert(insertPayload);
+    console.log("AIOfferte opslaan: supabase insert result", insertResult);
+    if (klantEmail) {
+      try {
+        await sendOfferEmail(klantEmail, klant, off.dienst, off.regels || [], off.subtotaal, off.btw, off.totaal);
+      } catch (error) {
+        console.error("Kan offerte e-mail niet verzenden", error);
+      }
+    } else {
+      console.log("AIOfferte opslaan: klantEmail is empty, skipping sendOfferEmail", { selectedKlant, newKlantEmail });
+    }
     onSaved && onSaved();
     onClose();
   };
 
   return(<div className="overlay"><div className="modal">
-    <div className="mh"><div><div className="mt">✨ AI Offerte Generator</div><div className="ms">Gebruikt jouw prijslijst</div></div><button className="mc" onClick={onClose}>✕</button></div>
+    <div className="mh"><div><div className="mt">✨ Slimme offerte generator</div><div className="ms">Gebruikt jouw prijslijst</div></div><button className="mc" onClick={onClose}>✕</button></div>
     <div className="mb">
-      {step===0&&<><div className="ig"><label className="ilbl">Beschrijf de klantvraag</label><textarea className="inp" value={vraag} onChange={e=>setVraag(e.target.value)} placeholder="Bijv: CV ketel onderhoud Utrecht, klant Jan Vermeer"/></div><button className="btn btn-ai btn-full" onClick={gen} disabled={!vraag.trim()} style={{opacity:vraag.trim()?1:.5}}>✨ Genereer</button></>}
+      {step===0&&<><div className="ig"><label className="ilbl">Kies klant</label><select className="inp" value={selectedKlantId} onChange={e=>setSelectedKlantId(e.target.value)}>
+          <option value="">Nieuwe klant...</option>
+          {klanten?.map(k=> <option key={k.id} value={k.id?.toString()}>{k.naam}</option>)}
+        </select></div>
+        {!selectedKlant && <div className="ig"><label className="ilbl">Klant e-mail</label><input className="inp" value={newKlantEmail} onChange={e=>setNewKlantEmail(e.target.value)} placeholder="klant@email.nl"/></div>}
+        {selectedKlant && selectedKlant.email && <div className="ig"><label className="ilbl">Klant e-mail</label><input className="inp" value={selectedKlant.email} disabled /></div>}
+        <div className="ig"><label className="ilbl">Beschrijf de klantvraag</label><textarea className="inp" value={vraag} onChange={e=>setVraag(e.target.value)} placeholder="Bijv: CV ketel onderhoud Utrecht, klant Jan Vermeer"/></div><button className="btn btn-ai btn-full" onClick={gen} disabled={!vraag.trim()} style={{opacity:vraag.trim()?1:.5}}>✨ Maak offerte</button></>}
       {step===1&&<div style={{textAlign:"center",padding:"44px 0"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:16}}>Bezig<span className="dot">…</span></div></div>}
-      {step===2&&off&&<><div className="off-hdr"><div className="off-dienst">{off.dienst}</div><div className="off-omschr">{off.omschrijving}</div></div>
-        <div className="off-tbl"><table><thead><tr><th>Omschrijving</th><th style={{textAlign:"right"}}>Aantal</th><th style={{textAlign:"right"}}>Prijs</th><th style={{textAlign:"right"}}>Totaal</th></tr></thead>
-        <tbody>{off.regels?.map((r,i)=><tr key={i}><td>{r.omschrijving}</td><td style={{textAlign:"right",color:"#888"}}>{r.aantal} {r.eenheid}</td><td style={{textAlign:"right",color:"#888"}}>€ {r.prijs}</td><td style={{textAlign:"right",fontWeight:700}}>€ {(r.aantal*r.prijs).toFixed(2)}</td></tr>)}</tbody></table></div>
+      {step===2&&off&&<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+          <div className="ig"><label className="ilbl">Dienst</label><input className="inp" value={off.dienst} onChange={e=>updateOff({dienst:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">Offerte omschrijving</label><textarea className="inp" value={off.omschrijving} onChange={e=>updateOff({omschrijving:e.target.value})} rows={3} /></div>
+        </div>
+        <div className="off-tbl">
+          <div className="off-tbl-grid off-tbl-hdr">
+            <div className="off-cell">Omschrijving</div>
+            <div className="off-cell right">Aantal</div>
+            <div className="off-cell center">Eenheid</div>
+            <div className="off-cell right">Prijs</div>
+            <div className="off-cell right">Totaal</div>
+            <div className="off-cell del"></div>
+          </div>
+          {off.regels?.map((r,i)=><div key={i} className="off-tbl-grid off-tbl-row">
+            <div className="off-cell"><input className="off-inp" value={r.omschrijving} onChange={e=>updateRule(i,"omschrijving",e.target.value)} /></div>
+            <div className="off-cell"><input className="off-inp right" type="number" min="0" step="0.1" value={r.aantal} onChange={e=>updateRule(i,"aantal",e.target.value)} /></div>
+            <div className="off-cell center"><select className="off-inp center" value={r.eenheid} onChange={e=>updateRule(i,"eenheid",e.target.value)}>{["uur","st","m²","m","rit","dag","persoon","km"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+            <div className="off-cell"><input className="off-inp right" type="number" min="0" step="0.01" value={r.prijs} onChange={e=>updateRule(i,"prijs",e.target.value)} /></div>
+            <div className="off-cell off-cell-totaal">€{((Number(r.aantal)||0)*(Number(r.prijs)||0)).toFixed(2)}</div>
+            <div className="off-cell del"><button className="btn btn-danger btn-sm" onClick={()=>removeRule(i)}>✕</button></div>
+          </div>)}
+        </div>
+        <button className="btn btn-outline" style={{marginBottom:12}} onClick={addRule}>+ Regel toevoegen</button>
         <div className="tot-box"><div>Subtotaal: <strong>€ {off.subtotaal}</strong></div><div>BTW: <strong>€ {off.btw}</strong></div><div style={{fontSize:15,fontWeight:800,marginTop:3}}>Totaal: € {off.totaal}</div></div>
         {off.opmerkingen&&<div className="note-box">📝 {off.opmerkingen}</div>}
         <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setStep(0);setOff(null);setVraag("");}}>Opnieuw</button><button className="btn btn-ai" style={{flex:1,justifyContent:"center"}} onClick={opslaan}>💾 Opslaan & Verstuur</button></div>
@@ -373,13 +1130,14 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved }) {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────
-function DashboardTab({ openTab, bedrijf, offertes, planning, facturen }) {
+function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten }) {
   const hr=new Date().getHours();
   const gr=hr<12?"Goedemorgen":hr<18?"Goedemiddag":"Goedenavond";
   const openOffertes = offertes.filter(o=>o.status==="In afwachting").length;
-  const planningVandaag = planning.length;
-  const openFacturen = facturen.filter(f=>f.status==="Openstaand"||f.status==="Herinnering");
-  const openBedrag = openFacturen.reduce((sum,f)=>{const n=parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."));return sum+(isNaN(n)?0:n);},0);
+  const td=new Date();const todayStr=`${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+  const planningVandaag = planning.filter(p=>p.datum===todayStr).length;
+  const openFacturen = facturen.filter(f=>f.status==="Openstaand"||f.status==="Herinnering"||f.status==="Verstuurd");
+  const openBedrag = openFacturen.reduce((sum,f)=>{const t=f.totaal!=null?Number(f.totaal):parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."))||0;return sum+t;},0);
 
   return(<div>
     <div className="dash-banner">
@@ -395,19 +1153,19 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen }) {
         {label:"Offertes open",val:openOffertes.toString(),sub:"wachten op antwoord",color:"#6366F1"},
         {label:"Openstaand",val:openBedrag>0?`€ ${openBedrag.toLocaleString("nl-NL")}`:"€ 0",sub:`${openFacturen.length} factuur${openFacturen.length!==1?"en":""}`,color:"#F59E0B"},
         {label:"Opdrachten",val:planningVandaag.toString(),sub:"ingepland",color:"#0F0F14"},
-        {label:"Klanten",val:"-",sub:"zie CRM",color:"#10B981"},
+        {label:"Klanten",val:(klanten||[]).length.toString(),sub:"zie Klanten",color:"#10B981"},
       ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color}}>{s.val}</div><div className="ss">{s.sub}</div></div>)}
     </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       <div>
         <div className="sec-ttl">Planning vandaag</div>
-        {planning.length===0
-          ? <div className="card cp leeg"><div className="leeg-icon">📅</div><div className="leeg-title">Geen opdrachten</div><div className="leeg-sub">Voeg opdrachten toe via Planning</div></div>
-          : <div style={{display:"flex",flexDirection:"column",gap:8}}>{planning.slice(0,3).map((item,i)=><div className="pc" key={i}><div className="tp">{item.tijd}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:13.5}}>{item.klant}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{item.dienst}</div></div><Badge status={item.status}/></div>)}</div>
+        {planning.filter(p=>p.datum===todayStr).length===0
+          ? <div className="card cp leeg"><div className="leeg-icon">📅</div><div className="leeg-title">Geen opdrachten vandaag</div><div className="leeg-sub">Voeg opdrachten toe via Planning</div></div>
+          : <div style={{display:"flex",flexDirection:"column",gap:8}}>{planning.filter(p=>p.datum===todayStr).slice(0,3).map((item,i)=><div className="pc" key={i}><div className="tp">{item.tijd}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:13.5}}>{item.klant}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{item.dienst}</div></div><Badge status={item.status}/></div>)}</div>
         }
       </div>
       <div><div className="sec-ttl">Snelle acties</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-        {[{icon:"✨",label:"AI Offerte",tab:"offertes",bg:"#EEF2FF",border:"#C7D2FE",col:"#6366F1"},{icon:"✉️",label:"Mail",tab:"mail",bg:"#F0FDF4",border:"#BBF7D0",col:"#16A34A"},{icon:"📱",label:"Social post",tab:"social",bg:"#FFF7ED",border:"#FED7AA",col:"#EA580C"},{icon:"🌐",label:"Website & SEO",tab:"website",bg:"#F8F0FF",border:"#E9D5FF",col:"#7C3AED"}]
+        {[{icon:"✨",label:"Slimme offerte",tab:"offertes",bg:"#EEF2FF",border:"#C7D2FE",col:"#6366F1"},{icon:"✉️",label:"Mail",tab:"mail",bg:"#F0FDF4",border:"#BBF7D0",col:"#16A34A"},{icon:"📱",label:"Social post",tab:"social",bg:"#FFF7ED",border:"#FED7AA",col:"#EA580C"}]
           .map(a=><button key={a.tab} onClick={()=>openTab(a.tab)} style={{background:a.bg,border:`1.5px solid ${a.border}`,borderRadius:11,padding:"14px",cursor:"pointer",textAlign:"center",fontFamily:"'DM Sans',sans-serif",transition:"all .14s"}} onMouseOver={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseOut={e=>e.currentTarget.style.transform="none"}>
             <div style={{fontSize:22,marginBottom:5}}>{a.icon}</div><div style={{fontSize:12.5,fontWeight:700,color:a.col}}>{a.label}</div>
           </button>)}
@@ -417,28 +1175,126 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen }) {
 }
 
 // ── Offertes ──────────────────────────────────────────────────
-function OfferteTab({ prijslijst, userId, offertes, refresh }) {
+function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf }) {
   const [showAI,setShowAI]=useState(false);
-  const totaal = offertes.reduce((s,o)=>{const n=parseFloat((o.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."));return s+(isNaN(n)?0:n);},0);
+  const totaal = offertes.reduce((s,o)=>{
+    const bedrag = (o.bedrag||"0").replace(/[€\s]/g, "");
+    const clean = bedrag.includes(",") ? bedrag.replace(/\./g, "").replace(",", ".") : bedrag;
+    const n = parseFloat(clean);
+    return s + (isNaN(n) ? 0 : n);
+  }, 0);
+
+  const formatMoney = (value) => {
+    const num = typeof value === "string"
+      ? parseFloat(value.toString().replace(/[€\s]/g, "").replace(/,/g, "."))
+      : Number(value);
+    return isNaN(num)
+      ? "0,00"
+      : num.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const parseOfferRules = (offer) => {
+    if (!offer) return [];
+    if (Array.isArray(offer.regels)) return offer.regels;
+    if (typeof offer.regels === "string") {
+      try { return JSON.parse(offer.regels); } catch { }
+    }
+    if (offer.regels && typeof offer.regels === "object") return [offer.regels];
+    const prijs = parseFloat((offer.bedrag||"0").replace(/[€\s]/g, "").replace(/,/g, "."));
+    return [{ omschrijving: offer.dienst || "Offerte", aantal: 1, eenheid: "", prijs: isNaN(prijs) ? 0 : prijs }];
+  };
+
+  const exportOfferPdf = (offer) => {
+    const company = {
+      bedrijfsnaam: bedrijf?.bedrijfsnaam || "WerkMate Bedrijf",
+      telefoon: bedrijf?.telefoon || "",
+      email: bedrijf?.email || "",
+      adres: bedrijf?.adres || "",
+    };
+    const regels = parseOfferRules(offer);
+    const subtotal = offer.subtotaal != null ? Number(offer.subtotaal) : regels.reduce((sum, r) => sum + ((Number(r.aantal) || 0) * (Number(r.prijs) || 0)), 0);
+    const btw = offer.btw != null ? Number(offer.btw) : Math.round(subtotal * 0.21 * 100) / 100;
+    const totaalValue = offer.totaal != null ? Number(offer.totaal) : subtotal + btw;
+    const today = new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text(company.bedrijfsnaam, 20, 25);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Datum: ${today}`, 20, 34);
+    doc.text(`Offerte voor: ${offer.klant || "klant"}`, 20, 42);
+    doc.text(`Geachte ${offer.klant || "heer/mevrouw"},`, 20, 52);
+    doc.text(`Hierbij ontvangt u onze offerte voor ${offer.dienst || "uw aanvraag"}.`, 20, 58);
+
+    const startY = 70;
+    const rowX = [20, 85, 115, 145, 175];
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Omschrijving", rowX[0], startY);
+    doc.text("Aantal", rowX[1], startY);
+    doc.text("Eenheid", rowX[2], startY);
+    doc.text("Prijs", rowX[3], startY);
+    doc.text("Totaal", rowX[4], startY);
+    doc.setDrawColor(200);
+    doc.line(20, startY + 2, 190, startY + 2);
+
+    let y = startY + 10;
+    doc.setFont("helvetica", "normal");
+    regels.forEach((regel) => {
+      const regelTotaal = (Number(regel.aantal) || 0) * (Number(regel.prijs) || 0);
+      doc.text(String(regel.omschrijving || ""), rowX[0], y);
+      doc.text(String(regel.aantal || ""), rowX[1], y, { align: "right" });
+      doc.text(String(regel.eenheid || ""), rowX[2], y, { align: "right" });
+      doc.text(`€ ${formatMoney(regel.prijs)}`, rowX[3], y, { align: "right" });
+      doc.text(`€ ${formatMoney(regelTotaal)}`, rowX[4], y, { align: "right" });
+      y += 8;
+      if (y > 250) {
+        doc.addPage();
+        y = 20;
+      }
+    });
+
+    const summaryY = y + 12;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Subtotaal:`, 140, summaryY);
+    doc.text(`€ ${formatMoney(subtotal)}`, 190, summaryY, { align: "right" });
+    doc.text(`BTW (21%):`, 140, summaryY + 8);
+    doc.text(`€ ${formatMoney(btw)}`, 190, summaryY + 8, { align: "right" });
+    doc.setFontSize(13);
+    doc.text(`Totaal:`, 140, summaryY + 18);
+    doc.text(`€ ${formatMoney(totaalValue)}`, 190, summaryY + 18, { align: "right" });
+
+    const footerY = summaryY + 34;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Contact", 20, footerY);
+    doc.text(`Telefoon: ${company.telefoon}`, 20, footerY + 6);
+    doc.text(`Email: ${company.email}`, 20, footerY + 12);
+    doc.text(`Adres: ${company.adres}`, 20, footerY + 18);
+
+    doc.save(`${(offer.klant || "offerte").replace(/\s+/g, "_")}_offerte.pdf`);
+  };
 
   return(<div>
-    {showAI&&<AIOfferte onClose={()=>setShowAI(false)} prijslijst={prijslijst} userId={userId} onSaved={refresh}/>}
-    <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><button className="btn btn-ai" onClick={()=>setShowAI(true)}>✨ AI Offerte</button></div>
+    {showAI&&<AIOfferte onClose={()=>setShowAI(false)} prijslijst={prijslijst} userId={userId} klanten={klanten} onSaved={refresh} bedrijf={bedrijf}/>}
+    <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><button className="btn btn-ai" onClick={()=>setShowAI(true)}>✨ Slimme offerte</button></div>
     <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr 1fr"}}>
       {[
         {label:"In afwachting",val:offertes.filter(o=>o.status==="In afwachting").length,color:"#F59E0B"},
         {label:"Ondertekend",val:offertes.filter(o=>o.status==="Ondertekend").length,color:"#10B981"},
         {label:"Verstuurd",val:offertes.filter(o=>o.status==="Verstuurd").length,color:"#3B82F6"},
-        {label:"Totaal",val:`€ ${totaal.toLocaleString("nl-NL")}`,color:"#0F0F14"},
+        {label:"Totaal",val:`€ ${totaal.toLocaleString("nl-NL", {minimumFractionDigits:2, maximumFractionDigits:2})}` ,color:"#0F0F14"},
       ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color,fontSize:19}}>{s.val}</div></div>)}
     </div>
     {offertes.length===0
-      ? <LeegScherm icon="📋" titel="Nog geen offertes" sub="Maak je eerste offerte met de AI generator" actie="✨ AI Offerte maken" onActie={()=>setShowAI(true)}/>
-      : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+      ? <LeegScherm icon="📋" titel="Nog geen offertes" sub="Maak je eerste offerte met de slimme generator" actie="✨ Slimme offerte maken" onActie={()=>setShowAI(true)}/>
+      : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
           <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
-            <td><select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
+            <td style={{display:"flex",alignItems:"center",gap:8}}><button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button><select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
               {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
-            </select></td>
+            </select><button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}>✕</button></td>
           </tr>)}</tbody>
         </table></div></div>
     }
@@ -446,17 +1302,60 @@ function OfferteTab({ prijslijst, userId, offertes, refresh }) {
 }
 
 // ── Prijslijst ────────────────────────────────────────────────
-function PrijslijstTab() {
-  const [items,setItems]=useState(DEFAULT_PRIJSLIJST);const [saved,setSaved]=useState(false);const [showAdd,setShowAdd]=useState(false);const [nieuw,setNieuw]=useState({dienst:"",eenheid:"uur",prijs:"",categorie:"Arbeid"});
+function PrijslijstTab({ initialItems, onSaveItems }) {
+  const [items,setItems]=useState(initialItems || []);
+  const [saved,setSaved]=useState(false);
+  const [showAdd,setShowAdd]=useState(false);
+  const [nieuw,setNieuw]=useState({dienst:"",eenheid:"uur",prijs:"",categorie:"Arbeid"});
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    setItems(initialItems || []);
+  }, [initialItems]);
   const upd=(id,f,v)=>setItems(p=>p.map(x=>x.id===id?{...x,[f]:v}:x));
   const del=(id)=>setItems(p=>p.filter(x=>x.id!==id));
-  const save=()=>{setSaved(true);setTimeout(()=>setSaved(false),2000);};
+  const save=()=>{
+    onSaveItems?.(items);
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2000);
+  };
   const add=()=>{if(!nieuw.dienst||!nieuw.prijs)return;setItems(p=>[...p,{...nieuw,id:Date.now(),prijs:parseFloat(nieuw.prijs)}]);setNieuw({dienst:"",eenheid:"uur",prijs:"",categorie:"Arbeid"});setShowAdd(false);};
   const cats=[...new Set(items.map(i=>i.categorie))];
+
+  const parsePrice = (value) => {
+    const parsed = parseFloat(String(value || "").toString().replace(/,/g, ".").replace(/[^0-9.\-]/g, ""));
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const importFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    const imported = rows.map((row, index) => {
+      const dienst = String(row.dienst || row.Dienst || row.service || row.Service || "").trim();
+      if (!dienst) return null;
+      return {
+        id: Date.now() + index,
+        dienst,
+        prijs: parsePrice(row.prijs || row.Prijs || row.price || row.Price),
+        eenheid: String(row.eenheid || row.Eenheid || row.unit || row.Unit || "uur").trim() || "uur",
+        categorie: "Overig",
+      };
+    }).filter(Boolean);
+    if (imported.length > 0) {
+      setItems((current) => [...current, ...imported]);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
+    event.target.value = "";
+  };
   return(<div>
-    <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — AI gebruikt deze bij offertes</div></div><div style={{display:"flex",gap:8}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}>+ Dienst</button><button className="btn btn-dark" onClick={save}>{saved?"✓ Opgeslagen!":"Opslaan"}</button></div></div>
+    <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — de slimme generator gebruikt deze als basis</div></div><div style={{display:"flex",gap:8,alignItems:"center"}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}>+ Dienst</button><button className="btn btn-outline" onClick={()=>fileInputRef.current?.click()}>Excel importeren</button><button className="btn btn-dark" onClick={save}>{saved?"✓ Opgeslagen!":"Opslaan"}</button><input ref={fileInputRef} type="file" accept=".xlsx,.csv" style={{display:"none"}} onChange={importFile} /></div></div>
     <div className="card cp">
-      <div style={{background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:9,padding:"10px 13px",marginBottom:18,fontSize:12.5,color:"#4338CA"}}>💡 De AI-offerte generator gebruikt jouw tarieven automatisch als basis.</div>
+      <div style={{background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:9,padding:"10px 13px",marginBottom:18,fontSize:12.5,color:"#4338CA"}}>💡 De slimme offerte generator gebruikt jouw tarieven automatisch als basis.</div>
       {cats.map(cat=><div key={cat} style={{marginBottom:20}}>
         <div style={{fontSize:10.5,fontWeight:700,letterSpacing:".7px",textTransform:"uppercase",color:"#94A3B8",marginBottom:8}}>{cat}</div>
         {items.filter(i=>i.categorie===cat).map(item=><div key={item.id} className="pl-row">
@@ -482,43 +1381,213 @@ function PrijslijstTab() {
 }
 
 // ── Planning ──────────────────────────────────────────────────
-function PlanningTab({ userId, planning, refresh }) {
+function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planningCats }) {
+  const td=new Date();
+  const todayStr=`${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+  const [view,setView]=useState("month");
+  const [cursor,setCursor]=useState(new Date());
   const [showAdd,setShowAdd]=useState(false);
-  const [nieuw,setNieuw]=useState({tijd:"08:00",klant:"",adres:"",dienst:"",status:"Ingepland"});
-  const vd=new Date().toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"});
+  const [showCats,setShowCats]=useState(false);
+  const [saveErr,setSaveErr]=useState("");
+  const [filterMedewerker,setFilterMedewerker]=useState(null);
+  const [nieuw,setNieuw]=useState({datum:todayStr,tijd:"08:00",eindtijd:"",klant:"",adres:"",dienst:"",status:"Ingepland",herhaal:"",categorie:"",medewerker:""});
+  const [newCat,setNewCat]=useState({naam:"",kleur:"#6366F1"});
+  const DAYS=["Ma","Di","Wo","Do","Vr","Za","Zo"];
+  const MONTHS=["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
+  const MC=["#6366F1","#8B5CF6","#EC4899","#14B8A6","#F59E0B","#10B981","#3B82F6","#EF4444"];
+  const fmtDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const memberColor=email=>MC[email.split("").reduce((a,c)=>a+c.charCodeAt(0),0)%MC.length];
+  const initials=email=>email.split("@")[0].slice(0,2).toUpperCase();
+  const catColor=t=>planningCats.find(c=>c.naam===t.categorie)?.kleur||null;
+  const tasksFor=ds=>planning.filter(p=>p.datum===ds&&(!filterMedewerker||p.medewerker===filterMedewerker)).sort((a,b)=>a.tijd>b.tijd?1:-1);
+  const openAdd=ds=>{setSaveErr("");setNieuw({datum:ds,tijd:"08:00",eindtijd:"",klant:"",adres:"",dienst:"",status:"Ingepland",herhaal:"",categorie:"",medewerker:""});setShowAdd(true);};
 
-  const add = async () => {
-    if(!nieuw.klant||!nieuw.dienst) return;
-    await supabase.from("planning").insert({...nieuw, user_id:userId});
-    setNieuw({tijd:"08:00",klant:"",adres:"",dienst:"",status:"Ingepland"});
-    setShowAdd(false);
+  // Dutch public holidays via Meeus/Jones/Butcher Easter algorithm
+  const easterDate=yr=>{
+    const a=yr%19,b=Math.floor(yr/100),c=yr%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),dy=((h+l-7*m+114)%31)+1;
+    return new Date(yr,mo-1,dy);
+  };
+  const getHolidays=yr=>{
+    const e=easterDate(yr);const ad=(d,n)=>{const r=new Date(d);r.setDate(d.getDate()+n);return r;};
+    const kd=new Date(yr,3,27).getDay()===0?new Date(yr,3,26):new Date(yr,3,27);
+    const h={};[[new Date(yr,0,1),"Nieuwjaarsdag"],[ad(e,-2),"Goede Vrijdag"],[e,"1e Paasdag"],[ad(e,1),"2e Paasdag"],[kd,"Koningsdag"],[new Date(yr,4,5),"Bevrijdingsdag"],[ad(e,39),"Hemelvaartsdag"],[ad(e,49),"1e Pinksterdag"],[ad(e,50),"2e Pinksterdag"],[new Date(yr,11,25),"1e Kerstdag"],[new Date(yr,11,26),"2e Kerstdag"]].forEach(([d,n])=>h[fmtDate(d)]=n);
+    return h;
+  };
+
+  const add=async()=>{
+    if(!nieuw.klant||!nieuw.dienst)return;
+    setSaveErr("");
+    const base=new Date(nieuw.datum+"T00:00:00");
+    const count=nieuw.herhaal==="daily"?365:nieuw.herhaal==="weekly"?52:nieuw.herhaal==="biweekly"?26:nieuw.herhaal==="monthly"?12:1;
+    const rows=Array.from({length:count},(_,i)=>{
+      const d=new Date(base);
+      if(nieuw.herhaal==="daily")d.setDate(base.getDate()+i);
+      else if(nieuw.herhaal==="weekly")d.setDate(base.getDate()+i*7);
+      else if(nieuw.herhaal==="biweekly")d.setDate(base.getDate()+i*14);
+      else if(nieuw.herhaal==="monthly")d.setMonth(base.getMonth()+i);
+      return{datum:fmtDate(d),tijd:nieuw.tijd,eindtijd:nieuw.eindtijd||null,klant:nieuw.klant,adres:nieuw.adres,dienst:nieuw.dienst,status:nieuw.status,herhaal:nieuw.herhaal||null,categorie:nieuw.categorie||null,medewerker:nieuw.medewerker||null,user_id:userId};
+    });
+    const{error}=await supabase.from("planning").insert(rows);
+    if(error){setSaveErr(error.message);return;}
+    setNieuw({datum:todayStr,tijd:"08:00",eindtijd:"",klant:"",adres:"",dienst:"",status:"Ingepland",herhaal:"",categorie:"",medewerker:""});
+    setShowAdd(false);refresh();
+  };
+
+  const addCat=async()=>{
+    if(!newCat.naam.trim())return;
+    await supabase.from("planning_categorieen").insert({naam:newCat.naam.trim(),kleur:newCat.kleur,user_id:userId});
+    setNewCat({naam:"",kleur:"#6366F1"});refresh();
+  };
+  const deleteCat=async id=>{await supabase.from("planning_categorieen").delete().eq("id",id);refresh();};
+
+  const markDone=async(e,id,cur)=>{
+    e.stopPropagation();
+    await supabase.from("planning").update({status:cur==="Klaar"?"Ingepland":"Klaar"}).eq("id",id);
+    refresh();
+  };
+  const verwijder=async id=>{await supabase.from("planning").delete().eq("id",id);refresh();};
+  const verwijderHerhaling=async t=>{
+    if(!t.herhaal)return;
+    if(!window.confirm(`Alle herhalingen van "${t.dienst}" (${t.klant}) verwijderen?`))return;
+    await supabase.from("planning").delete().eq("user_id",userId).eq("klant",t.klant).eq("dienst",t.dienst).eq("tijd",t.tijd).eq("herhaal",t.herhaal);
     refresh();
   };
 
-  const verwijder = async (id) => {
-    await supabase.from("planning").delete().eq("id",id);
-    refresh();
-  };
+  const prev=()=>view==="month"?setCursor(c=>new Date(c.getFullYear(),c.getMonth()-1,1)):setCursor(c=>{const n=new Date(c);n.setDate(c.getDate()-7);return n;});
+  const next=()=>view==="month"?setCursor(c=>new Date(c.getFullYear(),c.getMonth()+1,1)):setCursor(c=>{const n=new Date(c);n.setDate(c.getDate()+7);return n;});
+  const yr=cursor.getFullYear(),mo=cursor.getMonth();
+  const mon=new Date(cursor);mon.setDate(cursor.getDate()-(cursor.getDay()+6)%7);
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  const navTitle=view==="month"?`${MONTHS[mo]} ${yr}`:`${mon.getDate()} – ${sun.getDate()} ${MONTHS[sun.getMonth()]} ${sun.getFullYear()}`;
+  const holidays=Object.assign({},getHolidays(yr),mo===0?getHolidays(yr-1):{},mo===11?getHolidays(yr+1):{});
+  const tc=s=>`cal-task${s==="Onderweg"?" onderweg":s==="Klaar"?" klaar":""}`;
+  const offset=(new Date(yr,mo,1).getDay()+6)%7;
+  const cells=[...Array(offset).fill(null),...Array.from({length:new Date(yr,mo+1,0).getDate()},(_,i)=>i+1)];
+  while(cells.length%7)cells.push(null);
 
   return(<div>
-    <div className="ph"><div><div className="pg-title">Planning</div><div className="pg-sub" style={{textTransform:"capitalize"}}>{vd}</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Opdracht</button></div>
-    <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>
-      {[{label:"Opdrachten",val:planning.length.toString()},{label:"Onderweg",val:planning.filter(p=>p.status==="Onderweg").length.toString()},{label:"Ingepland",val:planning.filter(p=>p.status==="Ingepland").length.toString()}]
-        .map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv">{s.val}</div></div>)}
+    <div className="ph">
+      <div><div className="pg-title">Planning</div><div className="pg-sub">{planning.length} opdrachten totaal</div></div>
+      <div style={{display:"flex",gap:8}}>
+        <div className="cal-view-toggle">
+          <button className={`cal-vt-btn${view==="month"?" on":""}`} onClick={()=>setView("month")}>Maand</button>
+          <button className={`cal-vt-btn${view==="week"?" on":""}`} onClick={()=>setView("week")}>Week</button>
+        </div>
+        <button className="btn btn-ghost" onClick={()=>setShowCats(true)} title="Categorieën beheren">🏷️ Categorieën</button>
+        <button className="btn btn-dark" onClick={()=>openAdd(todayStr)}>+ Opdracht</button>
+      </div>
     </div>
-    {planning.length===0
-      ? <LeegScherm icon="📅" titel="Geen opdrachten" sub="Voeg je eerste opdracht toe" actie="+ Opdracht toevoegen" onActie={()=>setShowAdd(true)}/>
-      : <div style={{display:"flex",flexDirection:"column",gap:10}}>{planning.map((item)=><div className="pc" key={item.id}><div className="tp">{item.tijd}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{item.klant}</div><div style={{fontSize:13,color:"#555",marginTop:2}}>{item.dienst}</div>{item.adres&&<div style={{fontSize:12,color:"#94A3B8",marginTop:4}}>📍 {item.adres} <a href={"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(item.adres)} target="_blank" style={{color:"#6366F1",fontWeight:600,marginLeft:6}}>🗺️ Route</a></div>}</div><Badge status={item.status}/><button className="btn btn-danger btn-sm" onClick={()=>verwijder(item.id)}>✕</button></div>)}</div>
-    }
+    <div className="cal-wrap">
+      <div className="cal-nav">
+        <button className="cal-nav-btn" onClick={prev}>‹</button>
+        <span className="cal-title">{navTitle}</span>
+        <button className="cal-nav-btn" onClick={next}>›</button>
+      </div>
+      {teamMembers.length>0&&<div className="cal-filter-bar">
+        <span className="cal-filter-lbl">Team</span>
+        <button className={`cal-fp${!filterMedewerker?" on":""}`} onClick={()=>setFilterMedewerker(null)}>Iedereen</button>
+        {teamMembers.map(m=><button key={m.id} className={`cal-fp${filterMedewerker===m.email?" on":""}`} onClick={()=>setFilterMedewerker(filterMedewerker===m.email?null:m.email)}>
+          <span className="cal-fp-av" style={{background:memberColor(m.email)}}>{initials(m.email)}</span>
+          {m.email.split("@")[0]}
+        </button>)}
+      </div>}
+      {view==="month"?(<>
+        <div className="cal-dow">{DAYS.map(d=><div key={d} className="cal-dow-cell">{d}</div>)}</div>
+        <div className="cal-grid">{cells.map((day,i)=>{
+          if(!day)return<div key={i} className="cal-day empty"/>;
+          const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          const tasks=tasksFor(ds);const holiday=holidays[ds];
+          return<div key={i} className={`cal-day${ds===todayStr?" today":""}${holiday?" feestdag":""}`} onClick={()=>openAdd(ds)}>
+            <div className="cal-dn">{day}</div>
+            {holiday&&<div className="cal-feestdag">{holiday}</div>}
+            {tasks.slice(0,2).map(t=>{
+              const cc=catColor(t);
+              return<div key={t.id} className={tc(t.status)} style={{...(cc&&t.status!=="Klaar"?{background:cc+"22",color:cc}:{}),display:"flex",alignItems:"center",justifyContent:"space-between",gap:2}} onClick={e=>markDone(e,t.id,t.status)}>
+                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.status==="Klaar"?"✓ ":"· "}{t.tijd} {t.klant}</span>
+                {t.adres&&<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.adres)}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{flexShrink:0,fontSize:10,textDecoration:"none"}} title={t.adres}>📍</a>}
+              </div>;
+            })}
+            {tasks.length>2&&<div className="cal-more">+{tasks.length-2} meer</div>}
+          </div>;
+        })}</div>
+      </>):(<div className="cal-week">{Array.from({length:7},(_,i)=>{
+        const d=new Date(mon);d.setDate(mon.getDate()+i);
+        const ds=fmtDate(d);const tasks=tasksFor(ds);const isToday=ds===todayStr;const holiday=holidays[ds];
+        return<div key={i} className="cal-week-col">
+          <div className={`cal-week-hdr${isToday?" today":""}${holiday?" feestdag":""}`} onClick={()=>openAdd(ds)}>
+            <div className="cal-week-day">{DAYS[i]}</div>
+            <div className="cal-week-dn">{d.getDate()}</div>
+            {holiday&&<div className="cal-week-feestdag">{holiday}</div>}
+          </div>
+          <div className="cal-week-tasks">
+            {tasks.map(t=>{
+              const cc=catColor(t);
+              const ws=cc&&t.status!=="Klaar"?{background:cc+"18",borderLeft:`3px solid ${cc}`,color:cc}:{};
+              return<div key={t.id} className={`cal-task-wk${t.status==="Onderweg"?" onderweg":t.status==="Klaar"?" klaar":""}`} style={ws}>
+                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:4}}>
+                  <div style={{minWidth:0}}>
+                    <div className="cal-task-time">{t.eindtijd?`${t.tijd}–${t.eindtijd}`:t.tijd}</div>
+                    <div className="cal-task-name">{t.klant}</div>
+                    <div className="cal-task-dienst">{t.dienst}</div>
+                    {t.medewerker&&<div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}>
+                      <span className="cal-task-av" style={{background:memberColor(t.medewerker)}}>{initials(t.medewerker)}</span>
+                      <span style={{fontSize:10,opacity:.75}}>{t.medewerker.split("@")[0]}</span>
+                    </div>}
+                    {t.herhaal&&<div className="cal-herhaal-tag">↺ {t.herhaal==="daily"?"Dagelijks":t.herhaal==="weekly"?"Wekelijks":t.herhaal==="biweekly"?"2-wekelijks":"Maandelijks"}</div>}
+                    {t.adres&&<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.adres)}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{display:"inline-flex",alignItems:"center",gap:3,marginTop:4,fontSize:10.5,fontWeight:600,color:"#6366F1",textDecoration:"none",opacity:.9}}>📍 Navigeer</a>}
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    <button className="cal-done-btn" onClick={e=>markDone(e,t.id,t.status)} title={t.status==="Klaar"?"Zet open":"Markeer klaar"}>{t.status==="Klaar"?"✓":"○"}</button>
+                    <button onClick={e=>{e.stopPropagation();if(window.confirm("Opdracht verwijderen?"))verwijder(t.id);}} style={{background:"none",border:"1.5px solid currentColor",borderRadius:"50%",width:18,height:18,minWidth:18,cursor:"pointer",fontSize:9,display:"flex",alignItems:"center",justifyContent:"center",padding:0,opacity:.45,transition:"all .14s",flexShrink:0,color:"currentColor"}} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=.45}>✕</button>
+                    {t.herhaal&&<button onClick={e=>{e.stopPropagation();verwijderHerhaling(t);}} title="Verwijder alle herhalingen" style={{background:"none",border:"1.5px solid currentColor",borderRadius:4,width:18,height:18,minWidth:18,cursor:"pointer",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",padding:0,opacity:.45,transition:"all .14s",flexShrink:0,color:"currentColor"}} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=.45}>↺✕</button>}
+                  </div>
+                </div>
+              </div>;
+            })}
+          </div>
+        </div>;
+      })}</div>)}
+    </div>
+
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Opdracht toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <div className="ig"><label className="ilbl">Tijd</label><input className="inp" type="time" value={nieuw.tijd} onChange={e=>setNieuw({...nieuw,tijd:e.target.value})}/></div>
-        <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Ingepland","Onderweg","Klaar"].map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="ig"><label className="ilbl">Datum</label><input className="inp" type="date" value={nieuw.datum} onChange={e=>setNieuw({...nieuw,datum:e.target.value})}/></div>
+        <div className="ig"><label className="ilbl">Starttijd</label><input className="inp" type="time" value={nieuw.tijd} onChange={e=>setNieuw({...nieuw,tijd:e.target.value})}/></div>
+        <div className="ig"><label className="ilbl">Eindtijd</label><input className="inp" type="time" value={nieuw.eindtijd||""} onChange={e=>setNieuw({...nieuw,eindtijd:e.target.value})}/></div>
       </div>
-      <div className="ig"><label className="ilbl">Klant</label><input className="inp" value={nieuw.klant} onChange={e=>setNieuw({...nieuw,klant:e.target.value})} placeholder="Naam klant"/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Ingepland","Onderweg","Klaar"].map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="ig"><label className="ilbl">Herhaling</label><select className="inp" value={nieuw.herhaal} onChange={e=>setNieuw({...nieuw,herhaal:e.target.value})}><option value="">Geen herhaling</option><option value="daily">Dagelijks (365×)</option><option value="weekly">Wekelijks (52×)</option><option value="biweekly">Elke 2 weken (26×)</option><option value="monthly">Maandelijks (12×)</option></select></div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="ig">
+          <label className="ilbl">Categorie</label>
+          <div style={{display:"flex",alignItems:"center",gap:7}}>
+            {nieuw.categorie&&<span style={{width:14,height:14,borderRadius:"50%",background:catColor({categorie:nieuw.categorie})||"#E5E7EB",flexShrink:0,display:"inline-block"}}/>}
+            <select className="inp" style={{flex:1}} value={nieuw.categorie} onChange={e=>setNieuw({...nieuw,categorie:e.target.value})}><option value="">Geen categorie</option>{planningCats.map(c=><option key={c.id} value={c.naam}>{c.naam}</option>)}</select>
+          </div>
+        </div>
+        <div className="ig"><label className="ilbl">Medewerker</label><select className="inp" value={nieuw.medewerker} onChange={e=>setNieuw({...nieuw,medewerker:e.target.value})}><option value="">Niet toegewezen</option>{teamMembers.map(m=><option key={m.id} value={m.email}>{m.email.split("@")[0]}</option>)}</select></div>
+      </div>
+      <div className="ig"><label className="ilbl">Klant</label><select className="inp" value={nieuw.klant} onChange={e=>{const k=klanten.find(k=>k.naam===e.target.value);setNieuw({...nieuw,klant:e.target.value,adres:k?.adres||nieuw.adres})}}><option value="">-- Kies klant --</option>{(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}</select></div>
       <div className="ig"><label className="ilbl">Dienst</label><input className="inp" value={nieuw.dienst} onChange={e=>setNieuw({...nieuw,dienst:e.target.value})} placeholder="Wat ga je doen?"/></div>
       <div className="ig"><label className="ilbl">Adres</label><input className="inp" value={nieuw.adres} onChange={e=>setNieuw({...nieuw,adres:e.target.value})} placeholder="Straat, Stad"/></div>
-      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.klant||!nieuw.dienst}>Toevoegen</button></div>
+      {saveErr&&<div style={{color:"#991B1B",background:"#FEE2E2",borderRadius:7,padding:"8px 12px",fontSize:12,marginBottom:12}}>{saveErr}</div>}
+      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.klant||!nieuw.dienst}>{nieuw.herhaal?"Herhaling aanmaken":"Toevoegen"}</button></div>
+    </div></div></div>}
+
+    {showCats&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Categorieën</div><div className="ms">Kleurcodering voor taken in de kalender</div></div><button className="mc" onClick={()=>setShowCats(false)}>✕</button></div><div className="mb">
+      {planningCats.length===0&&<div style={{color:"#94A3B8",fontSize:13,textAlign:"center",padding:"8px 0 16px"}}>Nog geen categorieën — voeg er hieronder een toe</div>}
+      {planningCats.map(c=><div key={c.id} className="cat-row">
+        <span className="cat-swatch" style={{background:c.kleur}}/>
+        <span style={{flex:1,fontSize:13.5,fontWeight:600,color:"#111"}}>{c.naam}</span>
+        <button className="btn btn-danger btn-sm" onClick={()=>deleteCat(c.id)}>✕</button>
+      </div>)}
+      <div style={{display:"flex",gap:8,marginTop:16,alignItems:"center"}}>
+        <input type="color" value={newCat.kleur} onChange={e=>setNewCat({...newCat,kleur:e.target.value})} className="cat-inp-color" title="Kies kleur"/>
+        <input className="inp" style={{flex:1}} value={newCat.naam} onChange={e=>setNewCat({...newCat,naam:e.target.value})} placeholder="Naam (bijv. Installatie, Onderhoud…)" onKeyDown={e=>e.key==="Enter"&&addCat()}/>
+        <button className="btn btn-dark" onClick={addCat} disabled={!newCat.naam.trim()}>+ Toevoegen</button>
+      </div>
     </div></div></div>}
   </div>);
 }
@@ -527,14 +1596,43 @@ function PlanningTab({ userId, planning, refresh }) {
 function CRMTab({ userId, klanten, refresh }) {
   const [q,setQ]=useState("");
   const [showAdd,setShowAdd]=useState(false);
-  const [nieuw,setNieuw]=useState({naam:"",tel:"",email:"",status:"Actief"});
+  const [showEdit,setShowEdit]=useState(false);
+  const [editingId,setEditingId]=useState(null);
+  const [nieuw,setNieuw]=useState({naam:"",tel:"",email:"",adres:"",status:"Actief"});
+  const [bewerkt,setBewerkt]=useState({naam:"",tel:"",email:"",adres:"",status:"Actief"});
   const list=klanten.filter(k=>k.naam.toLowerCase().includes(q.toLowerCase()));
 
   const add = async () => {
     if(!nieuw.naam) return;
     await supabase.from("klanten").insert({...nieuw, user_id:userId});
-    setNieuw({naam:"",tel:"",email:"",status:"Actief"});
+    setNieuw({naam:"",tel:"",email:"",adres:"",status:"Actief"});
     setShowAdd(false);
+    refresh();
+  };
+
+  const startEdit = (klant) => {
+    setBewerkt({
+      naam: klant.naam || "",
+      tel: klant.tel || "",
+      email: klant.email || "",
+      adres: klant.adres || "",
+      status: klant.status || "Actief",
+    });
+    setEditingId(klant.id);
+    setShowEdit(true);
+  };
+
+  const saveEdit = async () => {
+    if(!bewerkt.naam || editingId == null) return;
+    await supabase.from("klanten").update({
+      naam: bewerkt.naam,
+      tel: bewerkt.tel,
+      email: bewerkt.email,
+      adres: bewerkt.adres,
+      status: bewerkt.status,
+    }).eq("id", editingId);
+    setShowEdit(false);
+    setEditingId(null);
     refresh();
   };
 
@@ -549,124 +1647,737 @@ function CRMTab({ userId, klanten, refresh }) {
     {klanten.length===0
       ? <LeegScherm icon="👥" titel="Nog geen klanten" sub="Voeg je eerste klant toe" actie="+ Klant toevoegen" onActie={()=>setShowAdd(true)}/>
       : <div style={{display:"flex",flexDirection:"column",gap:9}}>
-          {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id)}>✕</button></div>)}
+          {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-outline btn-sm" onClick={()=>startEdit(k)}>✎</button><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id)}>✕</button></div>) }
         </div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
       <div className="ig"><label className="ilbl">Naam</label><input className="inp" value={nieuw.naam} onChange={e=>setNieuw({...nieuw,naam:e.target.value})} placeholder="Bedrijf of naam"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" value={nieuw.tel} onChange={e=>setNieuw({...nieuw,tel:e.target.value})} placeholder="06-12345678"/></div>
-        <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={nieuw.email} onChange={e=>setNieuw({...nieuw,email:e.target.value})} placeholder="klant@email.nl"/></div>
+        <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={nieuw.email} onChange={e=>setNieuw({...nieuw,email:e.target.value})} placeholder="klant@email.nl"/></div><div className="ig"><label className="ilbl">Adres</label><input className="inp" value={nieuw.adres} onChange={e=>setNieuw({...nieuw,adres:e.target.value})} placeholder="Straat 1, Amsterdam"/></div>
       </div>
-      <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Actief","Lead"].map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Actief","Potentiële klant","Geïnteresseerd","Offerte verstuurd","Vaste klant","Inactief","Verloren"].map(s=><option key={s}>{s}</option>)}</select></div>
       <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.naam}>Toevoegen</button></div>
+    </div></div></div>}
+    {showEdit&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant bewerken</div></div><button className="mc" onClick={()=>setShowEdit(false)}>✕</button></div><div className="mb">
+      <div className="ig"><label className="ilbl">Naam</label><input className="inp" value={bewerkt.naam} onChange={e=>setBewerkt({...bewerkt,naam:e.target.value})} placeholder="Bedrijf of naam"/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" value={bewerkt.tel} onChange={e=>setBewerkt({...bewerkt,tel:e.target.value})} placeholder="06-12345678"/></div>
+        <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={bewerkt.email} onChange={e=>setBewerkt({...bewerkt,email:e.target.value})} placeholder="klant@email.nl"/></div><div className="ig"><label className="ilbl">Adres</label><input className="inp" value={bewerkt.adres} onChange={e=>setBewerkt({...bewerkt,adres:e.target.value})} placeholder="Straat 1, Amsterdam"/></div>
+      </div>
+      <div className="ig"><label className="ilbl">Status</label><select className="inp" value={bewerkt.status} onChange={e=>setBewerkt({...bewerkt,status:e.target.value})}>{["Actief","Potentiële klant","Geïnteresseerd","Offerte verstuurd","Vaste klant","Inactief","Verloren"].map(s=><option key={s}>{s}</option>)}</select></div>
+      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowEdit(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={saveEdit} disabled={!bewerkt.naam}>Opslaan</button></div>
     </div></div></div>}
   </div>);
 }
 
-// ── Financiën ─────────────────────────────────────────────────
-function FinancienTab({ userId, facturen, refresh }) {
+function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSettings }) {
   const [showAdd,setShowAdd]=useState(false);
-  const [nieuw,setNieuw]=useState({klant:"",bedrag:"",status:"Openstaand",datum:""});
+  const [showEdit,setShowEdit]=useState(false);
+  const [editingId,setEditingId]=useState(null);
+  const [lightboxFoto,setLightboxFoto]=useState(null);
+  const originalStatusRef = useRef("Nieuw");
+  const [nieuw,setNieuw]=useState({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw"});
+  const [bewerkt,setBewerkt]=useState({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw"});
+  const [fotoPreview,setFotoPreview]=useState("");
+  const [editFotoPreview,setEditFotoPreview]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [editSaving,setEditSaving]=useState(false);
+  const [error,setError]=useState("");
+  const [editError,setEditError]=useState("");
 
-  const betaald = facturen.filter(f=>f.status==="Betaald").reduce((s,f)=>{const n=parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."));return s+(isNaN(n)?0:n);},0);
-  const openstaand = facturen.filter(f=>f.status==="Openstaand"||f.status==="Herinnering").reduce((s,f)=>{const n=parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."));return s+(isNaN(n)?0:n);},0);
-
-  const add = async () => {
-    if(!nieuw.klant||!nieuw.bedrag) return;
-    const vandaag = new Date().toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
-    await supabase.from("facturen").insert({...nieuw, user_id:userId, datum:nieuw.datum||vandaag, bedrag:`€ ${nieuw.bedrag}`});
-    setNieuw({klant:"",bedrag:"",status:"Openstaand",datum:""});
-    setShowAdd(false);
-    refresh();
+  const handleFotoChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      setNieuw(prev=>({ ...prev, foto: dataUrl }));
+      setFotoPreview(dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const updateStatus = async (id, status) => {
-    await supabase.from("facturen").update({status}).eq("id",id);
-    refresh();
+  const handleEditFotoChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      setBewerkt(prev=>({ ...prev, foto: dataUrl }));
+      setEditFotoPreview(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const add = async () => {
+    if (!nieuw.klant || !nieuw.datum) {
+      setError("Klant en datum zijn verplicht.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    const { error } = await supabase.from("werkbonnen").insert({
+      user_id: userId,
+      klant: nieuw.klant,
+      datum: nieuw.datum,
+      omschrijving: nieuw.omschrijving || "",
+      foto: nieuw.foto || "",
+      uren: nieuw.uren ? parseFloat(nieuw.uren) : 0,
+      materialen: nieuw.materialen || "",
+      status: nieuw.status,
+    }).select();
+    if (error) {
+      console.error("Werkbon toevoegen mislukt", error);
+      setError(error.message || "Opslaan mislukt");
+      setSaving(false);
+      return;
+    }
+    setNieuw({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw"});
+    setFotoPreview("");
+    setShowAdd(false);
+    if (typeof refresh === "function") await refresh();
+    setSaving(false);
+  };
+
+  const startEdit = (werkbon) => {
+    setEditingId(werkbon.id);
+    originalStatusRef.current = werkbon.status || "Nieuw";
+    setBewerkt({
+      klant: werkbon.klant || "",
+      datum: werkbon.datum ? werkbon.datum.slice(0,10) : new Date().toISOString().slice(0,10),
+      omschrijving: werkbon.omschrijving || "",
+      foto: werkbon.foto || "",
+      uren: werkbon.uren != null ? String(werkbon.uren) : "",
+      materialen: werkbon.materialen || "",
+      status: werkbon.status || "Nieuw",
+    });
+    setEditFotoPreview(werkbon.foto || "");
+    setEditError("");
+    setShowEdit(true);
+  };
+
+  const sendReviewRequestEmail = async (clientEmail, serviceDescription) => {
+    if (!clientEmail) {
+      console.warn("sendReviewRequestEmail: no client email available");
+      return null;
+    }
+    const payload = {
+      action: "send-review-request-email",
+      customer_email: clientEmail,
+      company_name: bedrijf?.bedrijfsnaam || "WerkMate",
+      service_description: serviceDescription || "jouw opdracht",
+      ...(bedrijf?.email ? { reply_to: bedrijf.email } : {}),
+    };
+    const { data: { session: reviewSess } } = await supabase.auth.getSession();
+    const reviewToken = reviewSess?.access_token || import.meta.env.VITE_SUPABASE_KEY;
+    const response = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${reviewToken}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => null);
+    await logEmail(userId, clientEmail, `Review verzoek — ${serviceDescription || "opdracht"}`, "review", `Review verzoek voor ${serviceDescription || "opdracht"}`, response.ok ? "verzonden" : "mislukt");
+    return { status: response.status, data };
+  };
+
+  const saveEdit = async () => {
+    if (!bewerkt.klant || !bewerkt.datum) {
+      setEditError("Klant en datum zijn verplicht.");
+      return;
+    }
+    setEditSaving(true);
+    setEditError("");
+    const oldStatus = String(originalStatusRef.current || "").trim();
+    const newStatus = String(bewerkt.status || "").trim();
+    const shouldSendReview = oldStatus !== "Afgerond" && newStatus === "Afgerond";
+    const znaleClient = klanten?.find(k => k.naam.toLowerCase() === (bewerkt.klant||"").toLowerCase());
+    const clientEmail = znaleClient?.email || "";
+    const { error } = await supabase.from("werkbonnen").update({
+      klant: bewerkt.klant,
+      datum: bewerkt.datum,
+      omschrijving: bewerkt.omschrijving,
+      foto: bewerkt.foto,
+      uren: bewerkt.uren ? parseFloat(bewerkt.uren) : 0,
+      materialen: bewerkt.materialen,
+      status: bewerkt.status,
+    }).eq("id", editingId);
+    if (error) {
+      console.error("Werkbon update mislukt", error);
+      setEditError(error.message || "Opslaan mislukt");
+      setEditSaving(false);
+      return;
+    }
+    if (shouldSendReview) {
+      if (!clientEmail) {
+        setEditError("Werkbon afgerond, maar er is geen e-mailadres bekend voor deze klant — review e-mail niet verzonden.");
+      } else if (emailSettings?.auto_review_email === false) {
+        // automatic review email disabled in Instellingen
+      } else {
+        await sendReviewRequestEmail(clientEmail, bewerkt.omschrijving);
+      }
+    }
+    setShowEdit(false);
+    setEditingId(null);
+    setEditFotoPreview("");
+    if (typeof refresh === "function") await refresh();
+    setEditSaving(false);
   };
 
   return(<div>
-    <div className="ph"><div><div className="pg-title">Financiën</div><div className="pg-sub">Facturen & omzet</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Factuur</button></div>
-    <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>
-      {[
-        {label:"Betaald",val:`€ ${betaald.toLocaleString("nl-NL")}`,sub:"ontvangen",color:"#10B981"},
-        {label:"Openstaand",val:`€ ${openstaand.toLocaleString("nl-NL")}`,sub:`${facturen.filter(f=>f.status==="Openstaand"||f.status==="Herinnering").length} facturen`,color:"#F59E0B"},
-        {label:"Totaal facturen",val:facturen.length.toString(),sub:"aangemaakt",color:"#6366F1"},
-      ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color}}>{s.val}</div><div className="ss">{s.sub}</div></div>)}
-    </div>
-    {facturen.length===0
-      ? <LeegScherm icon="💶" titel="Nog geen facturen" sub="Maak je eerste factuur aan" actie="+ Factuur toevoegen" onActie={()=>setShowAdd(true)}/>
-      : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Bedrag","Status","Datum",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
-          <tbody>{facturen.map(f=><tr key={f.id}><td style={{fontWeight:700,color:"#111"}}>{f.klant}</td><td style={{fontWeight:700,color:"#111"}}>{f.bedrag}</td><td><Badge status={f.status}/></td><td style={{color:"#888"}}>{f.datum}</td>
-            <td><select value={f.status} onChange={e=>updateStatus(f.id,e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
-              {["Openstaand","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
-            </select></td>
-          </tr>)}</tbody>
+    <div className="ph"><div><div className="pg-title">Werkbonnen</div><div className="pg-sub">Maak werkbonnen voor klant, uren, materialen en foto</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Werkbon</button></div>
+    {werkbonnen.length===0
+      ? <LeegScherm icon="🔧" titel="Nog geen werkbonnen" sub="Maak je eerste werkbon aan" actie="+ Werkbon toevoegen" onActie={()=>setShowAdd(true)}/>
+      : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Datum","Uren","Status","Materialen","Foto","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+          <tbody>{werkbonnen.map(b=><tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{b.foto ? <img src={b.foto} alt="Werkbon foto" style={{width:80,height:60,objectFit:"cover",borderRadius:10,cursor:"pointer"}} onClick={()=>setLightboxFoto(b.foto)}/> : "-"}</td><td style={{display:"flex",gap:6,alignItems:"center"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎</button><button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>)}</tbody>
         </table></div></div>
     }
-    {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Factuur toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
-      <div className="ig"><label className="ilbl">Klant</label><input className="inp" value={nieuw.klant} onChange={e=>setNieuw({...nieuw,klant:e.target.value})} placeholder="Naam klant"/></div>
+    {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Werkbon toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
+      <div className="ig"><label className="ilbl">Klant</label><select className="inp" value={nieuw.klant} onChange={e=>setNieuw({...nieuw,klant:e.target.value})}><option value="">-- Kies klant --</option>{(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}</select></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <div className="ig"><label className="ilbl">Bedrag (€)</label><input className="inp" type="number" value={nieuw.bedrag} onChange={e=>setNieuw({...nieuw,bedrag:e.target.value})} placeholder="0.00"/></div>
-        <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Openstaand","Verstuurd","Betaald"].map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="ig"><label className="ilbl">Datum</label><input className="inp" type="date" value={nieuw.datum} onChange={e=>setNieuw({...nieuw,datum:e.target.value})} /></div>
+        <div className="ig"><label className="ilbl">Uren</label><input className="inp" type="number" value={nieuw.uren} onChange={e=>setNieuw({...nieuw,uren:e.target.value})} placeholder="0"/></div>
       </div>
-      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.klant||!nieuw.bedrag}>Toevoegen</button></div>
+      <div className="ig"><label className="ilbl">Omschrijving</label><textarea className="inp" style={{minHeight:100}} value={nieuw.omschrijving} onChange={e=>setNieuw({...nieuw,omschrijving:e.target.value})} placeholder="Wat is er gedaan?"/></div>
+      <div className="ig"><label className="ilbl">Materialen</label><textarea className="inp" style={{minHeight:60}} value={nieuw.materialen} onChange={e=>setNieuw({...nieuw,materialen:e.target.value})} placeholder="Gewerkte materialen"/></div>
+      <div className="ig"><label className="ilbl">Foto</label><input className="inp" type="file" accept="image/*" onChange={handleFotoChange}/>{fotoPreview&&<img src={fotoPreview} alt="Voorbeeld" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}</div>
+      <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Nieuw","Bezig","Klaar","Ondertekend","Afgerond"].map(s=><option key={s}>{s}</option>)}</select></div>
+      {error && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{error}</div>}
+      <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowAdd(false);setError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={add} disabled={saving||!nieuw.klant||!nieuw.datum}>{saving?"Opslaan…":"Opslaan"}</button></div>
+    </div></div></div>}
+    {showEdit&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Werkbon bewerken</div></div><button className="mc" onClick={()=>setShowEdit(false)}>✕</button></div><div className="mb">
+      <div className="ig"><label className="ilbl">Klant</label><select className="inp" value={bewerkt.klant} onChange={e=>setBewerkt({...bewerkt,klant:e.target.value})}><option value="">-- Kies klant --</option>{(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}</select></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="ig"><label className="ilbl">Datum</label><input className="inp" type="date" value={bewerkt.datum} onChange={e=>setBewerkt({...bewerkt,datum:e.target.value})} /></div>
+        <div className="ig"><label className="ilbl">Uren</label><input className="inp" type="number" value={bewerkt.uren} onChange={e=>setBewerkt({...bewerkt,uren:e.target.value})} placeholder="0"/></div>
+      </div>
+      <div className="ig"><label className="ilbl">Omschrijving</label><textarea className="inp" style={{minHeight:100}} value={bewerkt.omschrijving} onChange={e=>setBewerkt({...bewerkt,omschrijving:e.target.value})} placeholder="Wat is er gedaan?"/></div>
+      <div className="ig"><label className="ilbl">Materialen</label><textarea className="inp" style={{minHeight:60}} value={bewerkt.materialen} onChange={e=>setBewerkt({...bewerkt,materialen:e.target.value})} placeholder="Gewerkte materialen"/></div>
+      <div className="ig"><label className="ilbl">Foto</label><input className="inp" type="file" accept="image/*" onChange={handleEditFotoChange}/>{editFotoPreview&&<img src={editFotoPreview} alt="Voorbeeld" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}</div>
+      <div className="ig"><label className="ilbl">Status</label><select className="inp" value={bewerkt.status} onChange={e=>setBewerkt({...bewerkt,status:e.target.value})}>{["Nieuw","Bezig","Klaar","Ondertekend","Afgerond"].map(s=><option key={s}>{s}</option>)}</select></div>
+      {editError && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{editError}</div>}
+      <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowEdit(false);setEditError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={saveEdit} disabled={editSaving||!bewerkt.klant||!bewerkt.datum}>{editSaving?"Opslaan…":"Opslaan"}</button></div>
+    </div></div></div>}
+    {lightboxFoto&&<div onClick={()=>setLightboxFoto(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+      <img src={lightboxFoto} alt="Foto" style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:14,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}/>
+      <button onClick={()=>setLightboxFoto(null)} style={{position:"absolute",top:20,right:24,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:28,cursor:"pointer",borderRadius:"50%",width:44,height:44}}>✕</button>
+    </div>}
+  </div>);
+}
+
+// ── Financiën ─────────────────────────────────────────────────
+function FinancienTab({ userId, facturen, refresh, klanten, offertes, bedrijf }) {
+  const getTotal = (f) => f.totaal != null ? Number(f.totaal) : parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."))||0;
+
+  const [subTab, setSubTab] = useState("facturen");
+  const [filterStatus, setFilterStatus] = useState("Alle");
+  const [showCreate, setShowCreate] = useState(false);
+  const [showEmail, setShowEmail] = useState(null);
+  const [showReminder, setShowReminder] = useState(null);
+  const [emailAddr, setEmailAddr] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailMsg, setEmailMsg] = useState("");
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiAnswer, setAiAnswer] = useState("");
+  const [importOfferte, setImportOfferte] = useState("");
+  const [nieuw, setNieuw] = useState({klant:"",klant_email:"",datum:"",vervaldatum:"",regels:[],status:"Concept"});
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState("");
+
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const thisQ = Math.floor(now.getMonth()/3);
+  const qStart = new Date(now.getFullYear(), thisQ*3, 1);
+
+  const isOverdue = (f) => {
+    if (f.status==="Betaald"||f.status==="Concept") return false;
+    if (!f.vervaldatum) return false;
+    return new Date(f.vervaldatum) < now;
+  };
+  const dispStatus = (f) => isOverdue(f) ? "Verlopen" : (f.status||"Concept");
+
+  const monthRevenue = facturen.filter(f=>f.status==="Betaald"&&(f.datum||"").startsWith(thisMonth)).reduce((s,f)=>s+getTotal(f),0);
+  const openFacturen2 = facturen.filter(f=>{const s=dispStatus(f);return s!=="Betaald"&&s!=="Concept";});
+  const openAmount = openFacturen2.reduce((s,f)=>s+getTotal(f),0);
+  const yearRevenue = facturen.filter(f=>f.status==="Betaald"&&(f.datum||"").startsWith(String(now.getFullYear()))).reduce((s,f)=>s+getTotal(f),0);
+  const btwKwartaal = facturen.filter(f=>f.status==="Betaald"&&f.datum&&new Date(f.datum)>=qStart&&new Date(f.datum)<=now).reduce((s,f)=>s+(getTotal(f)/1.21*0.21),0);
+
+  const nextNummer = () => {
+    const yr = now.getFullYear();
+    const nums = facturen.map(f=>f.nummer).filter(n=>n&&n.startsWith(`${yr}-`)).map(n=>parseInt(n.split("-")[1])||0);
+    return `${yr}-${String(nums.length?Math.max(...nums)+1:1).padStart(3,"0")}`;
+  };
+
+  const calcTotals = (regels) => {
+    const sub = regels.reduce((s,r)=>s+(Number(r.aantal)||0)*(Number(r.prijs)||0),0);
+    return {subtotaal:sub, btw:sub*0.21, totaal:sub*1.21};
+  };
+
+  const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+
+  const openCreate = () => {
+    setImportOfferte("");
+    const datum=todayStr(), d=new Date(now); d.setDate(d.getDate()+30);
+    const vervaldatum=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    setNieuw({klant:"",klant_email:"",datum,vervaldatum,regels:[{omschrijving:"",aantal:1,eenheid:"stuk",prijs:""}],status:"Concept"});
+    setSaveErr(""); setShowCreate(true);
+  };
+
+  const importFromOfferte = (offerteId) => {
+    const o=(offertes||[]).find(x=>String(x.id)===String(offerteId));
+    if(!o) return;
+    const k=(klanten||[]).find(x=>x.naam===o.klant);
+    const prijs = parseFloat(String(o.bedrag).replace(/[€\s]/g, '')) || 0;
+    const regels=[{omschrijving:o.dienst||"",aantal:1,eenheid:"stuk",prijs}];
+    setNieuw(prev=>({...prev,klant:o.klant||"",klant_email:k?.email||"",regels}));
+  };
+
+  const addRegel = () => setNieuw(prev=>({...prev,regels:[...prev.regels,{omschrijving:"",aantal:1,eenheid:"stuk",prijs:""}]}));
+  const removeRegel = (i) => setNieuw(prev=>({...prev,regels:prev.regels.filter((_,idx)=>idx!==i)}));
+  const setRegel = (i,field,val) => setNieuw(prev=>({...prev,regels:prev.regels.map((r,idx)=>idx===i?{...r,[field]:val}:r)}));
+
+  const saveFactuur = async () => {
+    if(!nieuw.klant){setSaveErr("Vul een klant in.");return;}
+    if(!nieuw.regels.length){setSaveErr("Voeg minimaal één regel toe.");return;}
+    setSaving(true); setSaveErr("");
+    const {btw,totaal}=calcTotals(nieuw.regels);
+    const {error}=await supabase.from("facturen").insert({user_id:userId,nummer:nextNummer(),klant:nieuw.klant,klant_email:nieuw.klant_email,datum:nieuw.datum,vervaldatum:nieuw.vervaldatum,regels:nieuw.regels,btw,totaal,status:nieuw.status});
+    setSaving(false);
+    if(error){setSaveErr(error.message);return;}
+    setShowCreate(false); refresh();
+  };
+
+  const updateStatus = async (id, status) => { await supabase.from("facturen").update({status}).eq("id",id); refresh(); };
+
+  const sendInvoiceEmail = async () => {
+    if(!emailAddr) return;
+    setEmailSending(true); setEmailMsg("");
+    try {
+      const pdfB64=createFactuurPdfBase64(showEmail, bedrijf);
+      const {error}=await supabase.functions.invoke("ai-proxy",{body:{action:"send-invoice-email",customer_email:emailAddr,customer_name:showEmail.klant,factuur_nummer:showEmail.nummer,company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Factuur-${showEmail.nummer||"factuur"}.pdf`,content:pdfB64}]}});
+      if(error) throw new Error(error.message);
+      await supabase.from("facturen").update({status:"Verstuurd"}).eq("id",showEmail.id);
+      await logEmail(userId, emailAddr, `Factuur ${showEmail.nummer||""}`, "factuur", `Factuur ${showEmail.nummer||""} voor ${showEmail.klant}`, "verzonden");
+      setEmailMsg("Factuur verstuurd!"); refresh();
+      setTimeout(()=>{setShowEmail(null);setEmailMsg("");setEmailAddr("");},1600);
+    } catch(e){setEmailMsg("Fout: "+e.message);}
+    setEmailSending(false);
+  };
+
+  const sendReminder = async () => {
+    if(!emailAddr) return;
+    setEmailSending(true); setEmailMsg("");
+    try {
+      const pdfB64=createFactuurPdfBase64(showReminder, bedrijf);
+      await supabase.functions.invoke("ai-proxy",{body:{action:"send-reminder-email",customer_email:emailAddr,customer_name:showReminder.klant,factuur_nummer:showReminder.nummer,totaal:getTotal(showReminder),company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Herinnering-${showReminder.nummer||"factuur"}.pdf`,content:pdfB64}]}});
+      await supabase.from("facturen").update({status:"Herinnering"}).eq("id",showReminder.id);
+      await logEmail(userId, emailAddr, `Herinnering factuur ${showReminder.nummer||""}`, "herinnering", `Betalingsherinnering factuur ${showReminder.nummer||""} voor ${showReminder.klant}`, "verzonden");
+      setEmailMsg("Herinnering verstuurd!"); refresh();
+      setTimeout(()=>{setShowReminder(null);setEmailMsg("");setEmailAddr("");},1600);
+    } catch(e){setEmailMsg("Fout: "+e.message);}
+    setEmailSending(false);
+  };
+
+  const askAi = async () => {
+    if(!aiInput.trim()) return;
+    setAiLoading(true); setAiAnswer("");
+    const ctx=facturen.map(f=>`[${f.nummer||"?"} | ${f.klant} | ${dispStatus(f)} | €${getTotal(f).toFixed(2)} | ${f.datum||""}]`).join("\n");
+    try { const ans=await aiCall(`Je bent een boekhouding assistent voor een Nederlandse vakman. Facturen:\n${ctx}\n\nVraag: ${aiInput}\n\nGeef een duidelijk, beknopt antwoord in het Nederlands.`); setAiAnswer(ans); }
+    catch(e){ setAiAnswer("Fout bij ophalen antwoord."); }
+    setAiLoading(false);
+  };
+
+  const filtered = facturen.filter(f=>{
+    if(filterStatus==="Alle") return true;
+    if(filterStatus==="Verlopen") return isOverdue(f);
+    return dispStatus(f)===filterStatus;
+  });
+
+  const {subtotaal:cSub,btw:cBtw,totaal:cTot}=calcTotals(nieuw.regels);
+  const fmtEur=(n)=>`€ ${Number(n).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  const fmtDate=(s)=>s?new Date(s).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"}):"-";
+
+  return (<div>
+    <div className="ph"><div><div className="pg-title">Financiën</div><div className="pg-sub">Facturen & boekhouding</div></div><button className="btn btn-dark" onClick={openCreate}>+ Nieuwe factuur</button></div>
+    <div className="sg" style={{gridTemplateColumns:"repeat(4,1fr)"}}>
+      {[
+        {label:"Omzet deze maand",val:fmtEur(monthRevenue),sub:"betaald",color:"#10B981"},
+        {label:"Openstaand",val:fmtEur(openAmount),sub:`${openFacturen2.length} factuur${openFacturen2.length!==1?"en":""}`,color:"#F59E0B"},
+        {label:"Omzet dit jaar",val:fmtEur(yearRevenue),sub:"betaald",color:"#6366F1"},
+        {label:"BTW dit kwartaal",val:fmtEur(btwKwartaal),sub:"afdragen",color:"#EF4444"},
+      ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color}}>{s.val}</div><div className="ss">{s.sub}</div></div>)}
+    </div>
+
+    <div style={{display:"flex",gap:8,marginBottom:16}}>
+      {[["facturen","📄 Facturen"],["ai","✨ Slimme assistent"]].map(([id,lbl])=>(
+        <button key={id} onClick={()=>setSubTab(id)} style={{padding:"7px 18px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB"}}>{lbl}</button>
+      ))}
+    </div>
+
+    {subTab==="facturen"&&(<>
+      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+        {["Alle","Concept","Verstuurd","Herinnering","Betaald","Verlopen"].map(s=>(
+          <button key={s} onClick={()=>setFilterStatus(s)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterStatus===s?"#0F0F14":"#fff",color:filterStatus===s?"#fff":"#555",borderColor:filterStatus===s?"#0F0F14":"#E5E7EB"}}>{s}</button>
+        ))}
+      </div>
+      {filtered.length===0
+        ?<LeegScherm icon="💶" titel="Geen facturen" sub="Maak je eerste factuur aan" actie="+ Factuur aanmaken" onActie={openCreate}/>
+        :<div className="card"><div className="tw"><table><thead><tr>{["Nummer","Klant","Datum","Vervaldatum","Totaal","Status",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+          <tbody>{filtered.map(f=>{
+            const st=dispStatus(f), od=isOverdue(f);
+            return(<tr key={f.id}>
+              <td style={{fontWeight:700,color:"#6366F1",fontSize:13}}>{f.nummer||"-"}</td>
+              <td style={{fontWeight:600,color:"#111"}}>{f.klant}</td>
+              <td style={{color:"#888",fontSize:13}}>{fmtDate(f.datum)}</td>
+              <td style={{color:od?"#EF4444":"#888",fontSize:13,fontWeight:od?700:400}}>{fmtDate(f.vervaldatum)}</td>
+              <td style={{fontWeight:700,color:"#111"}}>{fmtEur(getTotal(f))}</td>
+              <td><Badge status={st}/></td>
+              <td><div style={{display:"flex",gap:5,alignItems:"center"}}>
+                <button className="btn btn-ghost btn-sm" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}>PDF</button>
+                {st!=="Betaald"&&st!=="Concept"&&<button className="btn btn-ghost btn-sm" title="Herinnering" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔</button>}
+                <button className="btn btn-ghost btn-sm" title="E-mailen" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>📧</button>
+                <select value={f.status||"Concept"} onChange={e=>updateStatus(f.id,e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
+                  {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
+                </select>
+                <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}>✕</button>
+              </div></td>
+            </tr>);
+          })}</tbody></table></div></div>
+      }
+    </>)}
+
+    {subTab==="ai"&&(
+      <div className="card cp" style={{maxWidth:620}}>
+        <div style={{fontWeight:700,fontSize:15,color:"#111",marginBottom:4}}>✨ Slimme assistent</div>
+        <div style={{fontSize:13,color:"#94A3B8",marginBottom:16}}>Stel vragen over je omzet, facturen en BTW</div>
+        {["Hoeveel heb ik deze maand verdiend?","Welke facturen staan nog open?","Hoeveel BTW moet ik afdragen dit kwartaal?","Wat is mijn omzet dit jaar?"].map(q=>(
+          <div key={q} className="tip-row" onClick={()=>setAiInput(q)} style={{fontSize:13,color:"#4338CA",cursor:"pointer",padding:"7px 0",borderBottom:"1px solid #F0F0F0"}}>→ {q}</div>
+        ))}
+        <div className="ig" style={{marginTop:14}}>
+          <label className="ilbl">Vraag</label>
+          <textarea className="inp" value={aiInput} onChange={e=>setAiInput(e.target.value)} style={{minHeight:72}} placeholder="Bijv: Hoeveel heb ik vorige maand verdiend?"/>
+        </div>
+        <button className="btn btn-ai btn-full" onClick={askAi} disabled={!aiInput.trim()||aiLoading} style={{opacity:aiInput.trim()?1:.5}}>{aiLoading?<>✨<span className="dot">…</span></>:"✨ Vraag het"}</button>
+        {aiAnswer&&<div style={{marginTop:14,background:"#F8FAFC",border:"1px solid #EAECF0",borderRadius:10,padding:"14px 16px",fontSize:14,color:"#1e293b",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{aiAnswer}</div>}
+      </div>
+    )}
+
+    {showCreate&&<div className="overlay"><div className="modal" style={{maxWidth:700,width:"95vw"}}>
+      <div className="mh"><div><div className="mt">Nieuwe factuur</div></div><button className="mc" onClick={()=>setShowCreate(false)}>✕</button></div>
+      <div className="mb">
+        {(offertes||[]).length>0&&<div className="ig"><label className="ilbl">Importeer van offerte (optioneel)</label>
+          <select className="inp" value={importOfferte} onChange={e=>{setImportOfferte(e.target.value);importFromOfferte(e.target.value);}}>
+            <option value="">-- Kies offerte --</option>
+            {(offertes||[]).map(o=><option key={o.id} value={o.id}>{o.klant} — {o.dienst||"offerte"}</option>)}
+          </select></div>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="ig"><label className="ilbl">Klant *</label>
+            <select className="inp" value={nieuw.klant} onChange={e=>{const k=(klanten||[]).find(x=>x.naam===e.target.value);setNieuw({...nieuw,klant:e.target.value,klant_email:k?.email||nieuw.klant_email});}}>
+              <option value="">-- Kies klant --</option>{(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}
+            </select></div>
+          <div className="ig"><label className="ilbl">E-mailadres klant</label><input className="inp" type="email" value={nieuw.klant_email} onChange={e=>setNieuw({...nieuw,klant_email:e.target.value})} placeholder="klant@email.nl"/></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          <div className="ig"><label className="ilbl">Factuurdatum</label><input className="inp" type="date" value={nieuw.datum} onChange={e=>setNieuw({...nieuw,datum:e.target.value})}/></div>
+          <div className="ig"><label className="ilbl">Vervaldatum</label><input className="inp" type="date" value={nieuw.vervaldatum} onChange={e=>setNieuw({...nieuw,vervaldatum:e.target.value})}/></div>
+          <div className="ig"><label className="ilbl">Status</label>
+            <select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Concept","Verstuurd","Betaald"].map(s=><option key={s}>{s}</option>)}</select></div>
+        </div>
+        <div style={{marginTop:8}}>
+          <div className="off-tbl-grid" style={{borderBottom:"2px solid #E5E7EB",paddingBottom:6,marginBottom:4}}>
+            {["Omschrijving","Aantal","Eenheid","Prijs","Totaal",""].map((h,i)=><div key={i} className="off-cell" style={{fontWeight:700,fontSize:12,color:"#94A3B8",justifyContent:i>=3&&i<5?"flex-end":i===1?"center":"flex-start"}}>{h}</div>)}
+          </div>
+          {nieuw.regels.map((r,i)=>(
+            <div key={i} className="off-tbl-grid" style={{borderBottom:"1px solid #F3F4F6"}}>
+              <div className="off-cell"><input className="off-inp" value={r.omschrijving} onChange={e=>setRegel(i,"omschrijving",e.target.value)} placeholder="Omschrijving"/></div>
+              <div className="off-cell"><input className="off-inp" type="number" value={r.aantal} onChange={e=>setRegel(i,"aantal",e.target.value)} style={{textAlign:"center"}}/></div>
+              <div className="off-cell"><select className="off-inp" value={r.eenheid} onChange={e=>setRegel(i,"eenheid",e.target.value)} style={{minWidth:80}}>{["stuk","uur","dag","m²","m","kg","l"].map(u=><option key={u}>{u}</option>)}</select></div>
+              <div className="off-cell"><input className="off-inp" type="number" value={r.prijs} onChange={e=>setRegel(i,"prijs",e.target.value)} style={{textAlign:"right"}}/></div>
+              <div className="off-cell off-cell-totaal">{fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</div>
+              <div className="off-cell"><button onClick={()=>removeRegel(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:16}}>×</button></div>
+            </div>
+          ))}
+          <button className="btn btn-ghost btn-sm" onClick={addRegel} style={{marginTop:8}}>+ Regel</button>
+        </div>
+        <div style={{background:"#F8FAFC",border:"1px solid #EAECF0",borderRadius:10,padding:"12px 16px",marginTop:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>Subtotaal</span><span>{fmtEur(cSub)}</span></div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:6}}><span>BTW 21%</span><span>{fmtEur(cBtw)}</span></div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:800,color:"#111"}}><span>Totaal</span><span>{fmtEur(cTot)}</span></div>
+        </div>
+        {saveErr&&<div style={{color:"#EF4444",fontSize:12.5,marginTop:8}}>{saveErr}</div>}
+        <div style={{display:"flex",gap:9,marginTop:12}}>
+          <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>Annuleren</button>
+          <button className="btn btn-dark btn-full" onClick={saveFactuur} disabled={saving||!nieuw.klant}>{saving?"Opslaan…":"Factuur aanmaken"}</button>
+        </div>
+      </div>
+    </div></div>}
+
+    {showEmail&&<div className="overlay"><div className="modal" style={{maxWidth:440}}>
+      <div className="mh"><div><div className="mt">Factuur e-mailen</div><div style={{fontSize:12.5,color:"#94A3B8",marginTop:2}}>{showEmail.nummer} — {showEmail.klant}</div></div><button className="mc" onClick={()=>{setShowEmail(null);setEmailMsg("");}}>✕</button></div>
+      <div className="mb">
+        <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={emailAddr} onChange={e=>setEmailAddr(e.target.value)} placeholder="klant@email.nl"/></div>
+        {emailMsg&&<div style={{color:emailMsg.startsWith("Fout")?"#EF4444":"#10B981",fontSize:13,marginBottom:8}}>{emailMsg}</div>}
+        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowEmail(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={sendInvoiceEmail} disabled={!emailAddr||emailSending}>{emailSending?"Versturen…":"📧 Verstuur factuur"}</button></div>
+      </div>
+    </div></div>}
+
+    {showReminder&&<div className="overlay"><div className="modal" style={{maxWidth:440}}>
+      <div className="mh"><div><div className="mt">Betalingsherinnering</div><div style={{fontSize:12.5,color:"#94A3B8",marginTop:2}}>{showReminder.nummer} — {showReminder.klant} — {fmtEur(getTotal(showReminder))}</div></div><button className="mc" onClick={()=>{setShowReminder(null);setEmailMsg("");}}>✕</button></div>
+      <div className="mb">
+        <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={emailAddr} onChange={e=>setEmailAddr(e.target.value)} placeholder="klant@email.nl"/></div>
+        {emailMsg&&<div style={{color:emailMsg.startsWith("Fout")?"#EF4444":"#10B981",fontSize:13,marginBottom:8}}>{emailMsg}</div>}
+        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowReminder(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={sendReminder} disabled={!emailAddr||emailSending}>{emailSending?"Versturen…":"🔔 Stuur herinnering"}</button></div>
+      </div>
+    </div></div>}
+  </div>);
+}
+
+// ── Team ──────────────────────────────────────────────────────
+function TeamTab({ ownerId, teamMembers, refresh, bedrijf }) {
+  const [showInvite,setShowInvite]=useState(false);
+  const [invite,setInvite]=useState({email:"",role:"Monteur"});
+  const [saving,setSaving]=useState(false);
+  const [error,setError]=useState("");
+
+  const inviteMember = async () => {
+    const email = String(invite.email || "").trim().toLowerCase();
+    if (!email || !invite.role) { setError("E-mail en rol zijn verplicht."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Ongeldig e-mailadres."); return; }
+    setSaving(true);
+    setError("");
+    const token = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : `${Math.random().toString(36).slice(2)}${Date.now()}`;
+
+    try {
+      const insertRes = await supabase.from("team").insert({
+        user_id: ownerId,
+        email,
+        role: invite.role,
+        invite_token: token,
+        invited_at: new Date().toISOString(),
+      }).select();
+      if (insertRes.error) {
+        setError(insertRes.error.message || "Opslaan mislukt");
+        setSaving(false);
+        return;
+      }
+
+      try {
+        const { data: { session: invSess } } = await supabase.auth.getSession();
+        const invToken = invSess?.access_token || import.meta.env.VITE_SUPABASE_KEY;
+        const response = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${invToken}` },
+          body: JSON.stringify({
+            action: "send-invite-email",
+            invite_email: email,
+            inviter_email: (await supabase.auth.getUser()).data?.user?.email || "",
+            invite_token: token,
+            appUrl: window.location.origin,
+            company_name: bedrijf?.bedrijfsnaam,
+            reply_to: bedrijf?.email || "",
+          }),
+        });
+        const fnRes = await response.json().catch(() => null);
+        if (!response.ok) {
+          setError(`Uitnodigingsmail kon niet verzonden worden: ${fnRes?.error?.message || response.statusText}`);
+        } else if (fnRes?.error) {
+          setError("Uitnodigingsmail kon niet verzonden worden.");
+        } else {
+          await logEmail(ownerId, email, "Uitnodiging WerkMate", "team", `Uitnodiging verstuurd naar ${email}`, "verzonden");
+        }
+      } catch (fnErr) {
+        setError("Uitnodigingsmail kon niet verzonden worden.");
+      }
+
+      setInvite({email:"",role:"Monteur"});
+      setShowInvite(false);
+      if (typeof refresh === "function") await refresh();
+    } catch (e) {
+      setError("Opslaan mislukt");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeMember = async (id) => {
+    await supabase.from("team").delete().eq("id", id);
+    if (typeof refresh === "function") await refresh();
+  };
+
+  return(<div>
+    <div className="ph"><div><div className="pg-title">Team</div><div className="pg-sub">Nodig teamleden uit en beheer rollen</div></div><button className="btn btn-dark" onClick={()=>setShowInvite(true)}>+ Teamlid uitnodigen</button></div>
+    {teamMembers.length===0
+      ? <LeegScherm icon="👥" titel="Nog geen teamleden" sub="Nodig iemand uit om samen te werken" actie="+ Uitnodigen" onActie={()=>setShowInvite(true)}/>
+      : <div className="card"><div className="tw"><table><thead><tr>{["E-mail","Rol","Uitgenodigd","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+          <tbody>{teamMembers.map(member=><tr key={member.id}><td style={{fontWeight:700,color:"#111"}}>{member.email}</td><td style={{color:"#555"}}>{member.role}</td><td style={{color:"#888"}}>{member.invited_at?new Date(member.invited_at).toLocaleDateString("nl-NL"):"-"}</td><td><button className="btn btn-danger btn-sm" onClick={()=>removeMember(member.id)}>Verwijderen</button></td></tr>)}</tbody>
+        </table></div></div>
+    }
+    {showInvite&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Teamlid uitnodigen</div></div><button className="mc" onClick={()=>setShowInvite(false)}>✕</button></div><div className="mb">
+      <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={invite.email} onChange={e=>setInvite({...invite,email:e.target.value})} placeholder="voorbeeld@bedrijf.nl"/></div>
+      <div className="ig"><label className="ilbl">Rol</label><select className="inp" value={invite.role} onChange={e=>setInvite({...invite,role:e.target.value})}>{["Baas","Beheerder","Monteur","Stagiair","Verkoper","Boekhouder","Chauffeur","Magazijnmedewerker","Projectleider","Uitvoerder"].map(r=><option key={r}>{r}</option>)}</select></div>
+      {error && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{error}</div>}
+      <div style={{display:"flex",gap:9}}>
+        <button type="button" className="btn btn-ghost" onClick={()=>{setShowInvite(false);setError("");}}>Annuleren</button>
+        <button type="button" className="btn btn-dark btn-full" onClick={inviteMember} disabled={saving||!invite.email||!invite.role}>{saving?"Uitnodigen…":"Uitnodigen"}</button>
+      </div>
     </div></div></div>}
   </div>);
 }
 
 // ── Mail ──────────────────────────────────────────────────────
-function MailTab() {
-  const [mode,setMode]=useState("zelf");const [aan,setAan]=useState("");const [onderwerp,setOnderwerp]=useState("");const [body,setBody]=useState("");const [aiP,setAiP]=useState("");const [aiL,setAiL]=useState(false);const [sent,setSent]=useState(false);
-  const gen=async()=>{if(!aiP.trim())return;setAiL(true);try{const t=await aiCall(`Professionele NL zakelijke e-mail voor vakman. Situatie: ${aiP}. ALLEEN mailtekst, begin met aanhef.`);setBody(t);}catch{setBody("Fout.");}setAiL(false);};
-  const send=()=>{setSent(true);setTimeout(()=>setSent(false),2500);setAan("");setOnderwerp("");setBody("");setAiP("");};
-  return(<div><div className="ph"><div><div className="pg-title">Mail</div><div className="pg-sub">Schrijf zelf of laat AI schrijven</div></div></div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
-      <div><div className="sec-ttl">✉️ Nieuwe mail</div><div className="card cp">
-        <div className="mail-tabs"><button className={`mail-tab ${mode==="zelf"?"on":""}`} onClick={()=>setMode("zelf")}>✍️ Zelf</button><button className={`mail-tab ${mode==="ai"?"on":""}`} onClick={()=>setMode("ai")}>✨ AI schrijft</button></div>
-        {mode==="ai"&&<div className="ig"><label className="ilbl">Wat moet de mail zeggen?</label><textarea className="inp" value={aiP} onChange={e=>setAiP(e.target.value)} style={{minHeight:75}} placeholder="Bijv: Herinnering factuur voor Jan Vermeer"/><button className="btn btn-ai btn-full" style={{marginTop:9,opacity:aiP.trim()?1:.5}} onClick={gen} disabled={!aiP.trim()||aiL}>{aiL?<>✨<span className="dot">…</span></>:"✨ Genereer"}</button></div>}
-        <div className="ig"><label className="ilbl">Aan</label><input className="inp" value={aan} onChange={e=>setAan(e.target.value)} placeholder="klant@bedrijf.nl"/></div>
-        <div className="ig"><label className="ilbl">Onderwerp</label><input className="inp" value={onderwerp} onChange={e=>setOnderwerp(e.target.value)} placeholder="Onderwerp…"/></div>
-        <div className="ig"><label className="ilbl">Bericht</label><textarea className="inp" value={body} onChange={e=>setBody(e.target.value)} style={{minHeight:130}} placeholder="Schrijf je bericht…"/></div>
-        <button className="btn btn-dark btn-full" onClick={send} disabled={!aan||!body}>{sent?"✓ Verstuurd!":"📨 Verstuur"}</button>
-      </div></div>
-      <div><div className="sec-ttl">📥 Inbox</div>
-        <LeegScherm icon="📬" titel="Inbox nog leeg" sub="Koppel je e-mail via instellingen"/>
+const TYPE_LABELS = { offerte:"Offerte", factuur:"Factuur", herinnering:"Herinnering", review:"Review", team:"Team" };
+const TYPE_COLORS = {
+  offerte:    { bg:"#EEF2FF", text:"#4338CA" },
+  factuur:    { bg:"#ECFDF5", text:"#065F46" },
+  herinnering:{ bg:"#FEF3C7", text:"#92400E" },
+  review:     { bg:"#F0FDF4", text:"#166534" },
+  team:       { bg:"#F5F3FF", text:"#6D28D9" },
+};
+
+function TypeBadge({ type }) {
+  const c = TYPE_COLORS[type] || { bg:"#F3F4F6", text:"#374151" };
+  const lbl = TYPE_LABELS[type] || type;
+  return <span style={{display:"inline-block",padding:"2px 9px",borderRadius:20,fontSize:11.5,fontWeight:700,background:c.bg,color:c.text}}>{lbl}</span>;
+}
+
+function MailTab({ userId, emailsLog = [], refresh }) {
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("Alle");
+  const [detail, setDetail] = useState(null);
+
+  const filtered = emailsLog.filter(e => {
+    const matchType = filterType === "Alle" || e.type === filterType.toLowerCase();
+    const q = search.toLowerCase();
+    const matchSearch = !q || e.to_email?.toLowerCase().includes(q) || e.subject?.toLowerCase().includes(q);
+    return matchType && matchSearch;
+  });
+
+  const fmtDate = (s) => {
+    if (!s) return "-";
+    const d = new Date(s);
+    return d.toLocaleDateString("nl-NL", { day:"numeric", month:"short", year:"numeric" }) + " " + d.toLocaleTimeString("nl-NL", { hour:"2-digit", minute:"2-digit" });
+  };
+
+  return (
+    <div>
+      <div className="ph">
+        <div><div className="pg-title">Mail</div><div className="pg-sub">Overzicht verzonden e-mails</div></div>
       </div>
+
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+        <input
+          className="inp"
+          style={{maxWidth:260,margin:0}}
+          placeholder="Zoeken op ontvanger of onderwerp…"
+          value={search}
+          onChange={e=>setSearch(e.target.value)}
+        />
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {["Alle","Offerte","Factuur","Herinnering","Review","Team"].map(t=>(
+            <button key={t} onClick={()=>setFilterType(t)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterType===t?"#0F0F14":"#fff",color:filterType===t?"#fff":"#555",borderColor:filterType===t?"#0F0F14":"#E5E7EB"}}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0
+        ? <LeegScherm icon="📭" titel="Geen e-mails gevonden" sub={emailsLog.length === 0 ? "Verstuurde e-mails verschijnen hier automatisch" : "Geen e-mails die overeenkomen met je zoekopdracht"}/>
+        : <div className="card"><div className="tw"><table>
+            <thead><tr>{["Datum","Ontvanger","Onderwerp","Type","Status"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+            <tbody>
+              {filtered.map(e=>(
+                <tr key={e.id} onClick={()=>setDetail(e)} style={{cursor:"pointer"}}>
+                  <td style={{color:"#888",fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(e.sent_at)}</td>
+                  <td style={{fontWeight:600,color:"#111"}}>{e.to_email}</td>
+                  <td style={{color:"#374151",fontSize:13}}>{e.subject}</td>
+                  <td><TypeBadge type={e.type}/></td>
+                  <td>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12.5,fontWeight:600,color:e.status==="verzonden"?"#065F46":"#991B1B"}}>
+                      <span style={{width:7,height:7,borderRadius:"50%",background:e.status==="verzonden"?"#10B981":"#EF4444",display:"inline-block"}}/>
+                      {e.status==="verzonden"?"Verzonden":"Mislukt"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div></div>
+      }
+
+      {detail && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"#fff",borderRadius:18,padding:"28px 28px 22px",width:"100%",maxWidth:520,boxShadow:"0 24px 60px rgba(0,0,0,0.22)",maxHeight:"85vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
+              <div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#0F0F14",marginBottom:4}}>{detail.subject}</div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <TypeBadge type={detail.type}/>
+                  <span style={{fontSize:12.5,color:detail.status==="verzonden"?"#065F46":"#991B1B",fontWeight:600}}>{detail.status==="verzonden"?"✓ Verzonden":"✗ Mislukt"}</span>
+                </div>
+              </div>
+              <button onClick={()=>setDetail(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#94A3B8",lineHeight:1}}>×</button>
+            </div>
+            <div style={{background:"#F8FAFC",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+              <div style={{fontSize:12,color:"#94A3B8",marginBottom:2}}>Aan</div>
+              <div style={{fontSize:13.5,fontWeight:600,color:"#111"}}>{detail.to_email}</div>
+            </div>
+            <div style={{background:"#F8FAFC",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+              <div style={{fontSize:12,color:"#94A3B8",marginBottom:2}}>Datum</div>
+              <div style={{fontSize:13.5,color:"#374151"}}>{fmtDate(detail.sent_at)}</div>
+            </div>
+            {detail.body && (
+              <div style={{background:"#F8FAFC",borderRadius:10,padding:"12px 14px",marginBottom:18}}>
+                <div style={{fontSize:12,color:"#94A3B8",marginBottom:6}}>Inhoud</div>
+                <div style={{fontSize:13.5,color:"#374151",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{detail.body}</div>
+              </div>
+            )}
+            <button className="btn btn-ghost btn-full" onClick={()=>setDetail(null)}>Sluiten</button>
+          </div>
+        </div>
+      )}
     </div>
-  </div>);
+  );
 }
 
 // ── Social ────────────────────────────────────────────────────
 function SocialTab() {
-  const [plat,setPlat]=useState("beide");const [ond,setOnd]=useState("");const [stijl,setStijl]=useState("professioneel");const [loading,setLoading]=useState(false);const [posts,setPosts]=useState(null);
+  const [plat,setPlat]=useState("beide");const [ond,setOnd]=useState("");const [stijl,setStijl]=useState("professioneel");const [loading,setLoading]=useState(false);const [posts,setPosts]=useState(null);const [copyMsg,setCopyMsg]=useState("");
   const gen=async()=>{if(!ond.trim())return;setLoading(true);setPosts(null);
-    try{const p=plat==="beide"?"Instagram EN TikTok":plat==="insta"?"Instagram":"TikTok";const iK=plat!=="tiktok"?`"instagram":"NL post met hashtags"`:"";const tK=plat!=="insta"?`"tiktok":"NL TikTok caption (max 300t)"`:""  ;const sep=plat==="beide"?",":"";
-    const t=await aiCall(`Social media voor vakman. Stijl:${stijl}. Platform:${p}. Onderwerp:${ond}. ALLEEN JSON: {${iK}${sep}${tK}}`);
-    setPosts(JSON.parse(t.replace(/```json|```/g,"").trim()));}catch{setPosts({instagram:"Fout.",tiktok:"Fout."});}setLoading(false);};
-  const copy=(t)=>{try{navigator.clipboard.writeText(t);}catch{}};
-  return(<div><div className="ph"><div><div className="pg-title">Social Media</div><div className="pg-sub">AI schrijft posts voor Instagram & TikTok</div></div></div>
+    try{
+      const platNames={insta:"Instagram",tiktok:"TikTok",facebook:"Facebook",beide:"Instagram EN TikTok",alle:"Instagram, TikTok EN Facebook"};
+      const p=platNames[plat]||"Instagram en TikTok";
+      const iK=(plat==="insta"||plat==="beide"||plat==="alle")?`"instagram":"NL post met hashtags"`:"";
+      const tK=(plat==="tiktok"||plat==="beide"||plat==="alle")?`"tiktok":"NL TikTok caption (max 300t)"`:""  ;
+      const fK=(plat==="facebook"||plat==="alle")?`"facebook":"NL Facebook post (vriendelijk en informatief)"`:""  ;
+      const parts=[iK,tK,fK].filter(Boolean).join(",");
+      const t=await aiCall(`Social media voor vakman. Stijl:${stijl}. Platform:${p}. Onderwerp:${ond}. ALLEEN JSON: {${parts}}`);
+      setPosts(JSON.parse(t.replace(/```json|```/g,"").trim()));}catch{setPosts({instagram:"Fout.",tiktok:"Fout.",facebook:"Fout."});}setLoading(false);};
+  const copy=(t)=>{try{navigator.clipboard.writeText(t);setCopyMsg("✓ Gekopieerd!");setTimeout(()=>setCopyMsg(""),2000);}catch{}};
+  return(<div>
+    <div className="ph"><div><div className="pg-title">Social Media</div><div className="pg-sub">Slimme posts voor Instagram, TikTok & Facebook</div></div></div>
+    {copyMsg&&<div style={{position:"fixed",bottom:24,right:24,background:"#0F0F14",color:"#fff",padding:"10px 20px",borderRadius:10,fontSize:14,fontWeight:600,zIndex:9999,boxShadow:"0 8px 24px rgba(0,0,0,.25)"}}>{copyMsg}</div>}
     <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:20}}>
       <div><div className="sec-ttl">⚙️ Instellingen</div><div className="card cp">
-        <div className="ig"><label className="ilbl">Platform</label><div className="soc-plat">
+        <div className="ig"><label className="ilbl">Platform</label><div className="soc-plat" style={{flexWrap:"wrap"}}>
           <button className={`soc-btn ${plat==="insta"?"on insta":""}`} onClick={()=>setPlat("insta")}>📸 Insta</button>
           <button className={`soc-btn ${plat==="tiktok"?"on tik":""}`} onClick={()=>setPlat("tiktok")}>🎵 TikTok</button>
+          <button className={`soc-btn ${plat==="facebook"?"on fb":""}`} onClick={()=>setPlat("facebook")} style={plat==="facebook"?{borderColor:"#1877F2",background:"#EBF5FB",color:"#1877F2"}:{}}>📘 Facebook</button>
           <button className={`soc-btn ${plat==="beide"?"on both":""}`} onClick={()=>setPlat("beide")}>✨ Beide</button>
+          <button className={`soc-btn ${plat==="alle"?"on both":""}`} onClick={()=>setPlat("alle")}>🌐 Alle</button>
         </div></div>
         <div className="ig"><label className="ilbl">Stijl</label><select className="inp" value={stijl} onChange={e=>setStijl(e.target.value)}>{["professioneel","stoer","informeel","grappig","motiverend"].map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}</select></div>
         <div className="ig"><label className="ilbl">Onderwerp</label><textarea className="inp" value={ond} onChange={e=>setOnd(e.target.value)} style={{minHeight:85}} placeholder="Bijv: Airco bij bakkerij Rotterdam geïnstalleerd"/></div>
         <div style={{background:"#F8FAFC",border:"1px solid #EAECF0",borderRadius:8,padding:"10px 13px",marginBottom:14}}>
           {["Afgerond project (voor & na)","Team aan het werk","Handige tip","5-sterren review","Dag uit het leven"].map((t,i)=><div key={i} className="tip-row" onClick={()=>setOnd(t)} style={{borderBottom:i<4?"1px solid #F0F0F0":"none"}}>→ {t}</div>)}
         </div>
-        <button className="btn btn-ai btn-full" onClick={gen} disabled={!ond.trim()||loading} style={{opacity:ond.trim()?1:.5}}>{loading?<>✨<span className="dot">…</span></>:"✨ Genereer posts"}</button>
+        <button className="btn btn-ai btn-full" onClick={gen} disabled={!ond.trim()||loading} style={{opacity:ond.trim()?1:.5}}>{loading?<>✨<span className="dot">…</span></>:"✨ Maak posts"}</button>
       </div></div>
       <div><div className="sec-ttl">📲 Posts</div>
-        {!posts&&!loading&&<div style={{background:"#fff",border:"1px dashed #D1D5DB",borderRadius:13,padding:"48px 24px",textAlign:"center",color:"#94A3B8"}}><div style={{fontSize:32,marginBottom:10}}>📱</div><div style={{fontSize:14,fontWeight:600,color:"#555",marginBottom:5}}>Nog geen posts</div><div style={{fontSize:12.5}}>Vul links in en klik genereer</div></div>}
+        {!posts&&!loading&&<div style={{background:"#fff",border:"1px dashed #D1D5DB",borderRadius:13,padding:"48px 24px",textAlign:"center",color:"#94A3B8"}}><div style={{fontSize:32,marginBottom:10}}>📱</div><div style={{fontSize:14,fontWeight:600,color:"#555",marginBottom:5}}>Nog geen posts</div><div style={{fontSize:12.5}}>Vul links in en klik op maak posts</div></div>}
         {loading&&<div style={{background:"#fff",border:"1px solid #EAECF0",borderRadius:13,padding:"48px 24px",textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>⚡</div><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15}}>Bezig<span className="dot">…</span></div></div>}
         {posts&&<>
-          {posts.instagram&&(plat==="insta"||plat==="beide")&&<div className="post-card"><div className="post-bar insta">📸 Instagram</div><div className="post-body">{posts.instagram}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.instagram)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
-          {posts.tiktok&&(plat==="tiktok"||plat==="beide")&&<div className="post-card"><div className="post-bar tik">🎵 TikTok</div><div className="post-body">{posts.tiktok}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.tiktok)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
+          {posts.instagram&&(plat==="insta"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar insta">📸 Instagram</div><div className="post-body">{posts.instagram}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.instagram)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
+          {posts.tiktok&&(plat==="tiktok"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar tik">🎵 TikTok</div><div className="post-body">{posts.tiktok}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.tiktok)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
+          {posts.facebook&&(plat==="facebook"||plat==="alle")&&<div className="post-card"><div className="post-bar" style={{background:"#EBF5FB",color:"#1877F2",borderBottom:"1px solid #C9E6F8"}}>📘 Facebook</div><div className="post-body">{posts.facebook}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.facebook)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
         </>}
       </div>
     </div>
@@ -676,53 +2387,295 @@ function SocialTab() {
 function Placeholder({label,items}){return(<div><div className="ph"><div><div className="pg-title">{label}</div><div className="pg-sub">Functionaliteiten in dit onderdeel</div></div></div><div className="fg">{items.map((item,i)=><div className="fc" key={i}><div style={{fontSize:20,marginBottom:8}}>{item.icon}</div><div style={{fontWeight:700,color:"#111",fontSize:13}}>{item.label}</div><div style={{fontSize:11.5,color:"#94A3B8",lineHeight:1.4,marginTop:3}}>{item.desc}</div></div>)}</div></div>);}
 const PH={website:{label:"Website & SEO",items:[{icon:"🏗️",label:"Website bouwen",desc:"Eigen professionele bedrijfswebsite"},{icon:"📬",label:"Contactformulier",desc:"Aanvragen direct in de app"},{icon:"⭐",label:"Reviews",desc:"Google & eigen platform"},{icon:"🔍",label:"SEO",desc:"Beter vindbaar in Google"}]},werkregistratie:{label:"Werkbonnen",items:[{icon:"📸",label:"Foto's uploaden",desc:"Voor & na per opdracht"},{icon:"⏱️",label:"Uren bijhouden",desc:"Per klant of project"},{icon:"🔩",label:"Materialen",desc:"Verbruik per werkbon"},{icon:"✍️",label:"Werkbonnen",desc:"Digitaal invullen & ondertekenen"}]},team:{label:"Team & Instellingen",items:[{icon:"👤",label:"Medewerkers",desc:"Monteurs en admins"},{icon:"🔐",label:"Rollen",desc:"Baas, monteur of admin"},{icon:"💳",label:"Abonnement",desc:"Plan upgraden"},{icon:"🔗",label:"Koppelingen",desc:"Exact, Moneybird, Snelstart"}]}};
 
+// ── Subscriptie scherm ────────────────────────────────────────
+function SubscriptieScherm({ bedrijfsnaam, onSkip, blocked, onLogout }) {
+  const features = [
+    { icon:"📄", label:"Offertes & facturen", desc:"Professionele PDF's, verstuur per e-mail" },
+    { icon:"📅", label:"Planning kalender", desc:"Maand- en weekoverzicht, terugkerende taken" },
+    { icon:"👥", label:"CRM & klantenbeheer", desc:"Alle klanten en contacten op één plek" },
+    { icon:"🤖", label:"AI assistent", desc:"Offertes, mails en social posts in seconden" },
+    { icon:"🔧", label:"Werkbonnen", desc:"Digitaal invullen en ondertekenen" },
+    { icon:"👷", label:"Teambeheer", desc:"Medewerkers uitnodigen en taken toewijzen" },
+  ];
+  return (
+    <div style={{minHeight:"100vh",background:"#0F0F14",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',sans-serif",padding:"24px",boxSizing:"border-box"}}>
+      <div style={{background:"#fff",borderRadius:24,padding:"40px 36px",width:"100%",maxWidth:520,boxShadow:"0 32px 80px rgba(0,0,0,0.4)"}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:36,marginBottom:10}}>⚡</div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:"#0F0F14",marginBottom:6}}>
+            {blocked ? "Proefperiode verlopen" : `Welkom${bedrijfsnaam ? `, ${bedrijfsnaam}` : ""}!`}
+          </div>
+          <div style={{fontSize:14,color:"#64748B",lineHeight:1.5}}>
+            {blocked ? "Kies een abonnement om WerkMate te blijven gebruiken." : "Start vandaag gratis. Geen creditcard nodig voor de proefperiode."}
+          </div>
+        </div>
+
+        <div style={{background:"linear-gradient(135deg,#6366F1,#8B5CF6)",borderRadius:16,padding:"20px 22px",marginBottom:22,color:"#fff"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+            <div>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:18}}>WerkMate Pro</div>
+              <div style={{fontSize:12.5,opacity:.85,marginTop:2}}>14 dagen gratis uitproberen</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontWeight:800,fontSize:22}}>€99</div>
+              <div style={{fontSize:11,opacity:.8}}>/maand daarna</div>
+            </div>
+          </div>
+          <div style={{fontSize:12,opacity:.8,borderTop:"1px solid rgba(255,255,255,.2)",paddingTop:10,marginTop:4}}>
+            Na 14 dagen automatisch €99/maand. Altijd opzegbaar.
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:24}}>
+          {features.map(f=>(
+            <div key={f.label} style={{display:"flex",gap:9,alignItems:"flex-start",padding:"10px 12px",background:"#F8FAFC",borderRadius:12,border:"1px solid #F1F5F9"}}>
+              <span style={{fontSize:18,lineHeight:1}}>{f.icon}</span>
+              <div>
+                <div style={{fontSize:12.5,fontWeight:700,color:"#111",marginBottom:1}}>{f.label}</div>
+                <div style={{fontSize:11,color:"#94A3B8",lineHeight:1.3}}>{f.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <a href={STRIPE_URL} target="_blank" rel="noopener noreferrer"
+          style={{display:"block",width:"100%",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"center",textDecoration:"none",boxSizing:"border-box",marginBottom:10}}>
+          {blocked ? "Abonnement kiezen" : "🚀 Start 14 dagen gratis"}
+        </a>
+        {!blocked && onSkip && (
+          <button onClick={onSkip}
+            style={{display:"block",width:"100%",background:"none",border:"none",color:"#94A3B8",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",padding:"8px"}}>
+            Misschien later
+          </button>
+        )}
+        {blocked && onLogout && (
+          <button onClick={onLogout}
+            style={{display:"block",width:"100%",background:"none",border:"none",color:"#94A3B8",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",padding:"8px"}}>
+            Uitloggen
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Toggle helper ─────────────────────────────────────────────
+function Toggle({ label, desc, value, onChange }) {
+  return (
+    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16}}>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:600,fontSize:14,color:"#111",marginBottom:3}}>{label}</div>
+        {desc && <div style={{fontSize:12.5,color:"#64748B",lineHeight:1.4}}>{desc}</div>}
+      </div>
+      <button type="button" onClick={()=>onChange(!value)}
+        style={{flexShrink:0,width:44,height:24,borderRadius:12,border:"none",background:value?"#6366F1":"#E5E7EB",cursor:"pointer",position:"relative",padding:0,transition:"background .2s"}}>
+        <span style={{position:"absolute",top:2,left:value?22:2,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,.2)",transition:"left .2s",display:"block"}}/>
+      </button>
+    </div>
+  );
+}
+
+// ── Instellingen ───────────────────────────────────────────────
+function InstellingenTab({ userId, refresh }) {
+  const [settings, setSettings] = useState({
+    auto_review_email: true,
+    auto_reminder_email: true,
+    reminder_days_before: 3,
+    auto_invoice_reminder: false,
+    invoice_reminder_days: 7,
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState({ type: "", text: "" });
+
+  useEffect(() => {
+    supabase.from("email_settings").select("*").eq("user_id", userId).maybeSingle().then(({ data }) => {
+      if (data) setSettings({
+        auto_review_email: data.auto_review_email ?? true,
+        auto_reminder_email: data.auto_reminder_email ?? true,
+        reminder_days_before: data.reminder_days_before ?? 3,
+        auto_invoice_reminder: data.auto_invoice_reminder ?? false,
+        invoice_reminder_days: data.invoice_reminder_days ?? 7,
+      });
+      setLoading(false);
+    });
+  }, [userId]);
+
+  const save = async () => {
+    setSaving(true);
+    setMsg({ type: "", text: "" });
+    const { error } = await supabase.from("email_settings").upsert(
+      { ...settings, user_id: userId, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
+    setSaving(false);
+    if (error) { setMsg({ type: "error", text: `Opslaan mislukt: ${error.message}` }); return; }
+    setMsg({ type: "ok", text: "Instellingen opgeslagen." });
+    if (refresh) refresh();
+  };
+
+  if (loading) return <div style={{padding:24,color:"#888"}}>Laden...</div>;
+
+  return (
+    <div>
+      <div className="ph"><div><div className="pg-title">Instellingen</div><div className="pg-sub">Automatische e-mails en meldingen</div></div></div>
+      <div className="sec-ttl" style={{marginBottom:12}}>📧 E-mail automatisering</div>
+      <div className="card cp" style={{display:"flex",flexDirection:"column",gap:20}}>
+        <Toggle
+          label="Automatische review e-mail"
+          desc="Stuur automatisch een review-verzoek als een werkbon op 'Afgerond' wordt gezet"
+          value={settings.auto_review_email}
+          onChange={v=>setSettings({...settings,auto_review_email:v})}
+        />
+        <div style={{borderTop:"1px solid #F1F5F9"}}/>
+        <Toggle
+          label="Automatische betalingsherinnering"
+          desc="Stuur een herinnering voor openstaande facturen vóór de vervaldatum"
+          value={settings.auto_reminder_email}
+          onChange={v=>setSettings({...settings,auto_reminder_email:v})}
+        />
+        {settings.auto_reminder_email && (
+          <div className="ig" style={{maxWidth:240}}>
+            <label className="ilbl">Dagen voor vervaldatum</label>
+            <input className="inp" type="number" min="1" max="30" value={settings.reminder_days_before}
+              onChange={e=>setSettings({...settings,reminder_days_before:Math.max(1,parseInt(e.target.value)||3)})}/>
+          </div>
+        )}
+        <div style={{borderTop:"1px solid #F1F5F9"}}/>
+        <Toggle
+          label="Automatische factuurherinnering"
+          desc="Stuur een herinnering nadat een factuur verstuurd is en nog onbetaald is"
+          value={settings.auto_invoice_reminder}
+          onChange={v=>setSettings({...settings,auto_invoice_reminder:v})}
+        />
+        {settings.auto_invoice_reminder && (
+          <div className="ig" style={{maxWidth:240}}>
+            <label className="ilbl">Dagen na factuurdatum</label>
+            <input className="inp" type="number" min="1" max="90" value={settings.invoice_reminder_days}
+              onChange={e=>setSettings({...settings,invoice_reminder_days:Math.max(1,parseInt(e.target.value)||7)})}/>
+          </div>
+        )}
+      </div>
+      {msg.text && (
+        <div style={{marginTop:12,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500,background:msg.type==="ok"?"#DCFCE7":"#FEE2E2",color:msg.type==="ok"?"#15803D":"#B91C1C"}}>
+          {msg.text}
+        </div>
+      )}
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}>
+        <button className="btn btn-dark" onClick={save} disabled={saving}>{saving?"Opslaan…":"Opslaan"}</button>
+      </div>
+    </div>
+  );
+}
+
 // ── WerkMate App ──────────────────────────────────────────────
 function WerkMateApp({ user, onLogout }) {
   const [tab, setTab] = useState("dashboard");
   const [bedrijf, setBedrijf] = useState(null);
-  const [prijslijst] = useState(DEFAULT_PRIJSLIJST);
+  const [prijslijst, setPrijslijst] = useState([]);
   const [showOnboard, setShowOnboard] = useState(false);
+  const [showSubscription, setShowSubscription] = useState(false);
+  const [mustSubscribe, setMustSubscribe] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [emailSettings, setEmailSettings] = useState({
+    auto_review_email: true,
+    auto_reminder_email: true,
+    reminder_days_before: 3,
+    auto_invoice_reminder: false,
+    invoice_reminder_days: 7,
+  });
+  const [orgOwnerId, setOrgOwnerId] = useState(user.id);
+  const [isOrgInitialized, setIsOrgInitialized] = useState(false);
 
   // Data state
   const [offertes, setOffertes] = useState([]);
   const [klanten, setKlanten] = useState([]);
   const [planning, setPlanning] = useState([]);
   const [facturen, setFacturen] = useState([]);
+  const [werkbonnen, setWerkbonnen] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [planningCats, setPlanningCats] = useState([]);
+  const [emailsLog, setEmailsLog] = useState([]);
 
-  // Laad bedrijfsprofiel
   useEffect(() => {
-    const laadData = async () => {
-      const { data: profiel } = await supabase.from("bedrijfsprofiel").select("*").eq("user_id", user.id).single();
-      if (profiel) {
-        setBedrijf(profiel);
-        setShowOnboard(false);
+    const initOrg = async () => {
+      let ownerId = user.id;
+      const { data: acceptedRecords } = await supabase.from("team").select("*").eq("accepted_user_id", user.id).limit(1);
+      if (acceptedRecords?.length) {
+        ownerId = acceptedRecords[0].user_id;
       } else {
-        setShowOnboard(true);
+        const { data: pendingRecords } = await supabase.from("team").select("*").eq("email", user.email).limit(1);
+        if (pendingRecords?.length) {
+          const pendingInvite = pendingRecords[0];
+          ownerId = pendingInvite.user_id;
+          if (!pendingInvite.accepted_user_id) {
+            await supabase.from("team").update({ accepted_user_id: user.id, accepted_at: new Date().toISOString() }).eq("id", pendingInvite.id);
+          }
+        }
       }
+      setOrgOwnerId(ownerId);
+      setIsOrgInitialized(true);
+    };
+    initOrg();
+  }, [user.id, user.email]);
+
+  useEffect(() => {
+    if (!isOrgInitialized) return;
+    const laadData = async () => {
+      const { data: profiel } = await supabase.from("bedrijfsprofiel").select("*").eq("user_id", orgOwnerId).single();
+      if (profiel) { setBedrijf(profiel); setShowOnboard(false); }
+      else { setShowOnboard(true); }
+
+      if (!SUBSCRIPTION_WHITELIST.includes(user.email)) {
+        const { data: sub } = await supabase.from("subscriptions").select("status,trial_ends_at").eq("user_id", orgOwnerId).maybeSingle();
+        if (sub) {
+          const isActive = sub.status === "active";
+          const inTrial = sub.status === "trialing" && sub.trial_ends_at && new Date(sub.trial_ends_at) > new Date();
+          if (!isActive && !inTrial) {
+            setMustSubscribe(true);
+            setLoadingData(false);
+            return;
+          }
+        }
+      }
+
       await refreshAlles();
       setLoadingData(false);
     };
     laadData();
-  }, [user.id]);
+  }, [isOrgInitialized, orgOwnerId]);
 
   const refreshAlles = async () => {
-    const [o, k, p, f] = await Promise.all([
-      supabase.from("offertes").select("*").eq("user_id", user.id).order("created_at", {ascending:false}),
-      supabase.from("klanten").select("*").eq("user_id", user.id).order("created_at", {ascending:false}),
-      supabase.from("planning").select("*").eq("user_id", user.id).order("tijd", {ascending:true}),
-      supabase.from("facturen").select("*").eq("user_id", user.id).order("created_at", {ascending:false}),
-    ]);
-    setOffertes(o.data || []);
-    setKlanten(k.data || []);
-    setPlanning(p.data || []);
-    setFacturen(f.data || []);
-  };
+      const ownerId = orgOwnerId || user.id;
+      const [o, k, p, f, w, t, pc, el] = await Promise.all([
+        supabase.from("offertes").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
+        supabase.from("klanten").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
+        supabase.from("planning").select("*").eq("user_id", ownerId).order("datum",{ascending:true}).order("tijd",{ascending:true}),
+        supabase.from("facturen").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
+        supabase.from("werkbonnen").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
+        supabase.from("team").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
+        supabase.from("planning_categorieen").select("*").eq("user_id", ownerId).order("naam", {ascending:true}),
+        supabase.from("emails_log").select("*").eq("user_id", ownerId).order("sent_at", {ascending:false}),
+      ]);
+      setOffertes(o.data || []);
+      setKlanten(k.data || []);
+      setPlanning(p.data || []);
+      setFacturen(f.data || []);
+      setWerkbonnen(w.data || []);
+      setTeamMembers(t.data || []);
+      setPlanningCats(pc.data || []);
+      setEmailsLog(el.data || []);
+      const { data: esData } = await supabase.from("email_settings").select("*").eq("user_id", ownerId).maybeSingle();
+      if (esData) setEmailSettings(esData);
+    };
 
   const onDone = async (data) => {
-    await supabase.from("bedrijfsprofiel").insert({ ...data, user_id: user.id });
+    await supabase.from("bedrijfsprofiel").insert({ ...data, user_id: orgOwnerId });
     setBedrijf(data);
+    setPrijslijst(getPrijslijstTemplate(data.sector));
     setShowOnboard(false);
+    setShowSubscription(true);
   };
 
   if (loadingData) return (
@@ -733,17 +2686,35 @@ function WerkMateApp({ user, onLogout }) {
 
   const render = () => {
     switch(tab) {
-      case "dashboard":  return <DashboardTab openTab={setTab} bedrijf={bedrijf} offertes={offertes} planning={planning} facturen={facturen}/>;
-      case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={user.id} offertes={offertes} refresh={refreshAlles}/>;
-      case "prijslijst": return <PrijslijstTab/>;
-      case "planning":   return <PlanningTab userId={user.id} planning={planning} refresh={refreshAlles}/>;
-      case "crm":        return <CRMTab userId={user.id} klanten={klanten} refresh={refreshAlles}/>;
-      case "facturen":   return <FinancienTab userId={user.id} facturen={facturen} refresh={refreshAlles}/>;
-      case "mail":       return <MailTab/>;
+      case "dashboard":  return <DashboardTab openTab={setTab} bedrijf={bedrijf} offertes={offertes} planning={planning} facturen={facturen} klanten={klanten}/>;
+      case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={orgOwnerId} offertes={offertes} klanten={klanten} refresh={refreshAlles} bedrijf={bedrijf}/>;
+      case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst}/>;
+      case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
+      case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} refresh={refreshAlles}/>;
+      case "profiel":     return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} />;
+      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf}/>;
+      case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
+      case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings}/>;
+      case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles}/>;
       case "social":     return <SocialTab/>;
+      case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles}/>;
       default: return PH[tab]?<Placeholder {...PH[tab]}/>:null;
     }
   };
+
+  if (mustSubscribe) return (
+    <>
+      <style>{css}</style>
+      <SubscriptieScherm bedrijfsnaam={bedrijf?.bedrijfsnaam} blocked={true} onLogout={() => supabase.auth.signOut()}/>
+    </>
+  );
+
+  if (showSubscription) return (
+    <>
+      <style>{css}</style>
+      <SubscriptieScherm bedrijfsnaam={bedrijf?.bedrijfsnaam} onSkip={()=>setShowSubscription(false)}/>
+    </>
+  );
 
   return (
     <>
@@ -770,6 +2741,36 @@ function WerkMateApp({ user, onLogout }) {
           </div>
         </div>
         <div className="main">{!showOnboard&&render()}</div>
+        {/* Mobile bottom navigation */}
+        <div className="mob-nav">
+          {showMoreMenu&&(
+            <div onClick={()=>setShowMoreMenu(false)} style={{position:"fixed",inset:0,zIndex:99}} />
+          )}
+          {showMoreMenu&&(
+            <div style={{position:"fixed",bottom:"calc(56px + env(safe-area-inset-bottom))",left:0,right:0,background:"#0F0F14",zIndex:100,borderTop:"1px solid rgba(255,255,255,.12)",padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {MORE_NAV.map(item=>(
+                <button key={item.id} onClick={()=>{setTab(item.id);setShowMoreMenu(false);}} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:tab===item.id?"rgba(99,102,241,.18)":"rgba(255,255,255,.06)",border:"none",borderRadius:10,color:tab===item.id?"#A5B4FC":"rgba(255,255,255,.7)",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",WebkitTapHighlightColor:"transparent"}}>
+                  <span style={{fontSize:18}}>{item.icon}</span>{item.label}
+                </button>
+              ))}
+              <button onClick={()=>{setShowMoreMenu(false);onLogout();}} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:"rgba(255,255,255,.06)",border:"none",borderRadius:10,color:"rgba(255,255,255,.5)",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",WebkitTapHighlightColor:"transparent",gridColumn:"1/-1"}}>
+                <span style={{fontSize:18}}>🚪</span>Uitloggen
+              </button>
+            </div>
+          )}
+          <div style={{display:"flex",height:56}}>
+            {MOBILE_NAV.map(item=>item.id==="meer"
+              ?<button key="meer" className={`mob-nb${showMoreMenu?" mob-nb-on":""}`} onClick={()=>setShowMoreMenu(m=>!m)}>
+                <span className="mob-nb-ic">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+              :<button key={item.id} className={`mob-nb${tab===item.id&&!showMoreMenu?" mob-nb-on":""}`} onClick={()=>{setTab(item.id);setShowMoreMenu(false);}}>
+                <span className="mob-nb-ic">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
