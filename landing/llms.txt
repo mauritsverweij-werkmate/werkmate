@@ -1,0 +1,27 @@
+# WerkMate
+
+> Compleet bedrijfsplatform voor vakmensen en ZZP'ers in Nederland.
+
+WerkMate is een Nederlandse SaaS-applicatie waarmee vakmensen (loodgieters, elektriciens, aannemers, schilders, installateurs en andere ZZP'ers) hun bedrijfsadministratie digitaal regelen.
+
+## Kernfunctionaliteiten
+
+- **Offerte software voor vakmensen** — maak professionele offertes in seconden, stuur ze direct naar klanten en volg de status bij.
+- **Werkbonnen app** — registreer uitgevoerd werk, uren, materialen en foto's per klus. Klanten ontvangen automatisch een reviewverzoek.
+- **Planning loodgieter en andere vakmensen** — weekplanning en maandoverzicht met terugkerende opdrachten en teamleden.
+- **Boekhouding ZZP** — facturen aanmaken vanuit offertes, btw-berekening, betaalstatus bijhouden, herinneringen sturen.
+- **Klantenbeheer (CRM)** — alle klantgegevens, contacthistorie en openstaande offertes op één plek.
+- **Team & medewerkers** — voeg medewerkers toe, wijs opdrachten toe, bekijk wie wat doet.
+- **AI-assistent** — laat WerkMate teksten schrijven, offertes aanvullen en vragen beantwoorden.
+
+## Doelgroep
+
+ZZP'ers en kleine bedrijven in de bouw, installatietechniek, schilderwerk, groenvoorziening en andere ambachtelijke beroepen in Nederland.
+
+## Technologie
+
+Web-app (React), werkt op desktop en mobiel. Geen installatie nodig. 14 dagen gratis proberen.
+
+## URL
+
+https://werkmate.tech
