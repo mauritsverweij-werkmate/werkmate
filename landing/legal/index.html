@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Algemene Voorwaarden &amp; Privacybeleid — WerkMate</title>
+  <meta name="description" content="Algemene voorwaarden en privacybeleid van WerkMate — het bedrijfsplatform voor vakmensen." />
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --dark:    #07071B;
+      --dark2:   #0D0D25;
+      --card:    #111127;
+      --primary: #6366F1;
+      --p2:      #8B5CF6;
+      --muted:   #64748B;
+      --border:  rgba(255,255,255,0.07);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--dark);
+      color: #F0F0FF;
+      font-family: 'DM Sans', sans-serif;
+      line-height: 1.75;
+      font-size: 15px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      padding: 0 48px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(7,7,27,.92);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 18px;
+      color: #fff; text-decoration: none;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .nav-logo-ic {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--primary), var(--p2));
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .nav-back {
+      color: var(--muted); text-decoration: none;
+      font-size: 13.5px; font-weight: 500;
+      display: flex; align-items: center; gap: 5px;
+      transition: color .15s;
+    }
+    .nav-back:hover { color: #fff; }
+    .nav-back::before { content: '←'; font-size: 15px; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 64px 40px 96px;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex; gap: 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 52px;
+    }
+    .tab {
+      padding: 10px 22px 12px;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13.5px; font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: none;
+      transition: all .18s;
+      margin-bottom: -1px;
+    }
+    .tab.active {
+      color: #fff;
+      background: var(--card);
+      border-color: var(--border);
+      border-bottom-color: var(--card);
+    }
+    .tab:not(.active):hover { color: rgba(255,255,255,.7); }
+
+    /* ── Content panels ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Typography ── */
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(28px, 5vw, 38px);
+      font-weight: 800;
+      letter-spacing: -.5px;
+      line-height: 1.15;
+      margin-bottom: 6px;
+      color: #fff;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 40px;
+    }
+    h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin: 44px 0 14px;
+    }
+    h2:first-of-type { margin-top: 0; }
+    p {
+      color: rgba(240,240,255,.82);
+      margin-bottom: 14px;
+    }
+    ul {
+      margin: 0 0 16px 0;
+      padding: 0;
+      list-style: none;
+    }
+    li {
+      color: rgba(240,240,255,.82);
+      padding: 5px 0 5px 20px;
+      position: relative;
+    }
+    li::before {
+      content: '–';
+      position: absolute; left: 0;
+      color: var(--primary);
+    }
+    strong { color: rgba(240,240,255,.95); font-weight: 600; }
+    a { color: var(--primary); }
+
+    /* ── Callout box ── */
+    .callout {
+      background: rgba(99,102,241,.08);
+      border: 1px solid rgba(99,102,241,.22);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 40px;
+      font-size: 14px;
+      color: rgba(240,240,255,.9);
+      line-height: 1.65;
+    }
+
+    /* ── Divider ── */
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 48px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: #fff; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      nav { padding: 0 20px; }
+      .container { padding: 40px 20px 80px; }
+      footer { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="https://werkmate.tech" class="nav-logo">
+    <div class="nav-logo-ic">⚡</div>
+    WerkMate
+  </a>
+  <a href="https://werkmate.tech" class="nav-back">Terug naar website</a>
+</nav>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab active" data-panel="av">Algemene Voorwaarden</button>
+    <button class="tab" data-panel="pp">Privacybeleid</button>
+  </div>
+
+  <!-- ══ ALGEMENE VOORWAARDEN ══════════════════════════════════════ -->
+  <div class="panel active" id="av">
+    <h1>Algemene Voorwaarden</h1>
+    <p class="meta">Versie 1.0 — Ingangsdatum: 1 juni 2026</p>
+
+    <div class="callout">
+      Deze algemene voorwaarden zijn van toepassing op alle gebruikers van WerkMate. Door gebruik te maken van WerkMate ga je akkoord met deze voorwaarden.
+    </div>
+
+    <h2>1. Wie zijn wij</h2>
+    <p>WerkMate is een software-as-a-service (SaaS) platform ontwikkeld door Verweij Woningontruiming, gevestigd te Prinses Maximalaan 65, 3708 ZT Zeist, Nederland. KvK-nummer: 42051715. Contactadres: <a href="mailto:info@werkmate.tech">info@werkmate.tech</a>.</p>
+
+    <h2>2. Wat is WerkMate</h2>
+    <p>WerkMate is een online bedrijfsbeheer applicatie voor kleine ondernemers. De applicatie biedt functies voor het maken van offertes, plannen van afspraken, beheren van klanten, opstellen van werkbonnen en bijhouden van financiën.</p>
+
+    <h2>3. Abonnement en betaling</h2>
+    <p>WerkMate werkt op basis van een maandelijks abonnement van €99 exclusief BTW per maand. Nieuwe gebruikers ontvangen een gratis proefperiode van 14 dagen. Na de proefperiode wordt automatisch het maandelijkse bedrag in rekening gebracht via de opgegeven betaalmethode.</p>
+    <ul>
+      <li>Betalingen worden verwerkt via Stripe</li>
+      <li>Het abonnement loopt maandelijks en kan maandelijks worden opgezegd</li>
+      <li>Bij opzegging blijft toegang actief tot het einde van de betaalde periode</li>
+      <li>Er wordt geen restitutie verleend voor reeds betaalde periodes</li>
+    </ul>
+
+    <h2>4. Gebruik van de applicatie</h2>
+    <p>Je mag WerkMate uitsluitend gebruiken voor legitieme zakelijke doeleinden. Het is niet toegestaan om:</p>
+    <ul>
+      <li>De applicatie te gebruiken voor illegale activiteiten</li>
+      <li>Andere gebruikers te hinderen of schade toe te brengen</li>
+      <li>De applicatie te reverse engineeren of te kopiëren</li>
+      <li>Valse of misleidende informatie in te voeren</li>
+    </ul>
+
+    <h2>5. Beschikbaarheid</h2>
+    <p>WerkMate streeft naar een zo hoog mogelijke beschikbaarheid maar kan geen garantie geven voor ononderbroken werking. Onderhoud, updates of technische storingen kunnen tijdelijk leiden tot beperkte beschikbaarheid.</p>
+
+    <h2>6. Aansprakelijkheid</h2>
+    <p>WerkMate is niet aansprakelijk voor:</p>
+    <ul>
+      <li>Directe of indirecte schade door gebruik of niet-gebruik van de applicatie</li>
+      <li>Verlies van data door technische storingen</li>
+      <li>Schade door fouten in door AI gegenereerde offertes of documenten</li>
+      <li>Gederfde inkomsten of gevolgschade</li>
+    </ul>
+    <p>De maximale aansprakelijkheid van WerkMate is beperkt tot het bedrag dat de gebruiker in de afgelopen maand heeft betaald.</p>
+
+    <h2>7. Intellectueel eigendom</h2>
+    <p>WerkMate en alle bijbehorende software, ontwerpen en content zijn eigendom van Verweij Woningontruiming. Jouw eigen data (klanten, offertes, facturen) blijft altijd jouw eigendom.</p>
+
+    <h2>8. Wijzigingen</h2>
+    <p>WerkMate behoudt het recht om deze voorwaarden te wijzigen. Bij wijzigingen word je minimaal 30 dagen van tevoren per e-mail geïnformeerd. Voortgezet gebruik na de wijzigingsdatum geldt als akkoord.</p>
+
+    <h2>9. Toepasselijk recht</h2>
+    <p>Op deze voorwaarden is Nederlands recht van toepassing. Geschillen worden voorgelegd aan de bevoegde rechter in Utrecht.</p>
+
+    <h2>10. Contact</h2>
+    <p>Voor vragen over deze voorwaarden: <a href="mailto:info@werkmate.tech">info@werkmate.tech</a> of <a href="tel:0610362420">06-10362420</a>.</p>
+  </div>
+
+  <!-- ══ PRIVACYBELEID ══════════════════════════════════════════════ -->
+  <div class="panel" id="pp">
+    <h1>Privacybeleid</h1>
+    <p class="meta">Versie 1.0 — Ingangsdatum: 1 juni 2026</p>
+
+    <div class="callout">
+      WerkMate neemt jouw privacy serieus. In dit beleid leggen we uit welke gegevens we verzamelen, waarom, en hoe we deze beschermen. Dit beleid is opgesteld conform de AVG (Algemene Verordening Gegevensbescherming).
+    </div>
+
+    <h2>1. Wie is verantwoordelijk</h2>
+    <p>Verweij Woningontruiming, Prinses Maximalaan 65, 3708 ZT Zeist. KvK: 42051715. E-mail: <a href="mailto:info@werkmate.tech">info@werkmate.tech</a>. Wij zijn de verwerkingsverantwoordelijke voor jouw persoonsgegevens.</p>
+
+    <h2>2. Welke gegevens verzamelen we</h2>
+    <p>Bij het gebruik van WerkMate verwerken wij de volgende gegevens:</p>
+    <ul>
+      <li><strong>Accountgegevens:</strong> naam, e-mailadres, wachtwoord (versleuteld)</li>
+      <li><strong>Bedrijfsgegevens:</strong> bedrijfsnaam, adres, telefoonnummer, sector</li>
+      <li><strong>Gebruiksdata:</strong> inlogmomenten, uitgevoerde acties in de app</li>
+      <li><strong>Klantdata:</strong> gegevens die jij invoert over jouw eigen klanten</li>
+      <li><strong>Betaalgegevens:</strong> worden verwerkt door Stripe — wij slaan geen betaalgegevens op</li>
+    </ul>
+
+    <h2>3. Waarom verwerken we deze gegevens</h2>
+    <ul>
+      <li>Om de dienst te kunnen leveren (uitvoering overeenkomst)</li>
+      <li>Om je account te beheren en te beveiligen</li>
+      <li>Om je te informeren over updates en wijzigingen</li>
+      <li>Om de applicatie te verbeteren</li>
+      <li>Om te voldoen aan wettelijke verplichtingen</li>
+    </ul>
+
+    <h2>4. Hoe lang bewaren we gegevens</h2>
+    <ul>
+      <li>Accountgegevens: zolang je klant bent + 1 jaar na opzegging</li>
+      <li>Financiële gegevens: 7 jaar (wettelijke bewaarplicht)</li>
+      <li>Na verwijdering van je account worden gegevens binnen 30 dagen gewist</li>
+    </ul>
+
+    <h2>5. Delen met derden</h2>
+    <p>Wij delen jouw gegevens alleen met:</p>
+    <ul>
+      <li><strong>Supabase:</strong> database en authenticatie (servers in EU)</li>
+      <li><strong>Stripe:</strong> betalingsverwerking</li>
+      <li><strong>Resend:</strong> e-mailverzending</li>
+      <li><strong>Anthropic:</strong> AI-functies (alleen geanonimiseerde prompts)</li>
+    </ul>
+    <p>Wij verkopen jouw gegevens nooit aan derden.</p>
+
+    <h2>6. Jouw rechten</h2>
+    <p>Op grond van de AVG heb je de volgende rechten:</p>
+    <ul>
+      <li>Recht op inzage in jouw gegevens</li>
+      <li>Recht op correctie van onjuiste gegevens</li>
+      <li>Recht op verwijdering ("recht op vergetelheid")</li>
+      <li>Recht op beperking van verwerking</li>
+      <li>Recht op dataportabiliteit</li>
+      <li>Recht om bezwaar te maken</li>
+    </ul>
+    <p>Je kunt een verzoek indienen via <a href="mailto:info@werkmate.tech">info@werkmate.tech</a>. Wij reageren binnen 30 dagen.</p>
+
+    <h2>7. Beveiliging</h2>
+    <p>WerkMate neemt passende technische en organisatorische maatregelen om jouw gegevens te beschermen:</p>
+    <ul>
+      <li>Versleutelde verbindingen (HTTPS/TLS)</li>
+      <li>Versleutelde wachtwoorden</li>
+      <li>Row Level Security in de database</li>
+      <li>Toegang beperkt tot geautoriseerde medewerkers</li>
+    </ul>
+
+    <h2>8. Cookies</h2>
+    <p>WerkMate gebruikt alleen functionele cookies die noodzakelijk zijn voor de werking van de applicatie (sessiecookies voor inloggen). Wij gebruiken geen tracking- of advertentiecookies.</p>
+
+    <h2>9. Klachten</h2>
+    <p>Heb je een klacht over hoe wij met jouw gegevens omgaan? Neem dan contact op via <a href="mailto:info@werkmate.tech">info@werkmate.tech</a>. Je hebt ook het recht om een klacht in te dienen bij de Autoriteit Persoonsgegevens via <a href="https://autoriteitpersoonsgegevens.nl" target="_blank" rel="noopener">autoriteitpersoonsgegevens.nl</a>.</p>
+
+    <h2>10. Wijzigingen</h2>
+    <p>Dit privacybeleid kan worden gewijzigd. Wijzigingen worden minimaal 30 dagen vooraf gecommuniceerd via e-mail. De meest actuele versie staat altijd op <a href="https://werkmate.tech/legal">werkmate.tech/legal</a>.</p>
+
+    <h2>11. Contact</h2>
+    <p>Voor vragen over dit privacybeleid: <a href="mailto:info@werkmate.tech">info@werkmate.tech</a> of <a href="tel:0610362420">06-10362420</a>.</p>
+  </div>
+
+</div>
+
+<footer>
+  © 2026 WerkMate · Verweij Woningontruiming, Zeist ·
+  <a href="mailto:info@werkmate.tech">info@werkmate.tech</a>
+</footer>
+
+<script>
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const id = tab.dataset.panel;
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      tab.classList.add('active');
+    });
+  });
+
+  // Open directly to #privacy if hash is present
+  if (window.location.hash === '#privacy') {
+    document.querySelector('[data-panel="pp"]').click();
+  }
+</script>
+
+</body>
+</html>

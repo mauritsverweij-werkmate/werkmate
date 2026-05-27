@@ -126,7 +126,7 @@ function Auth({ onLogin }) {
 }
 
 // ── Hoofd App ─────────────────────────────────────────────────
-export default function App() {
+function AuthApp() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [inviteReady, setInviteReady] = useState(true);
@@ -172,6 +172,18 @@ export default function App() {
   return <WerkMateApp user={user} onLogout={() => supabase.auth.signOut()} />;
 }
 
+export default function App() {
+  const path = window.location.pathname;
+  if (path.startsWith("/portal/")) {
+    const token = path.replace("/portal/", "").split(/[?#]/)[0];
+    return <><style>{css}</style><PortalPage token={token}/></>;
+  }
+  if (path === "/admin") {
+    return <><style>{css}</style><AdminPage/></>;
+  }
+  return <AuthApp/>;
+}
+
 // ── Nav items ─────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id:"dashboard",       icon:"⊞",  label:"Dashboard" },
@@ -186,19 +198,20 @@ const NAV_ITEMS = [
   
   { id:"werkregistratie", icon:"🔧", label:"Werkbonnen" },
   { id:"team",            icon:"👷", label:"Team" },
+  { id:"ritten",          icon:"🚗", label:"Ritten" },
   { id:"instellingen",    icon:"⚙️", label:"Instellingen" },
 ];
 
-const MOBILE_PRIMARY = ["dashboard","offertes","planning","crm","facturen"];
-const MOBILE_NAV = [
-  { id:"dashboard",  icon:"⊞",  label:"Dashboard" },
-  { id:"offertes",   icon:"📋", label:"Offertes" },
-  { id:"planning",   icon:"📅", label:"Planning" },
-  { id:"crm",        icon:"👥", label:"Klanten" },
-  { id:"facturen",   icon:"💶", label:"Financiën" },
-  { id:"meer",       icon:"☰",  label:"Meer" },
+const MOB_PRIMARY = ["dashboard","offertes","planning","crm","facturen"];
+const MOB_NAV = [
+  { id:"dashboard", icon:"⊞",  label:"Dashboard" },
+  { id:"offertes",  icon:"📋", label:"Offertes"  },
+  { id:"planning",  icon:"📅", label:"Planning"  },
+  { id:"crm",       icon:"👥", label:"Klanten"   },
+  { id:"facturen",  icon:"💶", label:"Financiën" },
+  { id:"meer",      icon:"☰",  label:"Meer"      },
 ];
-const MORE_NAV = NAV_ITEMS.filter(i => !MOBILE_PRIMARY.includes(i.id));
+const MOB_MORE = NAV_ITEMS.filter(i => !MOB_PRIMARY.includes(i.id));
 
 const DEFAULT_PRIJSLIJST = [
   { id:1, dienst:"Arbeid (uurloon)",          eenheid:"uur", prijs:85,  categorie:"Arbeid"      },
@@ -309,7 +322,52 @@ const SC = {
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow-x:hidden}
 body{background:#0F0F14}
+.mob-card-list{display:flex;flex-direction:column;gap:8px}
+.mob-card{background:#fff;border-radius:16px;border:1px solid #EAECF0;padding:16px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .12s;position:relative}
+.mob-card:active{background:#F8FAFF;transform:scale(0.99)}
+.mob-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px}
+.mob-card-name{font-size:16px;font-weight:700;color:#0F0F14;line-height:1.3}
+.mob-card-amount{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#0F0F14;margin:6px 0 2px}
+.mob-card-sub{font-size:13px;color:#64748B;margin-top:3px;line-height:1.4}
+.mob-card-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.mob-card-chevron{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:#CBD5E1;font-size:16px;font-weight:700}
+.mob-plan-date{font-size:11.5px;font-weight:700;color:#6366F1;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.mob-screen{position:fixed;inset:0;background:#F8FAFC;z-index:150;display:flex;flex-direction:column;overflow:hidden;animation:slideIn .26s cubic-bezier(.25,.46,.45,.94)}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.mob-screen-hdr{background:#fff;border-bottom:1px solid #EAECF0;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.mob-back{background:none;border:none;color:#6366F1;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:3px;padding:6px 0;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.mob-screen-ttl{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#0F0F14;flex:1}
+.mob-screen-scroll{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+.mob-det-section{background:#fff;border-radius:16px;border:1px solid #EAECF0;padding:18px;margin-bottom:10px}
+.mob-det-amount{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#0F0F14;margin-bottom:4px}
+.mob-det-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F3F4F6}
+.mob-det-row:last-child{border-bottom:none}
+.mob-det-lbl{font-size:13px;color:#64748B}
+.mob-det-val{font-size:13.5px;font-weight:600;color:#0F0F14;text-align:right;flex:1;margin-left:10px}
+.mob-det-action-btn{display:flex;align-items:center;gap:14px;width:100%;padding:15px 16px;background:#fff;border-radius:14px;border:1px solid #EAECF0;margin-bottom:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:#0F0F14;-webkit-tap-highlight-color:transparent;min-height:52px;text-align:left;transition:background .1s}
+.mob-det-action-btn:active{background:#F8FAFF}
+.mob-det-action-btn.danger{color:#EF4444;border-color:#FECACA;background:#FEF2F2}
+.mob-det-action-ic{font-size:20px;width:28px;text-align:center;flex-shrink:0}
+.mob-day-wrap{background:#fff;border-radius:16px;border:1px solid #EAECF0;overflow:hidden}
+.mob-day-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #F0F0F0}
+.mob-day-nav-btn{background:#F3F4F6;border:none;border-radius:10px;width:38px;height:38px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.mob-day-center{text-align:center;flex:1}
+.mob-day-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#0F0F14}
+.mob-day-sub{font-size:10px;font-weight:700;color:#6366F1;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.mob-day-hours{overflow-y:auto}
+.mob-day-row{display:flex;border-bottom:1px solid #F5F7FA;min-height:58px}
+.mob-day-row:last-child{border-bottom:none}
+.mob-day-timecol{width:54px;flex-shrink:0;padding:10px 10px 0;font-size:11px;font-weight:700;color:#94A3B8;text-align:right;border-right:1px solid #F0F0F0}
+.mob-day-slotcol{flex:1;padding:5px 10px;display:flex;flex-direction:column;gap:4px}
+.mob-day-ev{border-radius:10px;padding:8px 11px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .12s}
+.mob-day-ev:active{opacity:.8}
+.mob-day-ev-time{font-size:10px;font-weight:700;margin-bottom:2px}
+.mob-day-ev-name{font-size:13px;font-weight:700;line-height:1.2;color:#0F0F14}
+.mob-day-ev-dienst{font-size:11.5px;color:#64748B;margin-top:1px}
+.mob-day-ev.klaar{opacity:.5}
+.mob-day-empty{padding:28px 16px;text-align:center;color:#94A3B8;font-size:13.5px}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
 .shell{display:flex;height:100vh;background:#F4F4F6;font-family:'DM Sans',sans-serif;overflow:hidden}
@@ -483,16 +541,32 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .cal-feestdag{font-size:9px;color:#92400E;font-weight:600;margin-bottom:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .cal-week-hdr.feestdag{background:#FFFBEB}
 .cal-week-feestdag{font-size:9px;color:#92400E;font-weight:600;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.cal-week{display:grid;grid-template-columns:repeat(7,1fr)}
-.cal-week-col{border-right:1px solid #F0F0F0;box-sizing:border-box}
-.cal-week-col:last-child{border-right:none}
-.cal-week-hdr{text-align:center;padding:10px 6px 8px;border-bottom:1px solid #E5E7EB;cursor:pointer;transition:background .1s}
+.cal-week-hdr{text-align:center;padding:10px 6px 8px;border-bottom:1px solid #E5E7EB;cursor:pointer;transition:background .1s;box-sizing:border-box}
 .cal-week-hdr:hover{background:#F9FAFB}
 .cal-week-day{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
 .cal-week-dn{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#0F0F14}
 .cal-week-hdr.today .cal-week-dn{color:#6366F1}
 .cal-week-hdr.today .cal-week-day{color:#6366F1}
-.cal-week-tasks{padding:8px 6px;min-height:160px;display:flex;flex-direction:column;gap:5px}
+.cal-wg-outer{overflow:hidden}
+.cal-wg-hdr-row{display:flex;border-bottom:1px solid #E5E7EB}
+.cal-wg-hdr-spc{width:44px;flex-shrink:0;border-right:1px solid #F0F0F0;box-sizing:border-box}
+.cal-wg-hdr-cell{flex:1;min-width:0;border-right:1px solid #F0F0F0;box-sizing:border-box}
+.cal-wg-hdr-cell:last-child{border-right:none}
+.cal-wg-body-row{display:flex;overflow-y:auto;max-height:560px}
+.cal-wg-tc{width:44px;flex-shrink:0;border-right:1px solid #F0F0F0;box-sizing:border-box}
+.cal-wg-tl{height:40px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:6px;padding-top:2px;box-sizing:border-box}
+.cal-wg-dc{flex:1;min-width:0;border-right:1px solid #F0F0F0;box-sizing:border-box;position:relative}
+.cal-wg-dc:last-child{border-right:none}
+.cal-wg-slot{position:absolute;left:0;right:0;height:0;pointer-events:none}
+.cal-task-blk{position:absolute;left:2px;right:2px;border-radius:6px;padding:4px 6px;overflow:hidden;background:#EEF2FF;color:#4338CA;cursor:pointer;box-sizing:border-box;font-size:10.5px;line-height:1.3;transition:opacity .1s}
+.cal-task-blk:hover{opacity:.85}
+.cal-task-blk.onderweg{background:#FEF3C7;color:#92400E}
+.cal-task-blk.klaar{opacity:.45}
+.cal-task-blk .cal-tbk-time{font-size:9.5px;font-weight:700;opacity:.8;white-space:nowrap}
+.cal-task-blk .cal-tbk-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-task-blk .cal-tbk-name.done{text-decoration:line-through}
+.cal-task-blk .cal-tbk-dienst{font-size:10px;opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-task-blk .cal-tbk-actions{display:flex;gap:3px;margin-top:4px}
 .cal-task-wk{border-radius:7px;padding:6px 8px;background:#EEF2FF;color:#4338CA}
 .cal-task-wk.onderweg{background:#FEF3C7;color:#92400E}
 .cal-task-wk.klaar{opacity:.55}
@@ -514,47 +588,98 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .cat-row:last-child{border-bottom:none}
 .cat-swatch{width:26px;height:26px;border-radius:7px;flex-shrink:0;border:2px solid rgba(0,0,0,.08)}
 .cat-inp-color{width:38px;height:38px;border:1.5px solid #E5E7EB;border-radius:9px;cursor:pointer;padding:2px;flex-shrink:0;background:#fff}
-.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:#0F0F14;border-top:1px solid rgba(255,255,255,.12);padding-bottom:env(safe-area-inset-bottom)}
-.mob-nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 2px 6px;border:none;background:transparent;color:rgba(255,255,255,.38);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;cursor:pointer;transition:color .14s;-webkit-tap-highlight-color:transparent}
-.mob-nb.mob-nb-on{color:#A5B4FC}
-.mob-nb-ic{font-size:22px;line-height:1}
+.mob-nav{display:none}
 @media(max-width:768px){
-.shell{height:100dvh;overflow:hidden}
-.sidebar{display:none !important}
-.mob-nav{display:block}
-.main{flex:1;overflow-y:auto;padding:16px 14px;padding-bottom:calc(68px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
-.pg-title{font-size:20px}
-.ph{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:16px}
-.overlay{padding:0;align-items:flex-end}
-.modal,.modal-lg{width:100% !important;max-width:100% !important;height:100% !important;max-height:100% !important;border-radius:0 !important;overflow-y:auto}
-.btn{min-height:44px}
-.btn-sm{min-height:36px}
-.mc{width:36px;height:36px}
-.inp{font-size:16px}
-.fg{grid-template-columns:1fr}
-.sg{grid-template-columns:1fr 1fr !important}
-.mb div[style*="1fr"]{grid-template-columns:1fr !important}
-.card.cp>div[style*="1fr"]{grid-template-columns:1fr !important}
-.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;display:block}
-table{min-width:540px}
-.cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.cal-dow{min-width:460px}
-.cal-grid{min-width:460px}
-.cal-week{min-width:500px}
-.cal-day{min-height:56px;padding:3px 2px}
-.cal-dn{font-size:10px;width:18px;height:18px}
-.cal-week-tasks{min-height:60px}
-.cal-week-dn{font-size:15px}
-.cal-week-hdr{padding:7px 2px 5px}
-.cal-filter-bar{padding:7px 10px;gap:5px;flex-wrap:nowrap;overflow-x:auto}
-.off-tbl{overflow-x:auto}
-.mail-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-.mail-tabs::-webkit-scrollbar{display:none}
-.cp{padding:14px 13px}
-.dash-banner{padding:18px 16px}
-.pl-row{flex-wrap:wrap}
+  .sidebar{display:none}
+  .mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #E5E7EB;z-index:200;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1px 12px rgba(0,0,0,.06)}
+  .mob-nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px 8px;gap:3px;border:none;background:transparent;color:#9CA3AF;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .mob-nb.mob-nb-on{color:#6366F1}
+  .mob-nb-ic{font-size:22px;line-height:1}
+  .main{padding-bottom:calc(70px + env(safe-area-inset-bottom));padding-left:16px;padding-right:16px;padding-top:0}
+  .ph{position:sticky;top:0;z-index:10;background:#F8FAFC;padding:16px 0 14px;margin-bottom:16px;border-bottom:1px solid #EAECF0}
+  .ph .pg-title{font-size:20px}
+  .mb [style*="1fr"]{grid-template-columns:1fr !important}
+  .inp{font-size:16px;padding:12px 14px}
+  .btn{min-height:44px}
+  .btn-sm{min-height:40px}
+  .mob-hide{display:none}
+  .modal{border-radius:20px 20px 0 0;max-height:92vh;position:fixed;bottom:0;left:0;right:0;max-width:100%;margin:0}
+  .overlay{align-items:flex-end;padding:0}
+  .sg{grid-template-columns:1fr 1fr !important}
+  .sc{padding:14px;border-radius:12px}
+  .sv{font-size:20px}
+  .dash-banner{padding:18px 20px;margin-bottom:14px}
+  .db-name{font-size:18px}
 }
 `;
+
+function useMobile() {
+  const [mob, setMob] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const h = () => setMob(window.innerWidth <= 768);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return mob;
+}
+
+function SignatureCanvas({ onSave, label = "Teken hier uw handtekening" }) {
+  const canvasRef = useRef(null);
+  const drawing = useRef(false);
+  const lastPos = useRef(null);
+
+  const getPos = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - rect.left) * sx, y: (src.clientY - rect.top) * sy };
+  };
+  const startDraw = (e) => { e.preventDefault(); drawing.current = true; lastPos.current = getPos(e); };
+  const draw = (e) => {
+    if (!drawing.current) return;
+    e.preventDefault();
+    const ctx = canvasRef.current.getContext("2d");
+    const pos = getPos(e);
+    ctx.beginPath(); ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(pos.x, pos.y); ctx.strokeStyle = "#0F0F14"; ctx.lineWidth = 2.5;
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke();
+    lastPos.current = pos;
+  };
+  const endDraw = () => { drawing.current = false; };
+  const clear = () => { const c = canvasRef.current; c.getContext("2d").clearRect(0, 0, c.width, c.height); };
+  const save = () => {
+    const c = canvasRef.current;
+    if (!c.getContext("2d").getImageData(0,0,c.width,c.height).data.some(v=>v!==0)) return;
+    onSave(c.toDataURL("image/png"));
+  };
+
+  return (
+    <div>
+      <div style={{fontSize:12,color:"#94A3B8",marginBottom:6}}>{label}</div>
+      <canvas ref={canvasRef} width={600} height={160}
+        style={{border:"1.5px solid #E5E7EB",borderRadius:12,background:"#FAFAFA",width:"100%",touchAction:"none",cursor:"crosshair",display:"block"}}
+        onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+        onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <button type="button" className="btn btn-ghost" onClick={clear}>Wissen</button>
+        <button type="button" className="btn btn-dark btn-full" onClick={save}>✍️ Handtekening plaatsen</button>
+      </div>
+    </div>
+  );
+}
+
+function MobDetailScreen({ title, onBack, children }) {
+  return (
+    <div className="mob-screen">
+      <div className="mob-screen-hdr">
+        <button className="mob-back" onClick={onBack}>‹ Terug</button>
+        <div className="mob-screen-ttl">{title}</div>
+      </div>
+      <div className="mob-screen-scroll">{children}</div>
+    </div>
+  );
+}
 
 function Badge({ status }) {
   const c = SC[status] || { bg:"#F3F4F6", text:"#374151", dot:"#9CA3AF" };
@@ -827,7 +952,7 @@ function OnboardingWizard({ onDone }) {
   );
 }
 
-function ProfielTab({ userId, bedrijf, onSaved }) {
+function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
   const [profile, setProfile] = useState({
     bedrijfsnaam: bedrijf?.bedrijfsnaam || "",
     sector: bedrijf?.sector || "",
@@ -845,6 +970,9 @@ function ProfielTab({ userId, bedrijf, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
   const [logoLightbox, setLogoLightbox] = useState(false);
+  const [showAddCert, setShowAddCert] = useState(false);
+  const [nieuwCert, setNieuwCert] = useState({naam:"",type:"",vervaldatum:"",notitie:""});
+  const [savingCert, setSavingCert] = useState(false);
   useEffect(() => {
     setProfile({
       bedrijfsnaam: bedrijf?.bedrijfsnaam || "",
@@ -978,6 +1106,57 @@ function ProfielTab({ userId, bedrijf, onSaved }) {
           >✕</button>
         </div>
       )}
+
+      <div className="sec-ttl" style={{marginTop:28}}>📜 Documenten & Certificaten</div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div style={{fontSize:13,color:"#64748B"}}>{(certificaten||[]).length} certificaten — {(certificaten||[]).filter(c=>{if(!c.vervaldatum)return false;const d=new Date(c.vervaldatum);const now=new Date();const days=(d-now)/86400000;return days>=0&&days<=30;}).length} verlopen binnenkort</div>
+        <button className="btn btn-outline" onClick={()=>{setNieuwCert({naam:"",type:"",vervaldatum:"",notitie:""});setShowAddCert(true);}}>+ Certificaat</button>
+      </div>
+      {(certificaten||[]).length===0
+        ?<div className="card cp" style={{textAlign:"center",color:"#94A3B8",padding:32,fontSize:14}}>Nog geen certificaten. Voeg je eerste VCA, NEN of diploma toe.</div>
+        :<div className="mob-card-list">{(certificaten||[]).map(c=>{
+          const nu=new Date();
+          const verval=c.vervaldatum?new Date(c.vervaldatum):null;
+          const daysLeft=verval?Math.round((verval-nu)/86400000):null;
+          const expired=daysLeft!==null&&daysLeft<0;
+          const soonExpires=daysLeft!==null&&daysLeft>=0&&daysLeft<=30;
+          return(
+            <div className="mob-card" key={c.id} style={{borderLeft:`4px solid ${expired?"#EF4444":soonExpires?"#F59E0B":"#10B981"}`}}>
+              <div className="mob-card-top">
+                <div className="mob-card-name">{c.naam}</div>
+                {expired&&<span style={{background:"#FEE2E2",color:"#B91C1C",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>Verlopen</span>}
+                {soonExpires&&<span style={{background:"#FEF3C7",color:"#92400E",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>{daysLeft}d</span>}
+                {!expired&&!soonExpires&&daysLeft!==null&&<span style={{background:"#DCFCE7",color:"#15803D",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>Geldig</span>}
+              </div>
+              <div className="mob-card-sub">{c.type}{c.vervaldatum?` · Vervalt ${new Date(c.vervaldatum).toLocaleDateString("nl-NL")}`:""}</div>
+              {c.notitie&&<div className="mob-card-sub" style={{color:"#888"}}>{c.notitie}</div>}
+              <button onClick={()=>{if(window.confirm("Certificaat verwijderen?"))supabase.from("certificaten").delete().eq("id",c.id).then(()=>onSaved&&onSaved(bedrijf));}} style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"#9CA3AF",fontSize:18,cursor:"pointer"}}>✕</button>
+            </div>
+          );
+        })}</div>
+      }
+      {showAddCert&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Certificaat toevoegen</div></div><button className="mc" onClick={()=>setShowAddCert(false)}>✕</button></div><div className="mb">
+        <div className="ig"><label className="ilbl">Naam certificaat *</label><input className="inp" value={nieuwCert.naam} onChange={e=>setNieuwCert({...nieuwCert,naam:e.target.value})} placeholder="Bijv. VCA Basis, NEN 1010..."/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="ig"><label className="ilbl">Type</label>
+            <select className="inp" value={nieuwCert.type} onChange={e=>setNieuwCert({...nieuwCert,type:e.target.value})}>
+              <option value="">-- Kies type --</option>
+              {["VCA","NEN","BRL","ISO","SSVV","Diploma","Rijbewijs","Overig"].map(t=><option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="ig"><label className="ilbl">Vervaldatum</label><input className="inp" type="date" value={nieuwCert.vervaldatum} onChange={e=>setNieuwCert({...nieuwCert,vervaldatum:e.target.value})}/></div>
+        </div>
+        <div className="ig"><label className="ilbl">Notitie</label><input className="inp" value={nieuwCert.notitie} onChange={e=>setNieuwCert({...nieuwCert,notitie:e.target.value})} placeholder="Optioneel"/></div>
+        <div style={{display:"flex",gap:9}}>
+          <button className="btn btn-ghost" onClick={()=>setShowAddCert(false)}>Annuleren</button>
+          <button className="btn btn-dark btn-full" disabled={savingCert||!nieuwCert.naam} onClick={async()=>{
+            setSavingCert(true);
+            await supabase.from("certificaten").insert({user_id:userId,naam:nieuwCert.naam,type:nieuwCert.type||"Overig",vervaldatum:nieuwCert.vervaldatum||null,notitie:nieuwCert.notitie||null});
+            setSavingCert(false); setShowAddCert(false);
+            onSaved&&onSaved(bedrijf);
+          }}>{savingCert?"Opslaan…":"Opslaan"}</button>
+        </div>
+      </div></div></div>}
     </div>
   );
 }
@@ -1176,7 +1355,9 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten 
 
 // ── Offertes ──────────────────────────────────────────────────
 function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf }) {
+  const mob = useMobile();
   const [showAI,setShowAI]=useState(false);
+  const [mobDetail,setMobDetail]=useState(null);
   const totaal = offertes.reduce((s,o)=>{
     const bedrag = (o.bedrag||"0").replace(/[€\s]/g, "");
     const clean = bedrag.includes(",") ? bedrag.replace(/\./g, "").replace(",", ".") : bedrag;
@@ -1279,6 +1460,43 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf })
 
   return(<div>
     {showAI&&<AIOfferte onClose={()=>setShowAI(false)} prijslijst={prijslijst} userId={userId} klanten={klanten} onSaved={refresh} bedrijf={bedrijf}/>}
+    {mob && mobDetail && (
+      <MobDetailScreen title={mobDetail.klant} onBack={()=>setMobDetail(null)}>
+        <div className="mob-det-section">
+          <div className="mob-card-amount" style={{fontSize:32,margin:"0 0 8px"}}>{mobDetail.bedrag}</div>
+          <Badge status={mobDetail.status}/>
+          <div className="mob-det-row"><span className="mob-det-lbl">Dienst</span><span className="mob-det-val">{mobDetail.dienst||"—"}</span></div>
+          <div className="mob-det-row"><span className="mob-det-lbl">Datum</span><span className="mob-det-val">{mobDetail.datum||"—"}</span></div>
+          <div className="mob-det-row"><span className="mob-det-lbl">Klant</span><span className="mob-det-val">{mobDetail.klant}</span></div>
+        </div>
+        <button className="mob-det-action-btn" onClick={()=>exportOfferPdf(mobDetail)}><span className="mob-det-action-ic">📄</span>PDF downloaden</button>
+        {mobDetail.portal_token && (<>
+          <button className="mob-det-action-btn" onClick={async()=>{
+            const url=`https://app.werkmate.tech/portal/${mobDetail.portal_token}`;
+            const k=(klanten||[]).find(x=>x.naam===mobDetail.klant);
+            const email=k?.email||"";
+            if(!email){alert("Geen e-mailadres bekend voor deze klant");return;}
+            const {data:{session:s}}=await supabase.auth.getSession();
+            await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${s?.access_token}`},body:JSON.stringify({action:"send-portal-link",klant_email:email,klant_naam:mobDetail.klant,portal_url:url,company_name:bedrijf?.bedrijfsnaam||"WerkMate",bedrag:mobDetail.bedrag})});
+            await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",mobDetail.id);
+            refresh(); setMobDetail({...mobDetail,status:"Verstuurd"});
+            alert("Offerte verstuurd naar "+email);
+          }}><span className="mob-det-action-ic">📤</span>Stuur naar klant</button>
+          <button className="mob-det-action-btn" onClick={()=>{
+            const url=`https://app.werkmate.tech/portal/${mobDetail.portal_token}`;
+            const tekst=encodeURIComponent(`Beste ${mobDetail.klant},\n\nHierbij stuur ik je de offerte van ${bedrijf?.bedrijfsnaam||"WerkMate"} voor ${mobDetail.dienst||"de opdracht"}.\n\nBekijk en onderteken hier: ${url}\n\nMet vriendelijke groet`);
+            window.open(`https://wa.me/?text=${tekst}`,"_blank");
+          }}><span className="mob-det-action-ic">📱</span>Stuur via WhatsApp</button>
+        </>)}
+        <div style={{background:"#fff",borderRadius:14,border:"1px solid #EAECF0",padding:"14px 16px",marginBottom:8}}>
+          <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
+          <select value={mobDetail.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",mobDetail.id);refresh();setMobDetail({...mobDetail,status:e.target.value});}} style={{width:"100%",border:"1.5px solid #E5E7EB",borderRadius:10,padding:"12px 14px",fontSize:16,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none",background:"#fff",color:"#111"}}>
+            {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
+          </select>
+        </div>
+        <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic">🗑</span>Verwijderen</button>
+      </MobDetailScreen>
+    )}
     <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><button className="btn btn-ai" onClick={()=>setShowAI(true)}>✨ Slimme offerte</button></div>
     <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr 1fr"}}>
       {[
@@ -1290,13 +1508,41 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf })
     </div>
     {offertes.length===0
       ? <LeegScherm icon="📋" titel="Nog geen offertes" sub="Maak je eerste offerte met de slimme generator" actie="✨ Slimme offerte maken" onActie={()=>setShowAI(true)}/>
-      : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-          <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
-            <td style={{display:"flex",alignItems:"center",gap:8}}><button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button><select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
-              {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
-            </select><button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}>✕</button></td>
-          </tr>)}</tbody>
-        </table></div></div>
+      : mob
+        ? <div className="mob-card-list">{offertes.map(o=>(
+            <div className="mob-card" key={o.id} onClick={()=>setMobDetail(o)}>
+              <div className="mob-card-top">
+                <div className="mob-card-name">{o.klant}</div>
+                <Badge status={o.status}/>
+              </div>
+              <div className="mob-card-amount">{o.bedrag}</div>
+              <div className="mob-card-sub">{o.dienst} · {o.datum}</div>
+              <span className="mob-card-chevron">›</span>
+            </div>
+          ))}</div>
+        : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+            <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
+              <td style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button>
+              {o.portal_token&&<button className="btn btn-ghost btn-sm" title="Stuur portaallink naar klant" onClick={async()=>{
+                const url=`https://app.werkmate.tech/portal/${o.portal_token}`;
+                const k=(klanten||[]).find(x=>x.naam===o.klant);
+                const email=k?.email||"";
+                if(!email){alert("Geen e-mailadres bekend");return;}
+                const {data:{session:s}}=await supabase.auth.getSession();
+                await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${s?.access_token}`},body:JSON.stringify({action:"send-portal-link",klant_email:email,klant_naam:o.klant,portal_url:url,company_name:bedrijf?.bedrijfsnaam||"WerkMate",bedrag:o.bedrag})});
+                await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
+                alert("Verstuurd naar "+email);
+              }}>📤</button>}
+              {o.portal_token&&<button className="btn btn-ghost btn-sm" title="WhatsApp" onClick={()=>{
+                const url=`https://app.werkmate.tech/portal/${o.portal_token}`;
+                const tekst=encodeURIComponent(`Beste ${o.klant},\n\nHierbij stuur ik je de offerte van ${bedrijf?.bedrijfsnaam||"WerkMate"} voor ${o.dienst||"de opdracht"}.\n\nBekijk en onderteken hier: ${url}\n\nMet vriendelijke groet`);
+                window.open(`https://wa.me/?text=${tekst}`,"_blank");
+              }}>📱</button>}
+              <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
+                {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
+              </select><button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}>✕</button></td>
+            </tr>)}</tbody>
+          </table></div></div>
     }
   </div>);
 }
@@ -1382,9 +1628,11 @@ function PrijslijstTab({ initialItems, onSaveItems }) {
 
 // ── Planning ──────────────────────────────────────────────────
 function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planningCats }) {
+  const mob = useMobile();
   const td=new Date();
   const todayStr=`${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
   const [view,setView]=useState("month");
+  const [mobDayCursor,setMobDayCursor]=useState(new Date());
   const [cursor,setCursor]=useState(new Date());
   const [showAdd,setShowAdd]=useState(false);
   const [showCats,setShowCats]=useState(false);
@@ -1400,6 +1648,9 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
   const initials=email=>email.split("@")[0].slice(0,2).toUpperCase();
   const catColor=t=>planningCats.find(c=>c.naam===t.categorie)?.kleur||null;
   const tasksFor=ds=>planning.filter(p=>p.datum===ds&&(!filterMedewerker||p.medewerker===filterMedewerker)).sort((a,b)=>a.tijd>b.tijd?1:-1);
+  const WG_SLOT_H=40,WG_START=7,WG_END=20,WG_SLOTS=(WG_END-WG_START)*2,WG_TOTAL_H=WG_SLOTS*WG_SLOT_H;
+  const wgTop=tijd=>{const[h,m]=(tijd||"07:00").split(":").map(Number);return Math.max(0,Math.min(WG_TOTAL_H-WG_SLOT_H,((h-WG_START)*60+m)/30*WG_SLOT_H));};
+  const wgH=(s,e)=>{if(!e)return WG_SLOT_H*2;const[sh,sm]=(s||"07:00").split(":").map(Number);const[eh,em]=(e||"08:00").split(":").map(Number);return Math.max(WG_SLOT_H,((eh*60+em)-(sh*60+sm))/30*WG_SLOT_H);};
   const openAdd=ds=>{setSaveErr("");setNieuw({datum:ds,tijd:"08:00",eindtijd:"",klant:"",adres:"",dienst:"",status:"Ingepland",herhaal:"",categorie:"",medewerker:""});setShowAdd(true);};
 
   // Dutch public holidays via Meeus/Jones/Butcher Easter algorithm
@@ -1465,19 +1716,71 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
   const cells=[...Array(offset).fill(null),...Array.from({length:new Date(yr,mo+1,0).getDate()},(_,i)=>i+1)];
   while(cells.length%7)cells.push(null);
 
+  const mobDayStr = `${mobDayCursor.getFullYear()}-${String(mobDayCursor.getMonth()+1).padStart(2,'0')}-${String(mobDayCursor.getDate()).padStart(2,'0')}`;
+  const mobDayTasks = planning.filter(p=>p.datum===mobDayStr).sort((a,b)=>a.tijd>b.tijd?1:-1);
+  const mobPrevDay = () => { const d=new Date(mobDayCursor); d.setDate(d.getDate()-1); setMobDayCursor(d); };
+  const mobNextDay = () => { const d=new Date(mobDayCursor); d.setDate(d.getDate()+1); setMobDayCursor(d); };
+  const mobDayLabel = mobDayCursor.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"});
+  const mobIsToday = mobDayStr === todayStr;
+  const HOURS = Array.from({length:14},(_,i)=>i+7); // 7:00–20:00
+
   return(<div>
     <div className="ph">
       <div><div className="pg-title">Planning</div><div className="pg-sub">{planning.length} opdrachten totaal</div></div>
       <div style={{display:"flex",gap:8}}>
-        <div className="cal-view-toggle">
+        {!mob&&<div className="cal-view-toggle">
           <button className={`cal-vt-btn${view==="month"?" on":""}`} onClick={()=>setView("month")}>Maand</button>
           <button className={`cal-vt-btn${view==="week"?" on":""}`} onClick={()=>setView("week")}>Week</button>
-        </div>
-        <button className="btn btn-ghost" onClick={()=>setShowCats(true)} title="Categorieën beheren">🏷️ Categorieën</button>
-        <button className="btn btn-dark" onClick={()=>openAdd(todayStr)}>+ Opdracht</button>
+        </div>}
+        {!mob&&<button className="btn btn-ghost" onClick={()=>setShowCats(true)} title="Categorieën beheren">🏷️</button>}
+        <button className="btn btn-dark" onClick={()=>openAdd(mob?mobDayStr:todayStr)}>+ Opdracht</button>
       </div>
     </div>
-    <div className="cal-wrap">
+    {mob
+      ? <>
+          <div className="mob-day-wrap" style={{marginBottom:12}}>
+            <div className="mob-day-hdr">
+              <button className="mob-day-nav-btn" onClick={mobPrevDay}>‹</button>
+              <div className="mob-day-center">
+                <div className="mob-day-title" style={{textTransform:"capitalize"}}>{mobDayLabel}</div>
+                {mobIsToday&&<div style={{fontSize:10,fontWeight:700,color:"#6366F1",textTransform:"uppercase",letterSpacing:".4px",marginTop:2}}>Vandaag</div>}
+              </div>
+              <button className="mob-day-nav-btn" onClick={mobNextDay}>›</button>
+            </div>
+            <div className="mob-day-hours">
+              {HOURS.map(h=>{
+                const hStr=`${String(h).padStart(2,'0')}:`;
+                const slotTasks=mobDayTasks.filter(t=>t.tijd&&t.tijd.startsWith(hStr));
+                return(
+                  <div key={h} className="mob-day-row">
+                    <div className="mob-day-timecol">{h}:00</div>
+                    <div className="mob-day-slotcol">
+                      {slotTasks.map(t=>{
+                        const cc=planningCats.find(c=>c.naam===t.categorie)?.kleur;
+                        const bg=t.status==="Klaar"?"#F3F4F6":t.status==="Onderweg"?"#FEF3C7":cc?(cc+"22"):"#EEF2FF";
+                        const tc=t.status==="Klaar"?"#9CA3AF":t.status==="Onderweg"?"#92400E":cc||"#4338CA";
+                        return(
+                          <div key={t.id} className={`mob-day-ev${t.status==="Klaar"?" klaar":""}`} style={{background:bg}}>
+                            <div className="mob-day-ev-time" style={{color:tc}}>{t.tijd}{t.eindtijd?`–${t.eindtijd}`:""}</div>
+                            <div className="mob-day-ev-name">{t.klant}</div>
+                            <div className="mob-day-ev-dienst">{t.dienst}</div>
+                            {t.adres&&<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.adres)}`} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:3,marginTop:4,fontSize:11.5,fontWeight:600,color:"#6366F1",textDecoration:"none"}}>📍 Navigeer</a>}
+                            <div style={{display:"flex",gap:6,marginTop:8}}>
+                              <button className="btn btn-outline btn-sm" style={{flex:1,fontSize:12}} onClick={e=>markDone(e,t.id,t.status)}>{t.status==="Klaar"?"↩ Open":"✓ Klaar"}</button>
+                              <button className="btn btn-danger btn-sm" style={{fontSize:12}} onClick={e=>{e.stopPropagation();if(window.confirm("Verwijderen?"))verwijder(t.id);}}>✕</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              {mobDayTasks.length===0&&<div className="mob-day-empty">Geen opdrachten · tik <strong>+ Opdracht</strong> om toe te voegen</div>}
+            </div>
+          </div>
+        </>
+      : <div className="cal-wrap">
       <div className="cal-nav">
         <button className="cal-nav-btn" onClick={prev}>‹</button>
         <span className="cal-title">{navTitle}</span>
@@ -1510,44 +1813,54 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
             {tasks.length>2&&<div className="cal-more">+{tasks.length-2} meer</div>}
           </div>;
         })}</div>
-      </>):(<div className="cal-week">{Array.from({length:7},(_,i)=>{
-        const d=new Date(mon);d.setDate(mon.getDate()+i);
-        const ds=fmtDate(d);const tasks=tasksFor(ds);const isToday=ds===todayStr;const holiday=holidays[ds];
-        return<div key={i} className="cal-week-col">
-          <div className={`cal-week-hdr${isToday?" today":""}${holiday?" feestdag":""}`} onClick={()=>openAdd(ds)}>
-            <div className="cal-week-day">{DAYS[i]}</div>
-            <div className="cal-week-dn">{d.getDate()}</div>
-            {holiday&&<div className="cal-week-feestdag">{holiday}</div>}
-          </div>
-          <div className="cal-week-tasks">
-            {tasks.map(t=>{
-              const cc=catColor(t);
-              const ws=cc&&t.status!=="Klaar"?{background:cc+"18",borderLeft:`3px solid ${cc}`,color:cc}:{};
-              return<div key={t.id} className={`cal-task-wk${t.status==="Onderweg"?" onderweg":t.status==="Klaar"?" klaar":""}`} style={ws}>
-                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:4}}>
-                  <div style={{minWidth:0}}>
-                    <div className="cal-task-time">{t.eindtijd?`${t.tijd}–${t.eindtijd}`:t.tijd}</div>
-                    <div className="cal-task-name">{t.klant}</div>
-                    <div className="cal-task-dienst">{t.dienst}</div>
-                    {t.medewerker&&<div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}>
-                      <span className="cal-task-av" style={{background:memberColor(t.medewerker)}}>{initials(t.medewerker)}</span>
-                      <span style={{fontSize:10,opacity:.75}}>{t.medewerker.split("@")[0]}</span>
-                    </div>}
-                    {t.herhaal&&<div className="cal-herhaal-tag">↺ {t.herhaal==="daily"?"Dagelijks":t.herhaal==="weekly"?"Wekelijks":t.herhaal==="biweekly"?"2-wekelijks":"Maandelijks"}</div>}
-                    {t.adres&&<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.adres)}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{display:"inline-flex",alignItems:"center",gap:3,marginTop:4,fontSize:10.5,fontWeight:600,color:"#6366F1",textDecoration:"none",opacity:.9}}>📍 Navigeer</a>}
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                    <button className="cal-done-btn" onClick={e=>markDone(e,t.id,t.status)} title={t.status==="Klaar"?"Zet open":"Markeer klaar"}>{t.status==="Klaar"?"✓":"○"}</button>
-                    <button onClick={e=>{e.stopPropagation();if(window.confirm("Opdracht verwijderen?"))verwijder(t.id);}} style={{background:"none",border:"1.5px solid currentColor",borderRadius:"50%",width:18,height:18,minWidth:18,cursor:"pointer",fontSize:9,display:"flex",alignItems:"center",justifyContent:"center",padding:0,opacity:.45,transition:"all .14s",flexShrink:0,color:"currentColor"}} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=.45}>✕</button>
-                    {t.herhaal&&<button onClick={e=>{e.stopPropagation();verwijderHerhaling(t);}} title="Verwijder alle herhalingen" style={{background:"none",border:"1.5px solid currentColor",borderRadius:4,width:18,height:18,minWidth:18,cursor:"pointer",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",padding:0,opacity:.45,transition:"all .14s",flexShrink:0,color:"currentColor"}} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=.45}>↺✕</button>}
-                  </div>
-                </div>
-              </div>;
+      </>):(<div className="cal-wg-outer">
+        <div className="cal-wg-hdr-row">
+          <div className="cal-wg-hdr-spc"/>
+          {Array.from({length:7},(_,i)=>{
+            const d=new Date(mon);d.setDate(mon.getDate()+i);
+            const ds=fmtDate(d);const isToday=ds===todayStr;const holiday=holidays[ds];
+            return<div key={i} className={`cal-week-hdr cal-wg-hdr-cell${isToday?" today":""}${holiday?" feestdag":""}`} onClick={()=>openAdd(ds)}>
+              <div className="cal-week-day">{DAYS[i]}</div>
+              <div className="cal-week-dn">{d.getDate()}</div>
+              {holiday&&<div className="cal-week-feestdag">{holiday}</div>}
+            </div>;
+          })}
+        </div>
+        <div className="cal-wg-body-row">
+          <div className="cal-wg-tc">
+            {Array.from({length:WG_SLOTS},(_,i)=>{
+              const isHour=i%2===0;const h=WG_START+Math.floor(i/2);
+              return<div key={i} className="cal-wg-tl">{isHour&&<span style={{fontSize:9,fontWeight:700,color:"#94A3B8",lineHeight:1}}>{String(h).padStart(2,"0")}:00</span>}</div>;
             })}
           </div>
-        </div>;
-      })}</div>)}
-    </div>
+          {Array.from({length:7},(_,i)=>{
+            const d=new Date(mon);d.setDate(mon.getDate()+i);
+            const ds=fmtDate(d);const tasks=tasksFor(ds);
+            return<div key={i} className="cal-wg-dc">
+              <div style={{position:"relative",height:WG_TOTAL_H}}>
+                {Array.from({length:WG_SLOTS},(_,j)=>(
+                  <div key={j} className="cal-wg-slot" style={{top:j*WG_SLOT_H,borderTop:j%2===0?"1px solid #E5E7EB":"1px dashed #F3F4F6"}}/>
+                ))}
+                {tasks.map(t=>{
+                  const top=wgTop(t.tijd);const height=wgH(t.tijd,t.eindtijd);
+                  const cc=catColor(t);
+                  const blkStyle=cc&&t.status!=="Klaar"?{background:cc+"22",color:cc,borderLeft:`3px solid ${cc}`}:{};
+                  return<div key={t.id} className={`cal-task-blk${t.status==="Onderweg"?" onderweg":t.status==="Klaar"?" klaar":""}`} style={{top,height,...blkStyle}}>
+                    <div className="cal-tbk-time">{t.eindtijd?`${t.tijd}–${t.eindtijd}`:t.tijd}</div>
+                    <div className={`cal-tbk-name${t.status==="Klaar"?" done":""}`}>{t.klant}</div>
+                    {height>55&&<div className="cal-tbk-dienst">{t.dienst}</div>}
+                    <div className="cal-tbk-actions">
+                      <button style={{background:"none",border:"1px solid currentColor",borderRadius:3,padding:"1px 4px",fontSize:9,cursor:"pointer",color:"currentColor",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}} onClick={e=>markDone(e,t.id,t.status)}>{t.status==="Klaar"?"↩":"✓"}</button>
+                      <button style={{background:"none",border:"1px solid currentColor",borderRadius:3,padding:"1px 4px",fontSize:9,cursor:"pointer",color:"currentColor",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}} onClick={e=>{e.stopPropagation();if(window.confirm("Verwijderen?"))verwijder(t.id);}}>&#x2715;</button>
+                    </div>
+                  </div>;
+                })}
+              </div>
+            </div>;
+          })}
+        </div>
+      </div>)}
+    </div>}
 
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Opdracht toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -1594,13 +1907,15 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
 
 // ── CRM ───────────────────────────────────────────────────────
 function CRMTab({ userId, klanten, refresh }) {
+  const mob = useMobile();
+  const [mobDetail,setMobDetail]=useState(null);
   const [q,setQ]=useState("");
   const [showAdd,setShowAdd]=useState(false);
   const [showEdit,setShowEdit]=useState(false);
   const [editingId,setEditingId]=useState(null);
   const [nieuw,setNieuw]=useState({naam:"",tel:"",email:"",adres:"",status:"Actief"});
   const [bewerkt,setBewerkt]=useState({naam:"",tel:"",email:"",adres:"",status:"Actief"});
-  const list=klanten.filter(k=>k.naam.toLowerCase().includes(q.toLowerCase()));
+  const list=klanten.filter(k=>{const lq=q.toLowerCase();return(k.naam||"").toLowerCase().includes(lq)||(k.tel||"").toLowerCase().includes(lq)||(k.email||"").toLowerCase().includes(lq)||(k.adres||"").toLowerCase().includes(lq)||(k.status||"").toLowerCase().includes(lq);});
 
   const add = async () => {
     if(!nieuw.naam) return;
@@ -1642,13 +1957,47 @@ function CRMTab({ userId, klanten, refresh }) {
   };
 
   return(<div>
+    {mob && mobDetail && (
+      <MobDetailScreen title={mobDetail.naam} onBack={()=>setMobDetail(null)}>
+        <div className="mob-det-section">
+          <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:16}}>
+            <div className="av" style={{width:56,height:56,fontSize:22,flexShrink:0}}>{mobDetail.naam[0]}</div>
+            <div>
+              <div style={{fontSize:20,fontWeight:800,color:"#0F0F14",fontFamily:"'Syne',sans-serif"}}>{mobDetail.naam}</div>
+              <div style={{marginTop:4}}><Badge status={mobDetail.status}/></div>
+            </div>
+          </div>
+          {mobDetail.tel&&<div className="mob-det-row"><span className="mob-det-lbl">Telefoon</span><a href={`tel:${mobDetail.tel}`} style={{color:"#6366F1",fontWeight:600,fontSize:13.5,textDecoration:"none"}}>{mobDetail.tel}</a></div>}
+          {mobDetail.email&&<div className="mob-det-row"><span className="mob-det-lbl">E-mail</span><a href={`mailto:${mobDetail.email}`} style={{color:"#6366F1",fontWeight:600,fontSize:13.5,textDecoration:"none"}}>{mobDetail.email}</a></div>}
+          {mobDetail.adres&&<div className="mob-det-row"><span className="mob-det-lbl">Adres</span><span className="mob-det-val">{mobDetail.adres}</span></div>}
+        </div>
+        {mobDetail.tel&&<a href={`tel:${mobDetail.tel}`} className="mob-det-action-btn" style={{textDecoration:"none"}}><span className="mob-det-action-ic">📞</span>Bellen</a>}
+        {mobDetail.email&&<a href={`mailto:${mobDetail.email}`} className="mob-det-action-btn" style={{textDecoration:"none"}}><span className="mob-det-action-ic">✉️</span>E-mailen</a>}
+        <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic">✎</span>Bewerken</button>
+        <button className="mob-det-action-btn danger" onClick={()=>{if(window.confirm("Klant verwijderen?")){verwijder(mobDetail.id);setMobDetail(null);}}}><span className="mob-det-action-ic">🗑</span>Verwijderen</button>
+      </MobDetailScreen>
+    )}
     <div className="ph"><div><div className="pg-title">Klantenbeheer</div><div className="pg-sub">{klanten.length} klanten</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Klant</button></div>
-    <input className="inp" style={{marginBottom:14}} placeholder="🔍  Zoek klant…" value={q} onChange={e=>setQ(e.target.value)}/>
+    <input className="inp" style={{marginBottom:14}} placeholder="🔍  Zoek op naam, telefoon, e-mail, adres…" value={q} onChange={e=>setQ(e.target.value)}/>
     {klanten.length===0
       ? <LeegScherm icon="👥" titel="Nog geen klanten" sub="Voeg je eerste klant toe" actie="+ Klant toevoegen" onActie={()=>setShowAdd(true)}/>
-      : <div style={{display:"flex",flexDirection:"column",gap:9}}>
-          {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-outline btn-sm" onClick={()=>startEdit(k)}>✎</button><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id)}>✕</button></div>) }
-        </div>
+      : mob
+        ? <div className="mob-card-list">{list.map(k=>(
+            <div className="mob-card" key={k.id} onClick={()=>setMobDetail(k)}>
+              <div className="mob-card-top">
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div className="av" style={{width:36,height:36,fontSize:14,flexShrink:0}}>{k.naam[0]}</div>
+                  <div className="mob-card-name">{k.naam}</div>
+                </div>
+                <Badge status={k.status}/>
+              </div>
+              {(k.tel||k.email)&&<div className="mob-card-sub" style={{marginTop:6}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div>}
+              <span className="mob-card-chevron">›</span>
+            </div>
+          ))}</div>
+        : <div style={{display:"flex",flexDirection:"column",gap:9}}>
+            {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-outline btn-sm" onClick={()=>startEdit(k)}>✎</button><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id)}>✕</button></div>)}
+          </div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
       <div className="ig"><label className="ilbl">Naam</label><input className="inp" value={nieuw.naam} onChange={e=>setNieuw({...nieuw,naam:e.target.value})} placeholder="Bedrijf of naam"/></div>
@@ -1672,13 +2021,15 @@ function CRMTab({ userId, klanten, refresh }) {
 }
 
 function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSettings }) {
+  const mob = useMobile();
+  const [mobDetail,setMobDetail]=useState(null);
   const [showAdd,setShowAdd]=useState(false);
   const [showEdit,setShowEdit]=useState(false);
   const [editingId,setEditingId]=useState(null);
   const [lightboxFoto,setLightboxFoto]=useState(null);
   const originalStatusRef = useRef("Nieuw");
-  const [nieuw,setNieuw]=useState({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw"});
-  const [bewerkt,setBewerkt]=useState({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw"});
+  const [nieuw,setNieuw]=useState({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw",handtekening:""});
+  const [bewerkt,setBewerkt]=useState({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw",handtekening:""});
   const [fotoPreview,setFotoPreview]=useState("");
   const [editFotoPreview,setEditFotoPreview]=useState("");
   const [saving,setSaving]=useState(false);
@@ -1726,6 +2077,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       uren: nieuw.uren ? parseFloat(nieuw.uren) : 0,
       materialen: nieuw.materialen || "",
       status: nieuw.status,
+      handtekening: nieuw.handtekening || null,
     }).select();
     if (error) {
       console.error("Werkbon toevoegen mislukt", error);
@@ -1733,7 +2085,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       setSaving(false);
       return;
     }
-    setNieuw({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw"});
+    setNieuw({klant:"",datum:new Date().toISOString().slice(0,10),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw",handtekening:""});
     setFotoPreview("");
     setShowAdd(false);
     if (typeof refresh === "function") await refresh();
@@ -1751,6 +2103,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       uren: werkbon.uren != null ? String(werkbon.uren) : "",
       materialen: werkbon.materialen || "",
       status: werkbon.status || "Nieuw",
+      handtekening: werkbon.handtekening || "",
     });
     setEditFotoPreview(werkbon.foto || "");
     setEditError("");
@@ -1801,6 +2154,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       uren: bewerkt.uren ? parseFloat(bewerkt.uren) : 0,
       materialen: bewerkt.materialen,
       status: bewerkt.status,
+      handtekening: bewerkt.handtekening || null,
     }).eq("id", editingId);
     if (error) {
       console.error("Werkbon update mislukt", error);
@@ -1826,11 +2180,44 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
 
   return(<div>
     <div className="ph"><div><div className="pg-title">Werkbonnen</div><div className="pg-sub">Maak werkbonnen voor klant, uren, materialen en foto</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Werkbon</button></div>
+    {mob && mobDetail && (
+      <MobDetailScreen title={mobDetail.klant} onBack={()=>setMobDetail(null)}>
+        <div className="mob-det-section">
+          <div style={{marginBottom:10}}><Badge status={mobDetail.status||"Nieuw"}/></div>
+          <div className="mob-det-row"><span className="mob-det-lbl">Klant</span><span className="mob-det-val">{mobDetail.klant}</span></div>
+          <div className="mob-det-row"><span className="mob-det-lbl">Datum</span><span className="mob-det-val">{mobDetail.datum||"—"}</span></div>
+          <div className="mob-det-row"><span className="mob-det-lbl">Uren</span><span className="mob-det-val">{mobDetail.uren||"—"}</span></div>
+          {mobDetail.omschrijving&&<div className="mob-det-row"><span className="mob-det-lbl">Omschrijving</span><span className="mob-det-val">{mobDetail.omschrijving}</span></div>}
+          {mobDetail.materialen&&<div className="mob-det-row"><span className="mob-det-lbl">Materialen</span><span className="mob-det-val">{mobDetail.materialen}</span></div>}
+        </div>
+        {mobDetail.foto&&<div className="mob-det-section" style={{padding:0,overflow:"hidden"}}>
+          <img src={mobDetail.foto} alt="Werkbon foto" style={{width:"100%",maxHeight:240,objectFit:"cover"}}/>
+        </div>}
+        {mobDetail.handtekening&&<div className="mob-det-section">
+          <div style={{fontSize:13,color:"#64748B",fontWeight:600,marginBottom:8}}>Handtekening klant</div>
+          <img src={mobDetail.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB"}}/>
+        </div>}
+        <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic">✎</span>Werkbon bewerken</button>
+        <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic">🗑</span>Verwijderen</button>
+      </MobDetailScreen>
+    )}
     {werkbonnen.length===0
       ? <LeegScherm icon="🔧" titel="Nog geen werkbonnen" sub="Maak je eerste werkbon aan" actie="+ Werkbon toevoegen" onActie={()=>setShowAdd(true)}/>
-      : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Datum","Uren","Status","Materialen","Foto","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-          <tbody>{werkbonnen.map(b=><tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{b.foto ? <img src={b.foto} alt="Werkbon foto" style={{width:80,height:60,objectFit:"cover",borderRadius:10,cursor:"pointer"}} onClick={()=>setLightboxFoto(b.foto)}/> : "-"}</td><td style={{display:"flex",gap:6,alignItems:"center"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎</button><button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>)}</tbody>
-        </table></div></div>
+      : mob
+        ? <div className="mob-card-list">{werkbonnen.map(b=>(
+            <div className="mob-card" key={b.id} onClick={()=>setMobDetail(b)}>
+              <div className="mob-card-top">
+                <div className="mob-card-name">{b.klant}</div>
+                <Badge status={b.status||"Nieuw"}/>
+              </div>
+              <div className="mob-card-sub">{b.datum} {b.uren ? `· ${b.uren} uur` : ""}</div>
+              {b.omschrijving&&<div className="mob-card-sub" style={{marginTop:2,color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.omschrijving}</div>}
+              <span className="mob-card-chevron">›</span>
+            </div>
+          ))}</div>
+        : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Datum","Uren","Status","Materialen","Foto","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+            <tbody>{werkbonnen.map(b=><tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{b.foto ? <img src={b.foto} alt="Werkbon foto" style={{width:80,height:60,objectFit:"cover",borderRadius:10,cursor:"pointer"}} onClick={()=>setLightboxFoto(b.foto)}/> : "-"}</td><td style={{display:"flex",gap:6,alignItems:"center"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎</button><button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>)}</tbody>
+          </table></div></div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Werkbon toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
       <div className="ig"><label className="ilbl">Klant</label><select className="inp" value={nieuw.klant} onChange={e=>setNieuw({...nieuw,klant:e.target.value})}><option value="">-- Kies klant --</option>{(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}</select></div>
@@ -1840,8 +2227,11 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       </div>
       <div className="ig"><label className="ilbl">Omschrijving</label><textarea className="inp" style={{minHeight:100}} value={nieuw.omschrijving} onChange={e=>setNieuw({...nieuw,omschrijving:e.target.value})} placeholder="Wat is er gedaan?"/></div>
       <div className="ig"><label className="ilbl">Materialen</label><textarea className="inp" style={{minHeight:60}} value={nieuw.materialen} onChange={e=>setNieuw({...nieuw,materialen:e.target.value})} placeholder="Gewerkte materialen"/></div>
-      <div className="ig"><label className="ilbl">Foto</label><input className="inp" type="file" accept="image/*" onChange={handleFotoChange}/>{fotoPreview&&<img src={fotoPreview} alt="Voorbeeld" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}</div>
+      <div className="ig"><label className="ilbl">Foto</label><input className="inp" type="file" accept="image/*" capture="environment" onChange={handleFotoChange}/>{fotoPreview&&<img src={fotoPreview} alt="Voorbeeld" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}</div>
       <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Nieuw","Bezig","Klaar","Ondertekend","Afgerond"].map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="ig"><label className="ilbl">Handtekening klant (optioneel)</label>
+        {nieuw.handtekening?<div><img src={nieuw.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB",marginBottom:8}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setNieuw({...nieuw,handtekening:""})}>Wissen</button></div>:<SignatureCanvas onSave={sig=>setNieuw({...nieuw,handtekening:sig})}/>}
+      </div>
       {error && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{error}</div>}
       <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowAdd(false);setError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={add} disabled={saving||!nieuw.klant||!nieuw.datum}>{saving?"Opslaan…":"Opslaan"}</button></div>
     </div></div></div>}
@@ -1853,8 +2243,11 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       </div>
       <div className="ig"><label className="ilbl">Omschrijving</label><textarea className="inp" style={{minHeight:100}} value={bewerkt.omschrijving} onChange={e=>setBewerkt({...bewerkt,omschrijving:e.target.value})} placeholder="Wat is er gedaan?"/></div>
       <div className="ig"><label className="ilbl">Materialen</label><textarea className="inp" style={{minHeight:60}} value={bewerkt.materialen} onChange={e=>setBewerkt({...bewerkt,materialen:e.target.value})} placeholder="Gewerkte materialen"/></div>
-      <div className="ig"><label className="ilbl">Foto</label><input className="inp" type="file" accept="image/*" onChange={handleEditFotoChange}/>{editFotoPreview&&<img src={editFotoPreview} alt="Voorbeeld" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}</div>
+      <div className="ig"><label className="ilbl">Foto</label><input className="inp" type="file" accept="image/*" capture="environment" onChange={handleEditFotoChange}/>{editFotoPreview&&<img src={editFotoPreview} alt="Voorbeeld" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}</div>
       <div className="ig"><label className="ilbl">Status</label><select className="inp" value={bewerkt.status} onChange={e=>setBewerkt({...bewerkt,status:e.target.value})}>{["Nieuw","Bezig","Klaar","Ondertekend","Afgerond"].map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="ig"><label className="ilbl">Handtekening klant</label>
+        {bewerkt.handtekening?<div><img src={bewerkt.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB",marginBottom:8}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setBewerkt({...bewerkt,handtekening:""})}>Wissen</button></div>:<SignatureCanvas onSave={sig=>setBewerkt({...bewerkt,handtekening:sig})}/>}
+      </div>
       {editError && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{editError}</div>}
       <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowEdit(false);setEditError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={saveEdit} disabled={editSaving||!bewerkt.klant||!bewerkt.datum}>{editSaving?"Opslaan…":"Opslaan"}</button></div>
     </div></div></div>}
@@ -1866,7 +2259,9 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
 }
 
 // ── Financiën ─────────────────────────────────────────────────
-function FinancienTab({ userId, facturen, refresh, klanten, offertes, bedrijf }) {
+function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, bedrijf }) {
+  const mob = useMobile();
+  const [mobDetail,setMobDetail]=useState(null);
   const getTotal = (f) => f.totaal != null ? Number(f.totaal) : parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."))||0;
 
   const [subTab, setSubTab] = useState("facturen");
@@ -1884,6 +2279,11 @@ function FinancienTab({ userId, facturen, refresh, klanten, offertes, bedrijf })
   const [nieuw, setNieuw] = useState({klant:"",klant_email:"",datum:"",vervaldatum:"",regels:[],status:"Concept"});
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState("");
+  const [showAddUitgave, setShowAddUitgave] = useState(false);
+  const [nieuweUitgave, setNieuweUitgave] = useState({datum:new Date().toISOString().slice(0,10),categorie:"",omschrijving:"",bedrag:"",btw_percentage:21,foto:""});
+  const [savingUitgave, setSavingUitgave] = useState(false);
+  const [uitgaveErr, setUitgaveErr] = useState("");
+  const [uitgaveFotoPreview, setUitgaveFotoPreview] = useState("");
 
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
@@ -1999,6 +2399,31 @@ function FinancienTab({ userId, facturen, refresh, klanten, offertes, bedrijf })
   const fmtDate=(s)=>s?new Date(s).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"}):"-";
 
   return (<div>
+    {mob && mobDetail && (()=>{
+      const f=mobDetail, st=dispStatus(f), od=isOverdue(f);
+      return(
+        <MobDetailScreen title={`Factuur ${f.nummer||""}`} onBack={()=>setMobDetail(null)}>
+          <div className="mob-det-section">
+            <div className="mob-det-amount" style={{color:od?"#EF4444":"#0F0F14"}}>{fmtEur(getTotal(f))}</div>
+            <Badge status={st}/>
+            <div className="mob-det-row"><span className="mob-det-lbl">Klant</span><span className="mob-det-val">{f.klant}</span></div>
+            <div className="mob-det-row"><span className="mob-det-lbl">Nummer</span><span className="mob-det-val">{f.nummer||"—"}</span></div>
+            <div className="mob-det-row"><span className="mob-det-lbl">Datum</span><span className="mob-det-val">{fmtDate(f.datum)}</span></div>
+            <div className="mob-det-row"><span className="mob-det-lbl">Vervaldatum</span><span className="mob-det-val" style={{color:od?"#EF4444":"#0F0F14"}}>{fmtDate(f.vervaldatum)}{od?" ⚠️":""}</span></div>
+          </div>
+          <div className="mob-det-section" style={{marginBottom:8}}>
+            <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
+            <select value={f.status||"Concept"} onChange={async e=>{await updateStatus(f.id,e.target.value);setMobDetail({...f,status:e.target.value});}} style={{width:"100%",border:"1.5px solid #E5E7EB",borderRadius:10,padding:"12px 14px",fontSize:16,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none",background:"#fff",color:"#111"}}>
+              {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <button className="mob-det-action-btn" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}><span className="mob-det-action-ic">📄</span>PDF downloaden</button>
+          <button className="mob-det-action-btn" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}><span className="mob-det-action-ic">📧</span>Factuur e-mailen</button>
+          {st!=="Betaald"&&st!=="Concept"&&<button className="mob-det-action-btn" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}><span className="mob-det-action-ic">🔔</span>Herinnering sturen</button>}
+          <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic">🗑</span>Verwijderen</button>
+        </MobDetailScreen>
+      );
+    })()}
     <div className="ph"><div><div className="pg-title">Financiën</div><div className="pg-sub">Facturen & boekhouding</div></div><button className="btn btn-dark" onClick={openCreate}>+ Nieuwe factuur</button></div>
     <div className="sg" style={{gridTemplateColumns:"repeat(4,1fr)"}}>
       {[
@@ -2009,42 +2434,115 @@ function FinancienTab({ userId, facturen, refresh, klanten, offertes, bedrijf })
       ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color}}>{s.val}</div><div className="ss">{s.sub}</div></div>)}
     </div>
 
-    <div style={{display:"flex",gap:8,marginBottom:16}}>
-      {[["facturen","📄 Facturen"],["ai","✨ Slimme assistent"]].map(([id,lbl])=>(
+    <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+      {[["facturen","📄 Facturen"],["uitgaven","🧾 Uitgaven"],["ai","✨ Assistent"]].map(([id,lbl])=>(
         <button key={id} onClick={()=>setSubTab(id)} style={{padding:"7px 18px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB"}}>{lbl}</button>
       ))}
     </div>
 
     {subTab==="facturen"&&(<>
-      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",overflowX:"hidden"}}>
         {["Alle","Concept","Verstuurd","Herinnering","Betaald","Verlopen"].map(s=>(
           <button key={s} onClick={()=>setFilterStatus(s)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterStatus===s?"#0F0F14":"#fff",color:filterStatus===s?"#fff":"#555",borderColor:filterStatus===s?"#0F0F14":"#E5E7EB"}}>{s}</button>
         ))}
       </div>
       {filtered.length===0
         ?<LeegScherm icon="💶" titel="Geen facturen" sub="Maak je eerste factuur aan" actie="+ Factuur aanmaken" onActie={openCreate}/>
-        :<div className="card"><div className="tw"><table><thead><tr>{["Nummer","Klant","Datum","Vervaldatum","Totaal","Status",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
-          <tbody>{filtered.map(f=>{
-            const st=dispStatus(f), od=isOverdue(f);
-            return(<tr key={f.id}>
-              <td style={{fontWeight:700,color:"#6366F1",fontSize:13}}>{f.nummer||"-"}</td>
-              <td style={{fontWeight:600,color:"#111"}}>{f.klant}</td>
-              <td style={{color:"#888",fontSize:13}}>{fmtDate(f.datum)}</td>
-              <td style={{color:od?"#EF4444":"#888",fontSize:13,fontWeight:od?700:400}}>{fmtDate(f.vervaldatum)}</td>
-              <td style={{fontWeight:700,color:"#111"}}>{fmtEur(getTotal(f))}</td>
-              <td><Badge status={st}/></td>
-              <td><div style={{display:"flex",gap:5,alignItems:"center"}}>
-                <button className="btn btn-ghost btn-sm" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}>PDF</button>
-                {st!=="Betaald"&&st!=="Concept"&&<button className="btn btn-ghost btn-sm" title="Herinnering" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔</button>}
-                <button className="btn btn-ghost btn-sm" title="E-mailen" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>📧</button>
-                <select value={f.status||"Concept"} onChange={e=>updateStatus(f.id,e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
-                  {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
-                </select>
-                <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}>✕</button>
-              </div></td>
-            </tr>);
-          })}</tbody></table></div></div>
+        : mob
+          ? <div className="mob-card-list">{filtered.map(f=>{
+              const st=dispStatus(f), od=isOverdue(f);
+              return(
+                <div className="mob-card" key={f.id} onClick={()=>setMobDetail(f)}>
+                  <div className="mob-card-top">
+                    <div className="mob-card-name">{f.klant}</div>
+                    <Badge status={st}/>
+                  </div>
+                  <div className="mob-card-amount" style={{color:od?"#EF4444":"#0F0F14"}}>{fmtEur(getTotal(f))}</div>
+                  <div className="mob-card-sub">{f.nummer||"-"} · {fmtDate(f.datum)}{od?" · Vervallen":""}</div>
+                  <span className="mob-card-chevron">›</span>
+                </div>
+              );
+            })}</div>
+          : <div className="card"><div className="tw"><table><thead><tr>{["Nummer","Klant","Datum","Vervaldatum","Totaal","Status",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+              <tbody>{filtered.map(f=>{
+                const st=dispStatus(f), od=isOverdue(f);
+                return(<tr key={f.id}>
+                  <td style={{fontWeight:700,color:"#6366F1",fontSize:13}}>{f.nummer||"-"}</td>
+                  <td style={{fontWeight:600,color:"#111"}}>{f.klant}</td>
+                  <td style={{color:"#888",fontSize:13}}>{fmtDate(f.datum)}</td>
+                  <td style={{color:od?"#EF4444":"#888",fontSize:13,fontWeight:od?700:400}}>{fmtDate(f.vervaldatum)}</td>
+                  <td style={{fontWeight:700,color:"#111"}}>{fmtEur(getTotal(f))}</td>
+                  <td><Badge status={st}/></td>
+                  <td><div style={{display:"flex",gap:5,alignItems:"center"}}>
+                    <button className="btn btn-ghost btn-sm" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}>PDF</button>
+                    {st!=="Betaald"&&st!=="Concept"&&<button className="btn btn-ghost btn-sm" title="Herinnering" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔</button>}
+                    <button className="btn btn-ghost btn-sm" title="E-mailen" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>📧</button>
+                    <select value={f.status||"Concept"} onChange={e=>updateStatus(f.id,e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
+                      {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
+                    </select>
+                    <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}>✕</button>
+                  </div></td>
+                </tr>);
+              })}</tbody></table></div></div>
       }
+    </>)}
+
+    {subTab==="uitgaven"&&(<>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15,color:"#111"}}>Totaal uitgaven: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0),0))}</div>
+          <div style={{fontSize:13,color:"#64748B"}}>BTW terugvragen: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0)*Number(u.btw_percentage||0)/100/(1+Number(u.btw_percentage||0)/100),0))}</div>
+        </div>
+        <button className="btn btn-dark" onClick={()=>{setNieuweUitgave({datum:new Date().toISOString().slice(0,10),categorie:"",omschrijving:"",bedrag:"",btw_percentage:21,foto:""});setUitgaveFotoPreview("");setUitgaveErr("");setShowAddUitgave(true);}}>+ Uitgave</button>
+      </div>
+      {(uitgaven||[]).length===0
+        ?<LeegScherm icon="🧾" titel="Geen uitgaven" sub="Registreer je eerste zakelijke uitgave" actie="+ Uitgave toevoegen" onActie={()=>setShowAddUitgave(true)}/>
+        :<div className="card"><div className="tw"><table><thead><tr>{["Datum","Categorie","Omschrijving","Bedrag","BTW %","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+          <tbody>{(uitgaven||[]).map(u=><tr key={u.id}>
+            <td style={{color:"#888",fontSize:13}}>{u.datum}</td>
+            <td><span style={{background:"#F1F5F9",borderRadius:6,padding:"2px 8px",fontSize:12,fontWeight:600}}>{u.categorie}</span></td>
+            <td style={{fontWeight:600,color:"#111"}}>{u.omschrijving}{u.foto&&<img src={u.foto} alt="Bon" style={{width:36,height:28,objectFit:"cover",borderRadius:6,marginLeft:8,verticalAlign:"middle",cursor:"pointer"}} onClick={()=>window.open(u.foto)}/>}</td>
+            <td style={{fontWeight:700,color:"#111"}}>{fmtEur(u.bedrag)}</td>
+            <td style={{color:"#888"}}>{u.btw_percentage}%</td>
+            <td><button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Uitgave verwijderen?"))supabase.from("uitgaven").delete().eq("id",u.id).then(()=>refresh());}}>✕</button></td>
+          </tr>)}</tbody></table></div></div>
+      }
+      {showAddUitgave&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Uitgave toevoegen</div></div><button className="mc" onClick={()=>setShowAddUitgave(false)}>✕</button></div><div className="mb">
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="ig"><label className="ilbl">Datum</label><input className="inp" type="date" value={nieuweUitgave.datum} onChange={e=>setNieuweUitgave({...nieuweUitgave,datum:e.target.value})}/></div>
+          <div className="ig"><label className="ilbl">Categorie</label>
+            <select className="inp" value={nieuweUitgave.categorie} onChange={e=>setNieuweUitgave({...nieuweUitgave,categorie:e.target.value})}>
+              <option value="">-- Kies --</option>
+              {["Materiaal","Gereedschap","Brandstof","Verzekering","Telefoon","Software","Opleiding","Kantoor","Overig"].map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="ig"><label className="ilbl">Omschrijving</label><input className="inp" value={nieuweUitgave.omschrijving} onChange={e=>setNieuweUitgave({...nieuweUitgave,omschrijving:e.target.value})} placeholder="Wat is er gekocht?"/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="ig"><label className="ilbl">Bedrag (incl. BTW)</label><input className="inp" type="number" step="0.01" value={nieuweUitgave.bedrag} onChange={e=>setNieuweUitgave({...nieuweUitgave,bedrag:e.target.value})} placeholder="0.00"/></div>
+          <div className="ig"><label className="ilbl">BTW %</label>
+            <select className="inp" value={nieuweUitgave.btw_percentage} onChange={e=>setNieuweUitgave({...nieuweUitgave,btw_percentage:Number(e.target.value)})}>
+              {[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="ig"><label className="ilbl">Bonnetje (foto)</label>
+          <input className="inp" type="file" accept="image/*" capture="environment" onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{setNieuweUitgave(prev=>({...prev,foto:r.result}));setUitgaveFotoPreview(r.result)};r.readAsDataURL(f);}}/>
+          {uitgaveFotoPreview&&<img src={uitgaveFotoPreview} alt="Bon" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}
+        </div>
+        {uitgaveErr&&<div style={{color:"#B91C1C",fontSize:13,marginBottom:12}}>{uitgaveErr}</div>}
+        <div style={{display:"flex",gap:9}}>
+          <button className="btn btn-ghost" onClick={()=>setShowAddUitgave(false)}>Annuleren</button>
+          <button className="btn btn-dark btn-full" disabled={savingUitgave} onClick={async()=>{
+            if(!nieuweUitgave.categorie||!nieuweUitgave.omschrijving||!nieuweUitgave.bedrag){setUitgaveErr("Vul alle verplichte velden in.");return;}
+            setSavingUitgave(true);
+            const {error}=await supabase.from("uitgaven").insert({user_id:userId,datum:nieuweUitgave.datum,categorie:nieuweUitgave.categorie,omschrijving:nieuweUitgave.omschrijving,bedrag:Number(nieuweUitgave.bedrag),btw_percentage:nieuweUitgave.btw_percentage,foto:nieuweUitgave.foto||null});
+            setSavingUitgave(false);
+            if(error){setUitgaveErr(error.message);return;}
+            setShowAddUitgave(false); refresh();
+          }}>{savingUitgave?"Opslaan…":"Opslaan"}</button>
+        </div>
+      </div></div></div>}
     </>)}
 
     {subTab==="ai"&&(
@@ -2209,8 +2707,8 @@ function TeamTab({ ownerId, teamMembers, refresh, bedrijf }) {
     <div className="ph"><div><div className="pg-title">Team</div><div className="pg-sub">Nodig teamleden uit en beheer rollen</div></div><button className="btn btn-dark" onClick={()=>setShowInvite(true)}>+ Teamlid uitnodigen</button></div>
     {teamMembers.length===0
       ? <LeegScherm icon="👥" titel="Nog geen teamleden" sub="Nodig iemand uit om samen te werken" actie="+ Uitnodigen" onActie={()=>setShowInvite(true)}/>
-      : <div className="card"><div className="tw"><table><thead><tr>{["E-mail","Rol","Uitgenodigd","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-          <tbody>{teamMembers.map(member=><tr key={member.id}><td style={{fontWeight:700,color:"#111"}}>{member.email}</td><td style={{color:"#555"}}>{member.role}</td><td style={{color:"#888"}}>{member.invited_at?new Date(member.invited_at).toLocaleDateString("nl-NL"):"-"}</td><td><button className="btn btn-danger btn-sm" onClick={()=>removeMember(member.id)}>Verwijderen</button></td></tr>)}</tbody>
+      : <div className="card"><div className="tw"><table><thead><tr>{["E-mail","Rol","Uitgenodigd","Acties"].map(h=><th key={h} className={h==="Uitgenodigd"?"mob-hide":undefined}>{h}</th>)}</tr></thead>
+          <tbody>{teamMembers.map(member=><tr key={member.id}><td style={{fontWeight:700,color:"#111"}}>{member.email}</td><td style={{color:"#555"}}>{member.role}</td><td className="mob-hide" style={{color:"#888"}}>{member.invited_at?new Date(member.invited_at).toLocaleDateString("nl-NL"):"-"}</td><td><button className="btn btn-danger btn-sm" onClick={()=>removeMember(member.id)}>Verwijderen</button></td></tr>)}</tbody>
         </table></div></div>
     }
     {showInvite&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Teamlid uitnodigen</div></div><button className="mc" onClick={()=>setShowInvite(false)}>✕</button></div><div className="mb">
@@ -2576,7 +3074,7 @@ function WerkMateApp({ user, onLogout }) {
   const [showOnboard, setShowOnboard] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [mustSubscribe, setMustSubscribe] = useState(false);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [mobMore, setMobMore] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [emailSettings, setEmailSettings] = useState({
     auto_review_email: true,
@@ -2597,6 +3095,9 @@ function WerkMateApp({ user, onLogout }) {
   const [teamMembers, setTeamMembers] = useState([]);
   const [planningCats, setPlanningCats] = useState([]);
   const [emailsLog, setEmailsLog] = useState([]);
+  const [ritten, setRitten] = useState([]);
+  const [uitgaven, setUitgaven] = useState([]);
+  const [certificaten, setCertificaten] = useState([]);
 
   useEffect(() => {
     const initOrg = async () => {
@@ -2648,7 +3149,7 @@ function WerkMateApp({ user, onLogout }) {
 
   const refreshAlles = async () => {
       const ownerId = orgOwnerId || user.id;
-      const [o, k, p, f, w, t, pc, el] = await Promise.all([
+      const [o, k, p, f, w, t, pc, el, ri, ui, ce] = await Promise.all([
         supabase.from("offertes").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
         supabase.from("klanten").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
         supabase.from("planning").select("*").eq("user_id", ownerId).order("datum",{ascending:true}).order("tijd",{ascending:true}),
@@ -2657,6 +3158,9 @@ function WerkMateApp({ user, onLogout }) {
         supabase.from("team").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
         supabase.from("planning_categorieen").select("*").eq("user_id", ownerId).order("naam", {ascending:true}),
         supabase.from("emails_log").select("*").eq("user_id", ownerId).order("sent_at", {ascending:false}),
+        supabase.from("ritten").select("*").eq("user_id", ownerId).order("datum", {ascending:false}),
+        supabase.from("uitgaven").select("*").eq("user_id", ownerId).order("datum", {ascending:false}),
+        supabase.from("certificaten").select("*").eq("user_id", ownerId).order("vervaldatum", {ascending:true}),
       ]);
       setOffertes(o.data || []);
       setKlanten(k.data || []);
@@ -2666,6 +3170,9 @@ function WerkMateApp({ user, onLogout }) {
       setTeamMembers(t.data || []);
       setPlanningCats(pc.data || []);
       setEmailsLog(el.data || []);
+      setRitten(ri.data || []);
+      setUitgaven(ui.data || []);
+      setCertificaten(ce.data || []);
       const { data: esData } = await supabase.from("email_settings").select("*").eq("user_id", ownerId).maybeSingle();
       if (esData) setEmailSettings(esData);
     };
@@ -2691,12 +3198,13 @@ function WerkMateApp({ user, onLogout }) {
       case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst}/>;
       case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
       case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} refresh={refreshAlles}/>;
-      case "profiel":     return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} />;
-      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf}/>;
+      case "profiel":     return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} certificaten={certificaten} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} />;
+      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf}/>;
       case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
       case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings}/>;
       case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles}/>;
       case "social":     return <SocialTab/>;
+      case "ritten":     return <RittenTab userId={orgOwnerId} ritten={ritten} refresh={refreshAlles} klanten={klanten}/>;
       case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles}/>;
       default: return PH[tab]?<Placeholder {...PH[tab]}/>:null;
     }
@@ -2741,37 +3249,360 @@ function WerkMateApp({ user, onLogout }) {
           </div>
         </div>
         <div className="main">{!showOnboard&&render()}</div>
-        {/* Mobile bottom navigation */}
-        <div className="mob-nav">
-          {showMoreMenu&&(
-            <div onClick={()=>setShowMoreMenu(false)} style={{position:"fixed",inset:0,zIndex:99}} />
-          )}
-          {showMoreMenu&&(
-            <div style={{position:"fixed",bottom:"calc(56px + env(safe-area-inset-bottom))",left:0,right:0,background:"#0F0F14",zIndex:100,borderTop:"1px solid rgba(255,255,255,.12)",padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {MORE_NAV.map(item=>(
-                <button key={item.id} onClick={()=>{setTab(item.id);setShowMoreMenu(false);}} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:tab===item.id?"rgba(99,102,241,.18)":"rgba(255,255,255,.06)",border:"none",borderRadius:10,color:tab===item.id?"#A5B4FC":"rgba(255,255,255,.7)",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",WebkitTapHighlightColor:"transparent"}}>
-                  <span style={{fontSize:18}}>{item.icon}</span>{item.label}
-                </button>
-              ))}
-              <button onClick={()=>{setShowMoreMenu(false);onLogout();}} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",background:"rgba(255,255,255,.06)",border:"none",borderRadius:10,color:"rgba(255,255,255,.5)",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",WebkitTapHighlightColor:"transparent",gridColumn:"1/-1"}}>
-                <span style={{fontSize:18}}>🚪</span>Uitloggen
-              </button>
-            </div>
-          )}
-          <div style={{display:"flex",height:56}}>
-            {MOBILE_NAV.map(item=>item.id==="meer"
-              ?<button key="meer" className={`mob-nb${showMoreMenu?" mob-nb-on":""}`} onClick={()=>setShowMoreMenu(m=>!m)}>
+        {/* bottom nav – mobile only (hidden via CSS on desktop) */}
+        <nav className="mob-nav">
+          {MOB_NAV.map(item => item.id === "meer"
+            ? <button key="meer" className={`mob-nb${mobMore ? " mob-nb-on" : ""}`} onClick={() => setMobMore(m => !m)}>
                 <span className="mob-nb-ic">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
-              :<button key={item.id} className={`mob-nb${tab===item.id&&!showMoreMenu?" mob-nb-on":""}`} onClick={()=>{setTab(item.id);setShowMoreMenu(false);}}>
+            : <button key={item.id} className={`mob-nb${tab === item.id && !mobMore ? " mob-nb-on" : ""}`} onClick={() => { setTab(item.id); setMobMore(false); }}>
                 <span className="mob-nb-ic">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
-            )}
+          )}
+        </nav>
+        {/* Meer panel – mobile only */}
+        {mobMore && (
+          <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,borderTop:"1px solid #E5E7EB",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
+            {MOB_MORE.map(item => (
+              <button key={item.id} onClick={() => { setTab(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:tab===item.id?"#EEF2FF":"#F8FAFC",border:`1.5px solid ${tab===item.id?"#C7D2FE":"#E5E7EB"}`,borderRadius:12,color:tab===item.id?"#6366F1":"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                <span style={{fontSize:18}}>{item.icon}</span>{item.label}
+              </button>
+            ))}
+            <button onClick={() => { setMobMore(false); onLogout(); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:12,color:"#EF4444",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",gridColumn:"1/-1"}}>
+              <span style={{fontSize:18}}>🚪</span>Uitloggen
+            </button>
           </div>
-        </div>
+        )}
+        {mobMore && <div onClick={() => setMobMore(false)} style={{position:"fixed",inset:0,zIndex:198}} />}
       </div>
     </>
   );
+}
+
+// ── Portal Page ───────────────────────────────────────────────
+function PortalPage({ token }) {
+  const [offerte, setOfferte] = useState(null);
+  const [bedrijf, setBedrijf] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [step, setStep] = useState("view"); // view | sign | done
+  const [signing, setSigning] = useState(false);
+  const [klantEmail, setKlantEmail] = useState("");
+  const [signErr, setSignErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data, error: e } = await supabase.from("offertes").select("*").eq("portal_token", token).single();
+      if (e || !data) { setError("Offerte niet gevonden. Controleer de link."); setLoading(false); return; }
+      setOfferte(data);
+      if (data.status === "Geaccepteerd") setStep("done");
+      const { data: bp } = await supabase.from("bedrijfsprofiel").select("bedrijfsnaam,logo,adres,email,telefoon,website").eq("user_id", data.user_id).single();
+      setBedrijf(bp);
+      setLoading(false);
+    })();
+  }, [token]);
+
+  const handleSign = async (sig) => {
+    setSigning(true); setSignErr("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-proxy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_KEY}` },
+        body: JSON.stringify({ action: "portal-sign", portal_token: token, handtekening: sig, klant_email: klantEmail }),
+      });
+      if (!r.ok) throw new Error("Ondertekenen mislukt");
+      setStep("done");
+    } catch(e) { setSignErr("Er ging iets mis. Probeer opnieuw."); }
+    setSigning(false);
+  };
+
+  const fmtEur = (n) => `€ ${Number(n||0).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  const regels = Array.isArray(offerte?.regels) ? offerte.regels : [];
+  const subtotaal = offerte?.subtotaal ?? regels.reduce((s,r)=>s+(Number(r.aantal)||0)*(Number(r.prijs)||0),0);
+  const btw = offerte?.btw ?? subtotaal * 0.21;
+  const totaal = offerte?.totaal ?? subtotaal + btw;
+
+  const portalStyle = {fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#F8FAFC",color:"#111"};
+  const headStyle = {background:"#0F0F14",padding:"20px 24px",display:"flex",alignItems:"center",gap:16};
+
+  if (loading) return <div style={{...portalStyle,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{color:"#64748B"}}>Laden…</div></div></div>;
+  if (error) return <div style={{...portalStyle,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",maxWidth:400,padding:32}}><div style={{fontSize:40,marginBottom:16}}>⚠️</div><div style={{fontWeight:700,fontSize:18,color:"#111",marginBottom:8}}>Offerte niet gevonden</div><div style={{color:"#64748B"}}>{error}</div></div></div>;
+
+  return (
+    <div style={portalStyle}>
+      <div style={headStyle}>
+        {bedrijf?.logo && <img src={bedrijf.logo} alt="Logo" style={{height:40,width:40,objectFit:"contain",borderRadius:8,background:"#fff"}}/>}
+        <div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:18,color:"#fff"}}>{bedrijf?.bedrijfsnaam||"WerkMate"}</div>
+          {bedrijf?.adres && <div style={{fontSize:12,color:"rgba(255,255,255,.5)",marginTop:2}}>{bedrijf.adres}</div>}
+        </div>
+      </div>
+
+      <div style={{maxWidth:720,margin:"0 auto",padding:"24px 16px"}}>
+        {step === "done" ? (
+          <div style={{textAlign:"center",padding:"48px 24px",background:"#fff",borderRadius:20,border:"1px solid #EAECF0"}}>
+            <div style={{fontSize:56,marginBottom:16}}>✅</div>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:24,color:"#0F0F14",marginBottom:8}}>Offerte geaccepteerd!</div>
+            <div style={{color:"#64748B",fontSize:15,lineHeight:1.6}}>Bedankt voor het ondertekenen. Er is automatisch een factuur aangemaakt. U ontvangt een bevestiging per e-mail.</div>
+          </div>
+        ) : (
+          <>
+            <div style={{background:"#fff",borderRadius:16,border:"1px solid #EAECF0",padding:"22px 24px",marginBottom:16}}>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#0F0F14",marginBottom:4}}>Offerte</div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:16}}>Opgesteld voor: <strong style={{color:"#111"}}>{offerte.klant}</strong></div>
+              {offerte.dienst && <div style={{background:"linear-gradient(135deg,#6366F1,#8B5CF6)",borderRadius:12,padding:"14px 18px",color:"#fff",marginBottom:16}}>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15}}>{offerte.dienst}</div>
+                {offerte.omschrijving && <div style={{fontSize:12,opacity:.85,marginTop:4,lineHeight:1.5}}>{offerte.omschrijving}</div>}
+              </div>}
+              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:12}}>
+                <thead><tr style={{background:"#F8FAFC",borderBottom:"1px solid #E5E7EB"}}>
+                  {["Omschrijving","Aantal","Eenheid","Prijs","Totaal"].map(h=><th key={h} style={{padding:"9px 10px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>{h}</th>)}
+                </tr></thead>
+                <tbody>{regels.map((r,i)=>(
+                  <tr key={i} style={{borderBottom:"1px solid #F5F5F5"}}>
+                    <td style={{padding:"10px",fontSize:13,color:"#111"}}>{r.omschrijving}</td>
+                    <td style={{padding:"10px",fontSize:13,textAlign:"right"}}>{r.aantal}</td>
+                    <td style={{padding:"10px",fontSize:13,color:"#64748B"}}>{r.eenheid}</td>
+                    <td style={{padding:"10px",fontSize:13,textAlign:"right"}}>{fmtEur(r.prijs)}</td>
+                    <td style={{padding:"10px",fontSize:13,fontWeight:700,textAlign:"right"}}>{fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+              <div style={{textAlign:"right",fontSize:13,color:"#555",lineHeight:2,background:"#F8FAFC",borderRadius:10,padding:"12px 16px"}}>
+                <div>Subtotaal: <strong>{fmtEur(subtotaal)}</strong></div>
+                <div>BTW (21%): <strong>{fmtEur(btw)}</strong></div>
+                <div style={{fontSize:18,fontWeight:800,color:"#0F0F14",marginTop:4}}>Totaal: {fmtEur(totaal)}</div>
+              </div>
+            </div>
+
+            {step === "view" && (
+              <div style={{background:"#fff",borderRadius:16,border:"1px solid #EAECF0",padding:"22px 24px",marginBottom:16}}>
+                <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>Uw e-mailadres <span style={{fontSize:12,fontWeight:400,color:"#94A3B8"}}>(voor bevestiging)</span></div>
+                <input value={klantEmail} onChange={e=>setKlantEmail(e.target.value)} placeholder="uw@email.nl" style={{width:"100%",border:"1.5px solid #E5E7EB",borderRadius:10,padding:"12px 14px",fontSize:16,fontFamily:"'DM Sans',sans-serif",outline:"none",marginBottom:16,boxSizing:"border-box"}}/>
+                <button onClick={()=>setStep("sign")} style={{width:"100%",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",color:"#fff",border:"none",borderRadius:12,padding:"16px",fontSize:16,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                  ✍️ Offerte ondertekenen
+                </button>
+              </div>
+            )}
+
+            {step === "sign" && (
+              <div style={{background:"#fff",borderRadius:16,border:"1px solid #EAECF0",padding:"22px 24px"}}>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:16,marginBottom:4}}>Digitale handtekening</div>
+                <div style={{fontSize:13,color:"#64748B",marginBottom:16}}>Teken hieronder met uw vinger of muis. Door te ondertekenen accepteert u de offerte.</div>
+                <SignatureCanvas onSave={handleSign} label="Teken hier uw handtekening"/>
+                {signing && <div style={{textAlign:"center",marginTop:12,color:"#6366F1",fontWeight:600}}>Verwerken…</div>}
+                {signErr && <div style={{color:"#EF4444",marginTop:12,fontSize:13}}>{signErr}</div>}
+                <button onClick={()=>setStep("view")} style={{marginTop:12,background:"none",border:"none",color:"#64748B",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>← Terug</button>
+              </div>
+            )}
+          </>
+        )}
+        <div style={{textAlign:"center",marginTop:24,fontSize:12,color:"#94A3B8"}}>Beveiligd door <strong>WerkMate</strong></div>
+      </div>
+    </div>
+  );
+}
+
+// ── Admin Page ────────────────────────────────────────────────
+function AdminPage() {
+  const ADMIN_EMAIL = "mauritsverweij2010@gmail.com";
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user || session.user.email !== ADMIN_EMAIL) { setLoading(false); return; }
+      setUser(session.user);
+      loadStats();
+    });
+  }, []);
+
+  const loadStats = async () => {
+    const { data: profielen } = await supabase.from("bedrijfsprofiel").select("*").order("created_at",{ascending:false});
+    const { data: subs } = await supabase.from("subscriptions").select("*");
+    const activeCount = (subs||[]).filter(s=>s.status==="active").length;
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+    const newThisWeek = (profielen||[]).filter(p=>new Date(p.created_at)>weekAgo).length;
+    setStats({ total:(profielen||[]).length, active:activeCount, newThisWeek });
+    setUsers(profielen||[]);
+    setLoading(false);
+  };
+
+  if (loading) return <div style={{minHeight:"100vh",background:"#0F0F14",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontFamily:"sans-serif"}}>⚡ Laden…</div>;
+  if (!user) return <div style={{minHeight:"100vh",background:"#0F0F14",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontFamily:"sans-serif",textAlign:"center"}}><div><div style={{fontSize:40,marginBottom:16}}>🔒</div><div>Toegang geweigerd</div></div></div>;
+
+  return (
+    <div style={{fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#F4F4F6"}}>
+      <div style={{background:"#0F0F14",padding:"20px 32px",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#fff"}}>⚡ WerkMate Admin</div>
+        <span style={{marginLeft:"auto",fontSize:12,color:"rgba(255,255,255,.4)"}}>{user.email}</span>
+      </div>
+      <div style={{maxWidth:1000,margin:"0 auto",padding:"28px 24px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:28}}>
+          {[{label:"Totaal gebruikers",val:stats?.total||0,color:"#6366F1"},{label:"Actieve abonnementen",val:stats?.active||0,color:"#10B981"},{label:"Nieuw deze week",val:stats?.newThisWeek||0,color:"#F59E0B"}].map(s=>(
+            <div key={s.label} style={{background:"#fff",borderRadius:13,border:"1px solid #EAECF0",padding:"18px 20px"}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:".7px",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>{s.label}</div>
+              <div style={{fontFamily:"'Syne',sans-serif",fontSize:32,fontWeight:800,color:s.color}}>{s.val}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{background:"#fff",borderRadius:13,border:"1px solid #EAECF0",overflow:"hidden"}}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid #F0F0F0",fontWeight:700,fontSize:14}}>Alle gebruikers</div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead><tr style={{background:"#FAFAFA"}}>
+                {["Bedrijf","Sector","Stad","Email","Aangemeld"].map(h=><th key={h} style={{padding:"10px 14px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>{h}</th>)}
+              </tr></thead>
+              <tbody>{users.map(u=>(
+                <tr key={u.id} style={{borderTop:"1px solid #F5F5F5"}}>
+                  <td style={{padding:"12px 14px",fontWeight:700,fontSize:13,color:"#111"}}>{u.bedrijfsnaam||"—"}</td>
+                  <td style={{padding:"12px 14px",fontSize:13,color:"#555"}}>{u.sector||"—"}</td>
+                  <td style={{padding:"12px 14px",fontSize:13,color:"#555"}}>{u.stad||"—"}</td>
+                  <td style={{padding:"12px 14px",fontSize:13,color:"#6366F1"}}>{u.email||"—"}</td>
+                  <td style={{padding:"12px 14px",fontSize:12,color:"#888"}}>{u.created_at?new Date(u.created_at).toLocaleDateString("nl-NL"):"—"}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Ritten Tab ────────────────────────────────────────────────
+function RittenTab({ userId, ritten, refresh, klanten }) {
+  const mob = useMobile();
+  const [showAdd, setShowAdd] = useState(false);
+  const [filterDoel, setFilterDoel] = useState("Alle");
+  const [filterMaand, setFilterMaand] = useState("");
+  const todayStr = new Date().toISOString().slice(0,10);
+  const [nieuw, setNieuw] = useState({datum:todayStr, vertrek:"", bestemming:"", km:"", doel:"zakelijk", klant:""});
+  const [saving, setSaving] = useState(false);
+  const [kmLoading, setKmLoading] = useState(false);
+
+  const calcKm = async (vertrek, bestemming) => {
+    if (!vertrek.trim() || !bestemming.trim()) return;
+    setKmLoading(true);
+    try {
+      const geocode = async (addr) => {
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=nl,be,de`, {headers:{"User-Agent":"WerkMate/1.0"}});
+        const d = await r.json();
+        return d.length ? {lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon)} : null;
+      };
+      const [from, to] = await Promise.all([geocode(vertrek), geocode(bestemming)]);
+      if (!from || !to) { setKmLoading(false); return; }
+      const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`);
+      const d = await r.json();
+      if (d.code === "Ok" && d.routes?.length) {
+        const km = Math.round(d.routes[0].distance / 100) / 10;
+        setNieuw(prev => ({...prev, km: km.toString()}));
+      }
+    } catch(e) { console.warn("km calc:", e); }
+    setKmLoading(false);
+  };
+
+  const filtered = ritten.filter(r => {
+    if (filterDoel !== "Alle" && r.doel !== filterDoel) return false;
+    if (filterMaand && !(r.datum||"").startsWith(filterMaand)) return false;
+    return true;
+  });
+
+  const totaalKm = filtered.reduce((s,r) => s + Number(r.km||0), 0);
+  const totaalBedrag = filtered.reduce((s,r) => s + Number(r.km||0) * 0.23, 0);
+  const zakelijkKm = ritten.filter(r=>r.doel==="zakelijk").reduce((s,r)=>s+Number(r.km||0),0);
+
+  const add = async () => {
+    if (!nieuw.vertrek || !nieuw.bestemming || !nieuw.km) return;
+    setSaving(true);
+    await supabase.from("ritten").insert({ ...nieuw, km: Number(nieuw.km), user_id: userId });
+    setSaving(false); setShowAdd(false); setNieuw({datum:todayStr,vertrek:"",bestemming:"",km:"",doel:"zakelijk",klant:""});
+    refresh();
+  };
+
+  const del = async (id) => { if(window.confirm("Rit verwijderen?")) { await supabase.from("ritten").delete().eq("id",id); refresh(); } };
+
+  const exportXlsx = () => {
+    const rows = filtered.map(r => ({ Datum: r.datum, Vertrek: r.vertrek, Bestemming: r.bestemming, "KM": Number(r.km), "Doel": r.doel, "Klant": r.klant||"", "Aftrekbaar (€)": (Number(r.km)*0.23).toFixed(2) }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ritten");
+    XLSX.writeFile(wb, `ritten-${filterMaand||"export"}.xlsx`);
+  };
+
+  const maanden = [...new Set(ritten.map(r=>(r.datum||"").slice(0,7)))].sort().reverse();
+
+  return (<div>
+    <div className="ph">
+      <div><div className="pg-title">Rittenregistratie</div><div className="pg-sub">{ritten.length} ritten geregistreerd</div></div>
+      <div style={{display:"flex",gap:8}}>
+        <button className="btn btn-ghost" onClick={exportXlsx}>📊 Export</button>
+        <button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Rit</button>
+      </div>
+    </div>
+
+    <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>
+      {[{label:"Zakelijke KM",val:`${zakelijkKm.toFixed(0)} km`,color:"#6366F1"},{label:"Gefilterd totaal",val:`${totaalKm.toFixed(0)} km`,color:"#0F0F14"},{label:"Aftrekbaar",val:`€ ${totaalBedrag.toFixed(2)}`,color:"#10B981"}].map(s=>(
+        <div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color}}>{s.val}</div></div>
+      ))}
+    </div>
+
+    <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+      {["Alle","zakelijk","privé"].map(d=><button key={d} onClick={()=>setFilterDoel(d)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterDoel===d?"#0F0F14":"#fff",color:filterDoel===d?"#fff":"#555",borderColor:filterDoel===d?"#0F0F14":"#E5E7EB"}}>{d==="Alle"?"Alle":d.charAt(0).toUpperCase()+d.slice(1)}</button>)}
+      <select value={filterMaand} onChange={e=>setFilterMaand(e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:20,padding:"4px 14px",fontSize:12.5,fontWeight:600,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none",background:"#fff",color:"#555"}}>
+        <option value="">Alle maanden</option>
+        {maanden.map(m=><option key={m} value={m}>{new Date(m+"-01").toLocaleDateString("nl-NL",{month:"long",year:"numeric"})}</option>)}
+      </select>
+    </div>
+
+    {filtered.length === 0
+      ? <LeegScherm icon="🚗" titel="Geen ritten" sub="Voeg je eerste rit toe" actie="+ Rit toevoegen" onActie={()=>setShowAdd(true)}/>
+      : mob
+        ? <div className="mob-card-list">{filtered.map(r=>(
+            <div className="mob-card" key={r.id}>
+              <div className="mob-card-top">
+                <div className="mob-card-name">{r.vertrek} → {r.bestemming}</div>
+                <span style={{background:r.doel==="zakelijk"?"#EEF2FF":"#F3F4F6",color:r.doel==="zakelijk"?"#6366F1":"#555",fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:20}}>{r.doel}</span>
+              </div>
+              <div className="mob-card-amount" style={{fontSize:20}}>{r.km} km</div>
+              <div className="mob-card-sub">{r.datum} · Aftrekbaar: €{(Number(r.km)*0.23).toFixed(2)}{r.klant?` · ${r.klant}`:""}</div>
+              <div className="mob-card-actions"><button className="btn btn-danger btn-sm" onClick={()=>del(r.id)}>✕</button></div>
+            </div>
+          ))}</div>
+        : <div className="card"><div className="tw"><table><thead><tr>{["Datum","Vertrek","Bestemming","KM","Doel","Klant","Aftrekbaar",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+            <tbody>{filtered.map(r=>(
+              <tr key={r.id}>
+                <td style={{color:"#888",fontSize:12}}>{r.datum}</td>
+                <td style={{fontWeight:600}}>{r.vertrek}</td>
+                <td style={{fontWeight:600}}>{r.bestemming}</td>
+                <td style={{fontWeight:700}}>{r.km} km</td>
+                <td><span style={{background:r.doel==="zakelijk"?"#EEF2FF":"#F3F4F6",color:r.doel==="zakelijk"?"#6366F1":"#555",fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:20}}>{r.doel}</span></td>
+                <td style={{color:"#555"}}>{r.klant||"—"}</td>
+                <td style={{fontWeight:700,color:"#10B981"}}>€{(Number(r.km)*0.23).toFixed(2)}</td>
+                <td><button className="btn btn-danger btn-sm" onClick={()=>del(r.id)}>✕</button></td>
+              </tr>
+            ))}</tbody>
+          </table></div></div>
+    }
+
+    {showAdd && <div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Rit toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div>
+      <div className="mb">
+        <div className="ig"><label className="ilbl">Datum</label><input className="inp" type="date" value={nieuw.datum} onChange={e=>setNieuw({...nieuw,datum:e.target.value})}/></div>
+        <div className="ig"><label className="ilbl">Vertrekpunt</label><input className="inp" value={nieuw.vertrek} onChange={e=>setNieuw({...nieuw,vertrek:e.target.value})} onBlur={e=>nieuw.bestemming&&calcKm(e.target.value,nieuw.bestemming)} placeholder="Straat 1, Amsterdam"/></div>
+        <div className="ig"><label className="ilbl">Bestemming</label><input className="inp" value={nieuw.bestemming} onChange={e=>setNieuw({...nieuw,bestemming:e.target.value})} onBlur={e=>nieuw.vertrek&&calcKm(nieuw.vertrek,e.target.value)} placeholder="Straat 2, Rotterdam"/></div>
+        <div className="ig"><label className="ilbl">Afstand (km){kmLoading&&<span style={{marginLeft:6,fontSize:11,color:"#6366F1",fontWeight:600}}>Berekenen…</span>}</label><input className="inp" type="number" value={nieuw.km} onChange={e=>setNieuw({...nieuw,km:e.target.value})} placeholder="Wordt automatisch berekend"/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div className="ig"><label className="ilbl">Doel</label><select className="inp" value={nieuw.doel} onChange={e=>setNieuw({...nieuw,doel:e.target.value})}><option value="zakelijk">Zakelijk</option><option value="privé">Privé</option></select></div>
+          <div className="ig"><label className="ilbl">Klant (optioneel)</label><select className="inp" value={nieuw.klant} onChange={e=>setNieuw({...nieuw,klant:e.target.value})}><option value="">—</option>{(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}</select></div>
+        </div>
+        {nieuw.km && <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:9,padding:"10px 13px",fontSize:13,color:"#15803D",marginBottom:12}}>Aftrekbaar: <strong>€{(Number(nieuw.km)*0.23).toFixed(2)}</strong></div>}
+        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={saving||!nieuw.vertrek||!nieuw.bestemming||!nieuw.km}>{saving?"Opslaan…":"Opslaan"}</button></div>
+      </div>
+    </div></div>}
+  </div>);
 }
