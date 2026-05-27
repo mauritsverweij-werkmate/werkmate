@@ -25,7 +25,82 @@ const json = (data: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-serve(async (req) => {
+// ── Email signature ───────────────────────────────────────────
+type Profiel = {
+  bedrijfsnaam?: string | null;
+  telefoon?: string | null;
+  website?: string | null;
+  logo?: string | null;
+  email?: string | null;
+};
+
+function buildSignature(profiel: Profiel | null): string {
+  if (!profiel) return "";
+  const name    = esc(profiel.bedrijfsnaam ?? "");
+  const tel     = profiel.telefoon ? esc(profiel.telefoon) : null;
+  const rawSite = profiel.website   ? esc(profiel.website)  : null;
+  // Skip base64 logos — they bloat emails and many clients block them
+  const logo    = profiel.logo && !profiel.logo.startsWith("data:") ? esc(profiel.logo) : null;
+  const href    = rawSite
+    ? (rawSite.startsWith("http") ? rawSite : `https://${rawSite}`)
+    : null;
+
+  if (!name && !tel && !rawSite && !logo) return "";
+
+  return `<tr><td style="padding:0 32px 28px;">
+  <table cellpadding="0" cellspacing="0" width="100%"><tr>
+    <td style="border-top:1px solid #f0f0f0;padding-top:20px;">
+      <table cellpadding="0" cellspacing="0"><tr>
+        ${logo ? `<td style="padding-right:14px;vertical-align:middle;"><img src="${logo}" alt="${name}" width="44" height="44" style="width:44px;height:44px;border-radius:8px;object-fit:contain;display:block;"/></td>` : ""}
+        <td style="vertical-align:middle;">
+          ${name ? `<p style="margin:0;font-size:14px;font-weight:700;color:#111827;line-height:1.4;">${name}</p>` : ""}
+          ${tel    ? `<p style="margin:2px 0 0;font-size:12px;color:#6b7280;line-height:1.4;">${tel}</p>` : ""}
+          ${href  ? `<p style="margin:2px 0 0;font-size:12px;line-height:1.4;"><a href="${href}" style="color:#6366F1;text-decoration:none;">${rawSite}</a></p>` : ""}
+        </td>
+      </tr></table>
+    </td>
+  </tr></table>
+</td></tr>`;
+}
+
+// Fetch bedrijfsprofiel for a given user (service-role, no RLS needed)
+async function fetchProfiel(userId: string): Promise<Profiel | null> {
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+  const { data } = await admin
+    .from("bedrijfsprofiel")
+    .select("bedrijfsnaam,telefoon,website,logo,email")
+    .eq("user_id", userId)
+    .single();
+  return data ?? null;
+}
+
+// ── Shared email outer wrapper ────────────────────────────────
+function emailWrapper(headerTitle: string, contentRows: string, signatureRow: string): string {
+  return `<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;font-family:Inter,system-ui,sans-serif;background:#f5f7fb;color:#111;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;padding:24px;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.08);">
+<tr><td style="background:#111827;padding:28px 32px;">
+  <h1 style="margin:0;color:#fff;font-size:24px;font-family:Inter,system-ui,sans-serif;">${headerTitle}</h1>
+</td></tr>
+<tr><td style="padding:32px 32px 24px;">
+${contentRows}
+<p style="margin:24px 0 0;font-size:15px;color:#4b5563;">Met vriendelijke groet,</p>
+</td></tr>
+${signatureRow}
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -72,10 +147,11 @@ serve(async (req) => {
     // Send confirmation emails (best-effort)
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (resendKey) {
-      const { data: profiel } = await admin.from("bedrijfsprofiel").select("email,bedrijfsnaam").eq("user_id", offerte.user_id).single();
+      const profiel = await fetchProfiel(offerte.user_id);
       const companyName = esc(profiel?.bedrijfsnaam || "WerkMate");
-      const safeKlant = esc(offerte.klant || klant_naam || "klant");
-      const safeNummer = esc(nummer);
+      const safeKlant   = esc(offerte.klant || klant_naam || "klant");
+      const safeNummer  = esc(nummer);
+      const sig = buildSignature(profiel);
 
       const sendMail = (to: string, subject: string, html: string) =>
         fetch("https://api.resend.com/emails", {
@@ -86,19 +162,33 @@ serve(async (req) => {
 
       const clientEmail = isValidEmail(klant_email) ? klant_email! : (isValidEmail(offerte.klant_email) ? offerte.klant_email : null);
       if (clientEmail) {
-        await sendMail(clientEmail, `Offerte geaccepteerd — ${companyName}`,
-          `<p>Beste ${safeKlant},</p><p>Bedankt voor het accepteren van de offerte. Uw factuur (${safeNummer}) is aangemaakt en wordt zo spoedig mogelijk verstuurd.</p><p>Met vriendelijke groet,<br/>${companyName}</p>`);
+        await sendMail(
+          clientEmail,
+          `Offerte geaccepteerd — ${companyName}`,
+          emailWrapper(companyName,
+            `<p style="margin:0 0 16px;font-size:16px;">Beste ${safeKlant},</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bedankt voor het accepteren van de offerte. Uw factuur (<strong>${safeNummer}</strong>) is aangemaakt en wordt zo spoedig mogelijk verstuurd.</p>`,
+            sig)
+        );
       }
+      // Internal notification to company (no customer signature needed)
       if (profiel?.email && isValidEmail(profiel.email)) {
-        await sendMail(profiel.email, `✅ Offerte geaccepteerd door ${safeKlant}`,
-          `<p>Hallo,</p><p><strong>${safeKlant}</strong> heeft de offerte ondertekend en geaccepteerd.</p><p>Factuur <strong>${safeNummer}</strong> is automatisch aangemaakt.</p><p>WerkMate</p>`);
+        await sendMail(
+          profiel.email,
+          `✅ Offerte geaccepteerd door ${safeKlant}`,
+          emailWrapper("WerkMate",
+            `<p style="margin:0 0 16px;font-size:16px;">Hallo,</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;"><strong>${safeKlant}</strong> heeft de offerte ondertekend en geaccepteerd.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Factuur <strong>${safeNummer}</strong> is automatisch aangemaakt.</p>`,
+            "")
+        );
       }
     }
 
     return json({ success: true, factuur_nummer: nummer });
   }
 
-  // ── Send portal link email (public, anon safe) ─────────────
+  // ── Send portal link email ──────────────────────────────────
   if (body.action === "send-portal-link") {
     const { customer_email, customer_name, company_name, portal_url } = body as {
       customer_email?: string; customer_name?: string; company_name?: string; portal_url?: string;
@@ -107,16 +197,28 @@ serve(async (req) => {
     if (!isValidEmail(customer_email)) return json({ error: "Ongeldig e-mailadres" }, 400);
 
     const authHeader2 = req.headers.get("Authorization") ?? "";
-    const admin2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader2 } } });
-    const { data: { user: u2 } } = await admin2.auth.getUser();
+    const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader2 } } });
+    const { data: { user: u2 } } = await userClient.auth.getUser();
     if (!u2) return json({ error: "Authentication required" }, 401);
 
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
-    const cn = esc(company_name || "WerkMate");
+
+    const profiel = await fetchProfiel(u2.id);
+    const cn       = esc(company_name || profiel?.bedrijfsnaam || "WerkMate");
     const safeName = esc(customer_name || "");
-    const safeUrl = esc(portal_url || "");
-    const html = `<p>Beste ${safeName},</p><p>${cn} heeft een offerte voor u klaargemaakt. U kunt de offerte bekijken en digitaal ondertekenen via de knop hieronder.</p><p style="text-align:center;margin:32px 0"><a href="${safeUrl}" style="background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px">📋 Offerte bekijken &amp; ondertekenen</a></p><p>Of kopieer deze link:<br/><a href="${safeUrl}">${safeUrl}</a></p><p>Met vriendelijke groet,<br/>${cn}</p>`;
+    const safeUrl  = esc(portal_url || "");
+    const sig      = buildSignature(profiel);
+
+    const html = emailWrapper(cn,
+      `<p style="margin:0 0 16px;font-size:16px;">Beste ${safeName},</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">${cn} heeft een offerte voor u klaargemaakt. U kunt de offerte bekijken en digitaal ondertekenen via de knop hieronder.</p>
+<p style="text-align:center;margin:32px 0;">
+  <a href="${safeUrl}" style="background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">📋 Offerte bekijken &amp; ondertekenen</a>
+</p>
+<p style="margin:0 0 16px;font-size:14px;color:#9ca3af;">Of kopieer deze link: <a href="${safeUrl}" style="color:#6366F1;">${safeUrl}</a></p>`,
+      sig);
+
     const res2 = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
@@ -157,29 +259,20 @@ serve(async (req) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "WerkMate <info@werkmate.tech>";
-      const companyName = esc(body.company_name || fromEmail.split(" <")[0] || "WerkMate");
-      const acceptLink = `${appUrl.replace(/\/$/, "")}?invite_token=${encodeURIComponent(inviteToken)}&email=${encodeURIComponent(inviteEmail)}`;
+      const profiel     = await fetchProfiel(user.id);
+      const companyName = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
+      const acceptLink  = `${appUrl}?invite_token=${encodeURIComponent(inviteToken as string)}&email=${encodeURIComponent(inviteEmail as string)}`;
+      const sig         = buildSignature(profiel);
 
-      const html = `<!DOCTYPE html>
-<html lang="nl">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Uitnodiging voor WerkMate</title></head>
-<body style="margin:0;padding:0;font-family:Inter,system-ui,sans-serif;background:#f5f7fb;color:#111;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;padding:24px;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.08);">
-<tr><td style="background:#111827;padding:28px 32px;"><h1 style="margin:0;color:#fff;font-size:24px;">${companyName}</h1></td></tr>
-<tr><td style="padding:32px;">
-<p style="margin:0 0 24px;font-size:16px;">Je bent uitgenodigd om WerkMate te gebruiken.</p>
-<p style="margin:0 0 24px;font-size:15px;color:#4b5563;">Klik op de knop hieronder om je account te maken en direct met je team te beginnen.</p>
-<p style="text-align:center;margin:36px 0;"><a href="${acceptLink}" style="display:inline-block;padding:14px 24px;border-radius:12px;background:#6366F1;color:#fff;text-decoration:none;font-weight:700;">Accepteer uitnodiging</a></p>
-<p style="margin:0 0 24px;font-size:15px;color:#4b5563;">Als de knop niet werkt, kopieer dan deze link in je browser:</p>
-<p style="font-size:13px;color:#6b7280;word-break:break-all;">${acceptLink}</p>
-<p style="margin:24px 0 0;font-size:15px;color:#4b5563;">Met vriendelijke groet,<br/>${companyName}</p>
-</td></tr>
-</table></td></tr></table>
-</body></html>`;
+      const html = emailWrapper(companyName,
+        `<p style="margin:0 0 16px;font-size:16px;">Je bent uitgenodigd om WerkMate te gebruiken.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Klik op de knop hieronder om je account te maken en direct met je team te beginnen.</p>
+<p style="text-align:center;margin:36px 0;">
+  <a href="${esc(acceptLink)}" style="display:inline-block;padding:14px 24px;border-radius:12px;background:#6366F1;color:#fff;text-decoration:none;font-weight:700;">Accepteer uitnodiging</a>
+</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Als de knop niet werkt, kopieer dan deze link in je browser:</p>
+<p style="font-size:13px;color:#6b7280;word-break:break-all;">${esc(acceptLink)}</p>`,
+        sig);
 
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const payload: Record<string, unknown> = {
@@ -213,21 +306,15 @@ serve(async (req) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "WerkMate <info@werkmate.tech>";
-      const companyName = esc(body.company_name || fromEmail.split(" <")[0] || "WerkMate");
+      const profiel      = await fetchProfiel(user.id);
+      const companyName  = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
       const safeCustomer = esc(customer_name);
+      const sig          = buildSignature(profiel);
 
-      const html = `<!DOCTYPE html>
-<html lang="nl"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;font-family:Inter,system-ui,sans-serif;background:#f5f7fb;color:#111;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;padding:24px;"><tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.08);">
-<tr><td style="background:#111827;padding:28px 32px;"><h1 style="margin:0;color:#fff;font-size:24px;">${companyName}</h1></td></tr>
-<tr><td style="padding:32px;">
-<p style="margin:0 0 24px;font-size:16px;">Geachte ${safeCustomer},</p>
-<p style="margin:0 0 24px;font-size:15px;color:#4b5563;">Hierbij ontvangt u uw offerte in de bijlage.</p>
-<p style="margin:0 0 24px;font-size:15px;color:#4b5563;">Met vriendelijke groet,<br/>${companyName}</p>
-</td></tr></table></td></tr></table></body></html>`;
+      const html = emailWrapper(companyName,
+        `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u uw offerte in de bijlage.</p>`,
+        sig);
 
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const payload: Record<string, unknown> = {
@@ -259,29 +346,23 @@ serve(async (req) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "WerkMate <info@werkmate.tech>";
-      const companyName = esc(body.company_name || company_name || fromEmail.split(" <")[0] || "WerkMate");
+      const profiel     = await fetchProfiel(user.id);
+      const companyName = esc(company_name || profiel?.bedrijfsnaam || "WerkMate");
       const serviceText = esc(service_description || "de service");
+      const sig         = buildSignature(profiel);
 
-      const html = `<!DOCTYPE html>
-<html lang="nl"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;font-family:Inter,system-ui,sans-serif;background:#f5f7fb;color:#111;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;padding:24px;"><tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.08);">
-<tr><td style="background:#111827;padding:28px 32px;"><h1 style="margin:0;color:#fff;font-size:24px;">${companyName}</h1></td></tr>
-<tr><td style="padding:32px;">
-<p style="margin:0 0 24px;font-size:16px;">Hallo,</p>
-<p style="margin:0 0 24px;font-size:15px;color:#4b5563;">We hopen dat u tevreden bent over ${serviceText}. Zou u ons kort laten weten hoe het ging en een review achterlaten?</p>
-<p style="margin:0 0 24px;font-size:15px;color:#4b5563;">Uw feedback helpt ons om continu beter te worden. Alvast bedankt!</p>
-<p style="margin:0;font-size:15px;color:#4b5563;">Met vriendelijke groet,<br/>${companyName}</p>
-</td></tr></table></td></tr></table></body></html>`;
+      const html = emailWrapper(companyName,
+        `<p style="margin:0 0 16px;font-size:16px;">Hallo,</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">We hopen dat u tevreden bent over ${serviceText}. Zou u ons kort laten weten hoe het ging en een review achterlaten?</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Uw feedback helpt ons om continu beter te worden. Alvast bedankt!</p>`,
+        sig);
 
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const payload: Record<string, unknown> = {
         from: `${companyName} <info@werkmate.tech>`,
         to: customer_email,
         subject: `Laat een review achter voor ${companyName}`,
-        text: `Hallo,\n\nWe hopen dat u tevreden bent over ${service_description || "de service"}. Zou u een review willen achterlaten?\n\nMet vriendelijke groet,\n${company_name || "WerkMate"}`,
+        text: `Hallo,\n\nWe hopen dat u tevreden bent over ${service_description || "de service"}. Zou u een review willen achterlaten?\n\nMet vriendelijke groet,\n${companyName}`,
         html,
         ...(replyTo ? { reply_to: replyTo } : {}),
       };
@@ -308,23 +389,17 @@ serve(async (req) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "WerkMate <info@werkmate.tech>";
-      const companyName = esc(body.company_name || fromEmail.split(" <")[0] || "WerkMate");
+      const profiel      = await fetchProfiel(user.id);
+      const companyName  = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
       const safeCustomer = esc(customer_name);
-      const safeNummer = esc(factuur_nummer || "");
+      const safeNummer   = esc(factuur_nummer || "");
+      const sig          = buildSignature(profiel);
 
-      const html = `<!DOCTYPE html>
-<html lang="nl"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;font-family:Inter,system-ui,sans-serif;background:#f5f7fb;color:#111;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;padding:24px;"><tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;">
-<tr><td style="background:#111827;padding:28px 32px;"><h1 style="margin:0;color:#fff;font-size:24px;">${companyName}</h1></td></tr>
-<tr><td style="padding:32px;">
-<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
+      const html = emailWrapper(companyName,
+        `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u factuur <strong>${safeNummer}</strong> in de bijlage.</p>
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bij vragen kunt u altijd contact met ons opnemen.</p>
-<p style="margin:0;font-size:15px;color:#4b5563;">Met vriendelijke groet,<br/>${companyName}</p>
-</td></tr></table></td></tr></table></body></html>`;
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bij vragen kunt u altijd contact met ons opnemen.</p>`,
+        sig);
 
       const payload: Record<string, unknown> = {
         from: `${companyName} <info@werkmate.tech>`,
@@ -356,26 +431,20 @@ serve(async (req) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "WerkMate <info@werkmate.tech>";
-      const companyName = esc(body.company_name || fromEmail.split(" <")[0] || "WerkMate");
+      const profiel      = await fetchProfiel(user.id);
+      const companyName  = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
       const safeCustomer = esc(customer_name);
-      const safeNummer = esc(factuur_nummer || "");
-      const totaalFmt = totaal != null
+      const safeNummer   = esc(factuur_nummer || "");
+      const totaalFmt    = totaal != null
         ? `€ ${Number(totaal).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`
         : "";
+      const sig = buildSignature(profiel);
 
-      const html = `<!DOCTYPE html>
-<html lang="nl"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;font-family:Inter,system-ui,sans-serif;background:#f5f7fb;color:#111;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;padding:24px;"><tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;">
-<tr><td style="background:#111827;padding:28px 32px;"><h1 style="margin:0;color:#fff;font-size:24px;">${companyName}</h1></td></tr>
-<tr><td style="padding:32px;">
-<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
+      const html = emailWrapper(companyName,
+        `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Wij willen u vriendelijk herinneren aan openstaande factuur <strong>${safeNummer}</strong>${totaalFmt ? ` van <strong>${esc(totaalFmt)}</strong>` : ""}.</p>
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Gelieve het bedrag zo spoedig mogelijk over te maken.</p>
-<p style="margin:0;font-size:15px;color:#4b5563;">Met vriendelijke groet,<br/>${companyName}</p>
-</td></tr></table></td></tr></table></body></html>`;
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Gelieve het bedrag zo spoedig mogelijk over te maken.</p>`,
+        sig);
 
       const payload: Record<string, unknown> = {
         from: `${companyName} <info@werkmate.tech>`,
