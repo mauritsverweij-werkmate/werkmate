@@ -2259,7 +2259,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
 }
 
 // ── Financiën ─────────────────────────────────────────────────
-function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, bedrijf }) {
+function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, bedrijf, emailSettings }) {
   const mob = useMobile();
   const [mobDetail,setMobDetail]=useState(null);
   const getTotal = (f) => f.totaal != null ? Number(f.totaal) : parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."))||0;
@@ -2284,6 +2284,37 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   const [savingUitgave, setSavingUitgave] = useState(false);
   const [uitgaveErr, setUitgaveErr] = useState("");
   const [uitgaveFotoPreview, setUitgaveFotoPreview] = useState("");
+  const autoReminderSentRef = useRef(false);
+  const [autoReminderCount, setAutoReminderCount] = useState(0);
+
+  useEffect(() => {
+    if (autoReminderSentRef.current) return;
+    if (!facturen.length || !emailSettings?.id) return;
+    if (!emailSettings.auto_reminder_email && !emailSettings.auto_invoice_reminder) return;
+    autoReminderSentRef.current = true;
+    const today = new Date();
+    const reminderDays = Number(emailSettings.reminder_days_before ?? 3);
+    const invoiceDays  = Number(emailSettings.invoice_reminder_days ?? 7);
+    const candidates = facturen.filter(f => {
+      if (f.status !== "Verstuurd" || !f.klant_email) return false;
+      const nearDue   = emailSettings.auto_reminder_email  && f.vervaldatum && ((new Date(f.vervaldatum) - today) / 86400000) >= 0 && ((new Date(f.vervaldatum) - today) / 86400000) <= reminderDays;
+      const oldUnpaid = emailSettings.auto_invoice_reminder && f.datum      && ((today - new Date(f.datum)) / 86400000) >= invoiceDays;
+      return nearDue || oldUnpaid;
+    });
+    if (!candidates.length) return;
+    (async () => {
+      let sent = 0;
+      for (const f of candidates) {
+        try {
+          await supabase.functions.invoke("ai-proxy", { body: { action:"send-reminder-email", customer_email:f.klant_email, customer_name:f.klant, factuur_nummer:f.nummer, totaal:f.totaal, company_name:bedrijf?.bedrijfsnaam } });
+          await supabase.from("facturen").update({ status:"Herinnering" }).eq("id", f.id);
+          await logEmail(userId, f.klant_email, `Herinnering factuur ${f.nummer||""}`, "herinnering", `Automatische herinnering factuur ${f.nummer||""} voor ${f.klant}`, "verzonden");
+          sent++;
+        } catch(e) { console.warn("Auto reminder failed", f.nummer, e); }
+      }
+      if (sent > 0) { setAutoReminderCount(sent); refresh(); }
+    })();
+  }, [facturen, emailSettings]);
 
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
@@ -2399,6 +2430,12 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   const fmtDate=(s)=>s?new Date(s).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"}):"-";
 
   return (<div>
+    {autoReminderCount > 0 && (
+      <div style={{margin:"0 0 12px",padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500,background:"#DCFCE7",color:"#15803D",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        ✅ {autoReminderCount} automatische herinnering{autoReminderCount > 1 ? "en" : ""} verstuurd
+        <button onClick={()=>setAutoReminderCount(0)} style={{background:"none",border:"none",cursor:"pointer",color:"#15803D",fontSize:18,lineHeight:1,padding:0}}>×</button>
+      </div>
+    )}
     {mob && mobDetail && (()=>{
       const f=mobDetail, st=dispStatus(f), od=isOverdue(f);
       return(
@@ -3199,7 +3236,7 @@ function WerkMateApp({ user, onLogout }) {
       case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
       case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} refresh={refreshAlles}/>;
       case "profiel":     return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} certificaten={certificaten} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} />;
-      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf}/>;
+      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf} emailSettings={emailSettings}/>;
       case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
       case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings}/>;
       case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles}/>;
