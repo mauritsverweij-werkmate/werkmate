@@ -3497,9 +3497,16 @@ function PortalPage({ token }) {
                 {offerte.omschrijving && <div style={{fontSize:13,color:"#64748B",marginTop:6,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{offerte.omschrijving}</div>}
               </div>}
               <div style={{overflowX:"auto",marginBottom:12}}>
-              <table style={{width:"100%",minWidth:480,borderCollapse:"collapse"}}>
+              <table style={{width:"100%",minWidth:480,borderCollapse:"collapse",tableLayout:"fixed"}}>
+                <colgroup>
+                  <col style={{width:"44%"}}/>
+                  <col style={{width:"10%"}}/>
+                  <col style={{width:"12%"}}/>
+                  <col style={{width:"17%"}}/>
+                  <col style={{width:"17%"}}/>
+                </colgroup>
                 <thead><tr style={{background:"#F8FAFC",borderBottom:"1px solid #E5E7EB"}}>
-                  <th style={{padding:"9px 10px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px",width:"42%"}}>Omschrijving</th>
+                  <th style={{padding:"9px 10px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>Omschrijving</th>
                   <th style={{padding:"9px 10px",textAlign:"right",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>Aantal</th>
                   <th style={{padding:"9px 10px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>Eenheid</th>
                   <th style={{padding:"9px 10px",textAlign:"right",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>Prijs</th>

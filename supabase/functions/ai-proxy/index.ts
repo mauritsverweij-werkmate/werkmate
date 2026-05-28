@@ -315,11 +315,10 @@ serve(async (req: Request) => {
       const sig          = buildSignature(profiel);
 
       const portalBlock = safePortal ? `
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">U kunt de offerte ook online bekijken en digitaal ondertekenen via de knop hieronder:</p>
-<p style="text-align:center;margin:28px 0;">
-  <a href="${safePortal}" style="background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">📋 Bekijk en onderteken uw offerte</a>
-</p>
-<p style="margin:0 0 16px;font-size:13px;color:#9ca3af;">Of kopieer deze link: <a href="${safePortal}" style="color:#6366F1;">${safePortal}</a></p>` : "";
+<p style="margin:0 0 10px;font-size:13px;color:#6b7280;">U kunt de offerte ook online inzien en ondertekenen:</p>
+<p style="margin:0 0 20px;">
+  <a href="${safePortal}" style="display:inline-block;background:#F8FAFC;color:#374151;padding:9px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;border:1px solid #E2E8F0;">Bekijk offerte online →</a>
+</p>` : "";
 
       const html = emailWrapper(companyName,
         `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
