@@ -355,23 +355,34 @@ serve(async (req: Request) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const profiel     = await fetchProfiel(user.id);
-      const companyName = esc(company_name || profiel?.bedrijfsnaam || "WerkMate");
-      const serviceText = esc(service_description || "de service");
-      const sig         = buildSignature(profiel);
+      const profiel        = await fetchProfiel(user.id);
+      const companyName    = esc(company_name || profiel?.bedrijfsnaam || "WerkMate");
+      const serviceText    = esc(service_description || "de service");
+      const sig            = buildSignature(profiel);
+      const rawReviewUrl   = body.google_review_url || (profiel as Record<string,unknown>)?.google_review_url;
+      const safeReviewUrl  = typeof rawReviewUrl === "string" && rawReviewUrl.startsWith("http") ? rawReviewUrl : null;
+
+      const reviewBtn = safeReviewUrl
+        ? `<p style="margin:24px 0 8px;text-align:center;">
+<a href="${safeReviewUrl}" style="display:inline-block;background:#4285F4;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;letter-spacing:.2px;">⭐ Laat een Google review achter</a>
+</p>
+<p style="margin:0 0 16px;font-size:12px;color:#9ca3af;text-align:center;">Duurt minder dan 1 minuut</p>`
+        : `<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Uw feedback helpt ons om continu beter te worden. Alvast bedankt!</p>`;
 
       const html = emailWrapper(companyName,
         `<p style="margin:0 0 16px;font-size:16px;">Hallo,</p>
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">We hopen dat u tevreden bent over ${serviceText}. Zou u ons kort laten weten hoe het ging en een review achterlaten?</p>
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Uw feedback helpt ons om continu beter te worden. Alvast bedankt!</p>`,
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bedankt voor het vertrouwen in ${companyName}! We hopen dat u tevreden bent over ${serviceText}.</p>
+<p style="margin:0 0 4px;font-size:15px;color:#4b5563;">Zou u even 1 minuut nemen om een review achter te laten? Dat helpt ons enorm.</p>
+${reviewBtn}`,
         sig);
 
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
+      const reviewLinkText = safeReviewUrl ? `\n\nLaat een review achter: ${safeReviewUrl}` : "";
       const payload: Record<string, unknown> = {
         from: `${companyName} <info@werkmate.tech>`,
         to: customer_email,
-        subject: `Laat een review achter voor ${companyName}`,
-        text: `Hallo,\n\nWe hopen dat u tevreden bent over ${service_description || "de service"}. Zou u een review willen achterlaten?\n\nMet vriendelijke groet,\n${companyName}`,
+        subject: `Hoe was uw ervaring met ${companyName}?`,
+        text: `Hallo,\n\nBedankt voor het vertrouwen in ${companyName}! We hopen dat u tevreden bent over ${service_description || "de service"}.\n\nZou u een review willen achterlaten? Dat helpt ons enorm.${reviewLinkText}\n\nMet vriendelijke groet,\n${companyName}`,
         html,
         ...(replyTo ? { reply_to: replyTo } : {}),
       };

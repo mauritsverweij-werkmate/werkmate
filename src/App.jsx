@@ -892,6 +892,19 @@ const createFactuurPdf = (factuur, bedrijf) => {
   doc.text("Totaal:", pageW / 2 + 5, y);
   doc.text(`€ ${tot.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" });
 
+  if (company.iban) {
+    const ibanY = y + 16;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, ibanY - 5, pageW - 2 * margin, 14, "F");
+    doc.setDrawColor(229, 231, 235); doc.setLineWidth(0.4);
+    doc.rect(margin, ibanY - 5, pageW - 2 * margin, 14);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(80, 80, 80);
+    doc.text("Bankrekening:", margin + 3, ibanY + 2);
+    doc.setFont("helvetica", "normal");
+    doc.text(company.iban, margin + 36, ibanY + 2);
+    if (company.bedrijfsnaam) doc.text(`t.n.v. ${company.bedrijfsnaam}`, pageW - margin - 3, ibanY + 2, { align: "right" });
+  }
+
   const footerY = 270;
   doc.setDrawColor(229, 231, 235); doc.line(margin, footerY - 5, pageW - margin, footerY - 5);
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(120, 120, 120);
@@ -986,6 +999,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
     website: bedrijf?.website || "",
     iban: bedrijf?.iban || "",
     km_vergoeding: bedrijf?.km_vergoeding ?? 0.23,
+    google_review_url: bedrijf?.google_review_url || "",
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
@@ -1008,6 +1022,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
       website: bedrijf?.website || "",
       iban: bedrijf?.iban || "",
       km_vergoeding: bedrijf?.km_vergoeding ?? 0.23,
+      google_review_url: bedrijf?.google_review_url || "",
     });
   }, [bedrijf]);
 
@@ -1015,7 +1030,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
     setSaving(true);
     setSaveMsg({ type: "", text: "" });
     const payload = { ...profile, user_id: userId };
-    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban", "km_vergoeding"];
+    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban", "km_vergoeding", "google_review_url"];
     const filteredPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => allowedColumns.includes(key)));
     console.log("[saveProfile] payload", filteredPayload);
     console.log("[saveProfile] bedrijf", bedrijf);
@@ -1081,6 +1096,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
           <div className="ig"><label className="ilbl">BTW nummer</label><input className="inp" value={profile.btw_nummer} onChange={e=>setProfile({...profile,btw_nummer:e.target.value})} placeholder="NL123456789B01"/></div>
           <div className="ig"><label className="ilbl">Website</label><input className="inp" value={profile.website} onChange={e=>setProfile({...profile,website:e.target.value})} placeholder="https://jouwbedrijf.nl"/></div>
           <div className="ig"><label className="ilbl">IBAN</label><input className="inp" value={profile.iban} onChange={e=>setProfile({...profile,iban:e.target.value})} placeholder="NL00 BANK 0000 0000 00"/></div>
+          <div className="ig"><label className="ilbl">Google review link</label><input className="inp" value={profile.google_review_url} onChange={e=>setProfile({...profile,google_review_url:e.target.value})} placeholder="https://g.page/r/..."/></div>
           <div className="ig"><label className="ilbl">Diensten</label><input className="inp" value={profile.diensten} onChange={e=>setProfile({...profile,diensten:e.target.value})} /></div>
           <div className="ig"><label className="ilbl">KM-vergoeding (€/km)</label><input className="inp" type="number" step="0.01" min="0" max="10" value={profile.km_vergoeding} onChange={e=>setProfile({...profile,km_vergoeding:parseFloat(e.target.value)||0.23})} placeholder="0.23"/></div>
           <div className="ig"><label className="ilbl">Logo upload</label><input className="inp" type="file" accept="image/*" onChange={async(e)=>{
@@ -2177,6 +2193,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       customer_email: clientEmail,
       company_name: bedrijf?.bedrijfsnaam || "WerkMate",
       service_description: serviceDescription || "jouw opdracht",
+      google_review_url: bedrijf?.google_review_url || null,
       ...(bedrijf?.email ? { reply_to: bedrijf.email } : {}),
     };
     const { data: { session: reviewSess } } = await supabase.auth.getSession();
@@ -2255,6 +2272,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
           <img src={mobDetail.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB"}}/>
         </div>}
         <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic">✎</span>Werkbon bewerken</button>
+        {mobDetail.status==="Afgerond"&&klanten?.find(k=>k.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase())?.email&&<button className="mob-det-action-btn" onClick={async()=>{const k=klanten.find(kl=>kl.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase());if(k?.email){await sendReviewRequestEmail(k.email,mobDetail.omschrijving);alert("Review verzoek verstuurd!");}}}>⭐ Review verzoek sturen</button>}
         <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic">🗑</span>Verwijderen</button>
       </MobDetailScreen>
     )}
@@ -2273,7 +2291,8 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
             </div>
           ))}</div>
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Datum","Uren","Status","Materialen","Foto","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-            <tbody>{werkbonnen.map(b=><tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{b.foto ? <img src={b.foto} alt="Werkbon foto" style={{width:80,height:60,objectFit:"cover",borderRadius:10,cursor:"pointer"}} onClick={()=>setLightboxFoto(b.foto)}/> : "-"}</td><td style={{display:"flex",gap:6,alignItems:"center"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎</button><button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>)}</tbody>
+            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{b.foto ? <img src={b.foto} alt="Werkbon foto" style={{width:80,height:60,objectFit:"cover",borderRadius:10,cursor:"pointer"}} onClick={()=>setLightboxFoto(b.foto)}/> : "-"}</td><td style={{display:"flex",gap:6,alignItems:"center"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" title="Review verzoek sturen" onClick={async()=>{await sendReviewRequestEmail(bKlant.email,b.omschrijving);alert("Review verzoek verstuurd!");}}>⭐</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>);})}
+            </tbody>
           </table></div></div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Werkbon toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
