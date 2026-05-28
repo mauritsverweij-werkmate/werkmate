@@ -917,6 +917,35 @@ const createFactuurPdf = (factuur, bedrijf) => {
 
 const createFactuurPdfBase64 = (factuur, bedrijf) => createFactuurPdf(factuur, bedrijf).output("datauristring").split(",")[1];
 
+// ── Email confirm modal ───────────────────────────────────────
+function EmailConfirmModal({ toEmail, toName, onConfirm, onCancel, sending, sent, error }) {
+  return (
+    <div className="overlay"><div className="modal" style={{maxWidth:400}}>
+      <div className="mh"><div><div className="mt">Email versturen</div></div><button className="mc" onClick={onCancel}>✕</button></div>
+      <div className="mb">
+        {sent
+          ? <div style={{textAlign:"center",padding:"24px 0"}}>
+              <div style={{fontSize:36,marginBottom:10}}>✓</div>
+              <div style={{fontWeight:700,fontSize:15,color:"#111",marginBottom:4}}>Email verstuurd</div>
+              <div style={{color:"#64748B",fontSize:13}}>Naar {toEmail}</div>
+            </div>
+          : <>
+              <p style={{fontSize:14,color:"#374151",marginBottom:16,lineHeight:1.6}}>
+                Wil je een email sturen naar <strong>{toName || toEmail}</strong>?<br/>
+                <span style={{color:"#64748B",fontSize:13}}>{toEmail}</span>
+              </p>
+              {error && <div style={{color:"#EF4444",fontSize:13,marginBottom:10}}>{error}</div>}
+              <div className="modal-act">
+                <button className="btn btn-ghost" onClick={onCancel}>Annuleren</button>
+                <button className="btn btn-dark btn-full" onClick={onConfirm} disabled={sending}>{sending?"Versturen…":"Verstuur"}</button>
+              </div>
+            </>
+        }
+      </div>
+    </div></div>
+  );
+}
+
 // ── Leeg scherm component ─────────────────────────────────────
 function LeegScherm({ icon, titel, sub, actie, onActie }) {
   return (
@@ -2109,6 +2138,10 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
   const [editSaving,setEditSaving]=useState(false);
   const [error,setError]=useState("");
   const [editError,setEditError]=useState("");
+  const [reviewConfirm,setReviewConfirm]=useState(null);
+  const [reviewSending,setReviewSending]=useState(false);
+  const [reviewSent,setReviewSent]=useState(false);
+  const [reviewErr,setReviewErr]=useState("");
 
   const handleFotoChange = (event) => {
     const file = event.target.files?.[0];
@@ -2272,7 +2305,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
           <img src={mobDetail.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB"}}/>
         </div>}
         <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic">✎</span>Werkbon bewerken</button>
-        {mobDetail.status==="Afgerond"&&klanten?.find(k=>k.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase())?.email&&<button className="mob-det-action-btn" onClick={async()=>{const k=klanten.find(kl=>kl.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase());if(k?.email){await sendReviewRequestEmail(k.email,mobDetail.omschrijving);alert("Review verzoek verstuurd!");}}}>⭐ Review verzoek sturen</button>}
+        {mobDetail.status==="Afgerond"&&klanten?.find(k=>k.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase())?.email&&<button className="mob-det-action-btn" onClick={()=>{const k=klanten.find(kl=>kl.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase());setMobDetail(null);setReviewErr("");setReviewSent(false);setReviewConfirm({email:k.email,name:k.naam,omschrijving:mobDetail.omschrijving});}}>⭐ Review verzoek sturen</button>}
         <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic">🗑</span>Verwijderen</button>
       </MobDetailScreen>
     )}
@@ -2291,8 +2324,8 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
             </div>
           ))}</div>
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Datum","Uren","Status","Materialen","Foto","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{b.foto ? <img src={b.foto} alt="Werkbon foto" style={{width:80,height:60,objectFit:"cover",borderRadius:10,cursor:"pointer"}} onClick={()=>setLightboxFoto(b.foto)}/> : "-"}</td><td style={{display:"flex",gap:6,alignItems:"center"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" title="Review verzoek sturen" onClick={async()=>{await sendReviewRequestEmail(bKlant.email,b.omschrijving);alert("Review verzoek verstuurd!");}}>⭐</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>);})}
-            </tbody>
+            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{b.foto ? <img src={b.foto} alt="Werkbon foto" style={{width:80,height:60,objectFit:"cover",borderRadius:10,cursor:"pointer"}} onClick={()=>setLightboxFoto(b.foto)}/> : "-"}</td><td style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎ Bewerken</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>{setReviewErr("");setReviewSent(false);setReviewConfirm({email:bKlant.email,name:bKlant.naam,omschrijving:b.omschrijving});}}>⭐ Review verzoek</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>);})}
+</tbody>
           </table></div></div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Werkbon toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
@@ -2331,6 +2364,21 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       <img src={lightboxFoto} alt="Foto" style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:14,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}/>
       <button onClick={()=>setLightboxFoto(null)} style={{position:"absolute",top:20,right:24,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:28,cursor:"pointer",borderRadius:"50%",width:44,height:44}}>✕</button>
     </div>}
+    {reviewConfirm&&<EmailConfirmModal
+      toEmail={reviewConfirm.email}
+      toName={reviewConfirm.name}
+      onConfirm={async()=>{
+        setReviewSending(true);setReviewErr("");
+        try{await sendReviewRequestEmail(reviewConfirm.email,reviewConfirm.omschrijving);}
+        catch(e){setReviewErr("Versturen mislukt");setReviewSending(false);return;}
+        setReviewSending(false);setReviewSent(true);
+        setTimeout(()=>{setReviewConfirm(null);setReviewSent(false);},2200);
+      }}
+      onCancel={()=>{setReviewConfirm(null);setReviewSent(false);setReviewErr("");}}
+      sending={reviewSending}
+      sent={reviewSent}
+      error={reviewErr}
+    />}
   </div>);
 }
 
@@ -2466,8 +2514,8 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       if(error) throw new Error(error.message);
       await supabase.from("facturen").update({status:"Verstuurd"}).eq("id",showEmail.id);
       await logEmail(userId, emailAddr, `Factuur ${showEmail.nummer||""}`, "factuur", `Factuur ${showEmail.nummer||""} voor ${showEmail.klant}`, "verzonden");
-      setEmailMsg("Factuur verstuurd!"); refresh();
-      setTimeout(()=>{setShowEmail(null);setEmailMsg("");setEmailAddr("");},1600);
+      setEmailMsg(`Email verstuurd naar ${emailAddr}`); refresh();
+      setTimeout(()=>{setShowEmail(null);setEmailMsg("");setEmailAddr("");},2200);
     } catch(e){setEmailMsg("Fout: "+e.message);}
     setEmailSending(false);
   };
@@ -2480,8 +2528,8 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       await supabase.functions.invoke("ai-proxy",{body:{action:"send-reminder-email",customer_email:emailAddr,customer_name:showReminder.klant,factuur_nummer:showReminder.nummer,totaal:getTotal(showReminder),company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Herinnering-${showReminder.nummer||"factuur"}.pdf`,content:pdfB64}]}});
       await supabase.from("facturen").update({status:"Herinnering"}).eq("id",showReminder.id);
       await logEmail(userId, emailAddr, `Herinnering factuur ${showReminder.nummer||""}`, "herinnering", `Betalingsherinnering factuur ${showReminder.nummer||""} voor ${showReminder.klant}`, "verzonden");
-      setEmailMsg("Herinnering verstuurd!"); refresh();
-      setTimeout(()=>{setShowReminder(null);setEmailMsg("");setEmailAddr("");},1600);
+      setEmailMsg(`Herinnering verstuurd naar ${emailAddr}`); refresh();
+      setTimeout(()=>{setShowReminder(null);setEmailMsg("");setEmailAddr("");},2200);
     } catch(e){setEmailMsg("Fout: "+e.message);}
     setEmailSending(false);
   };
@@ -2725,20 +2773,44 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     </div></div>}
 
     {showEmail&&<div className="overlay"><div className="modal" style={{maxWidth:440}}>
-      <div className="mh"><div><div className="mt">Factuur e-mailen</div><div style={{fontSize:12.5,color:"#94A3B8",marginTop:2}}>{showEmail.nummer} — {showEmail.klant}</div></div><button className="mc" onClick={()=>{setShowEmail(null);setEmailMsg("");}}>✕</button></div>
+      <div className="mh"><div><div className="mt">Factuur versturen</div><div style={{fontSize:12.5,color:"#94A3B8",marginTop:2}}>{showEmail.nummer} — {showEmail.klant}</div></div><button className="mc" onClick={()=>{setShowEmail(null);setEmailMsg("");}}>✕</button></div>
       <div className="mb">
-        <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={emailAddr} onChange={e=>setEmailAddr(e.target.value)} placeholder="klant@email.nl"/></div>
-        {emailMsg&&<div style={{color:emailMsg.startsWith("Fout")?"#EF4444":"#10B981",fontSize:13,marginBottom:8}}>{emailMsg}</div>}
-        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowEmail(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={sendInvoiceEmail} disabled={!emailAddr||emailSending}>{emailSending?"Versturen…":"📧 Verstuur factuur"}</button></div>
+        {emailMsg&&!emailMsg.startsWith("Fout")
+          ? <div style={{textAlign:"center",padding:"24px 0"}}>
+              <div style={{fontSize:36,marginBottom:10}}>✓</div>
+              <div style={{fontWeight:700,fontSize:15,color:"#111",marginBottom:4}}>Email verstuurd</div>
+              <div style={{color:"#64748B",fontSize:13}}>Naar {emailAddr}</div>
+            </div>
+          : <>
+              <p style={{fontSize:14,color:"#374151",marginBottom:12,lineHeight:1.6}}>
+                Wil je factuur <strong>{showEmail.nummer}</strong> sturen naar <strong>{showEmail.klant}</strong>?
+              </p>
+              <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={emailAddr} onChange={e=>setEmailAddr(e.target.value)} placeholder="klant@email.nl" autoFocus/></div>
+              {emailMsg&&<div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{emailMsg}</div>}
+              <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setShowEmail(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={sendInvoiceEmail} disabled={!emailAddr||emailSending}>{emailSending?"Versturen…":"Factuur versturen"}</button></div>
+            </>
+        }
       </div>
     </div></div>}
 
     {showReminder&&<div className="overlay"><div className="modal" style={{maxWidth:440}}>
-      <div className="mh"><div><div className="mt">Betalingsherinnering</div><div style={{fontSize:12.5,color:"#94A3B8",marginTop:2}}>{showReminder.nummer} — {showReminder.klant} — {fmtEur(getTotal(showReminder))}</div></div><button className="mc" onClick={()=>{setShowReminder(null);setEmailMsg("");}}>✕</button></div>
+      <div className="mh"><div><div className="mt">Betalingsherinnering sturen</div><div style={{fontSize:12.5,color:"#94A3B8",marginTop:2}}>{showReminder.nummer} — {showReminder.klant} — {fmtEur(getTotal(showReminder))}</div></div><button className="mc" onClick={()=>{setShowReminder(null);setEmailMsg("");}}>✕</button></div>
       <div className="mb">
-        <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={emailAddr} onChange={e=>setEmailAddr(e.target.value)} placeholder="klant@email.nl"/></div>
-        {emailMsg&&<div style={{color:emailMsg.startsWith("Fout")?"#EF4444":"#10B981",fontSize:13,marginBottom:8}}>{emailMsg}</div>}
-        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowReminder(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={sendReminder} disabled={!emailAddr||emailSending}>{emailSending?"Versturen…":"🔔 Stuur herinnering"}</button></div>
+        {emailMsg&&!emailMsg.startsWith("Fout")
+          ? <div style={{textAlign:"center",padding:"24px 0"}}>
+              <div style={{fontSize:36,marginBottom:10}}>✓</div>
+              <div style={{fontWeight:700,fontSize:15,color:"#111",marginBottom:4}}>Herinnering verstuurd</div>
+              <div style={{color:"#64748B",fontSize:13}}>Naar {emailAddr}</div>
+            </div>
+          : <>
+              <p style={{fontSize:14,color:"#374151",marginBottom:12,lineHeight:1.6}}>
+                Wil je een betalingsherinnering sturen naar <strong>{showReminder.klant}</strong> voor factuur <strong>{showReminder.nummer}</strong> ({fmtEur(getTotal(showReminder))})?
+              </p>
+              <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={emailAddr} onChange={e=>setEmailAddr(e.target.value)} placeholder="klant@email.nl" autoFocus/></div>
+              {emailMsg&&<div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{emailMsg}</div>}
+              <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setShowReminder(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={sendReminder} disabled={!emailAddr||emailSending}>{emailSending?"Versturen…":"Herinnering versturen"}</button></div>
+            </>
+        }
       </div>
     </div></div>}
   </div>);
@@ -2838,7 +2910,7 @@ function TeamTab({ ownerId, teamMembers, refresh, bedrijf }) {
 }
 
 // ── Mail ──────────────────────────────────────────────────────
-const TYPE_LABELS = { offerte:"Offerte", factuur:"Factuur", herinnering:"Herinnering", review:"Review", team:"Team" };
+const TYPE_LABELS = { offerte:"Offerte", factuur:"Factuur", herinnering:"Herinnering", review:"Review", team:"Team", handmatig:"Handmatig" };
 const TYPE_COLORS = {
   offerte:    { bg:"#EEF2FF", text:"#4338CA" },
   factuur:    { bg:"#ECFDF5", text:"#065F46" },
@@ -2853,10 +2925,15 @@ function TypeBadge({ type }) {
   return <span style={{display:"inline-block",padding:"2px 9px",borderRadius:20,fontSize:11.5,fontWeight:700,background:c.bg,color:c.text}}>{lbl}</span>;
 }
 
-function MailTab({ userId, emailsLog = [], refresh }) {
+function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("Alle");
   const [detail, setDetail] = useState(null);
+  const [showCompose, setShowCompose] = useState(false);
+  const [compose, setCompose] = useState({ klantId:"", to:"", subject:"", body:"" });
+  const [composeSending, setComposeSending] = useState(false);
+  const [composeSent, setComposeSent] = useState(false);
+  const [composeErr, setComposeErr] = useState("");
 
   const filtered = emailsLog.filter(e => {
     const matchType = filterType === "Alle" || e.type === filterType.toLowerCase();
@@ -2871,10 +2948,31 @@ function MailTab({ userId, emailsLog = [], refresh }) {
     return d.toLocaleDateString("nl-NL", { day:"numeric", month:"short", year:"numeric" }) + " " + d.toLocaleTimeString("nl-NL", { hour:"2-digit", minute:"2-digit" });
   };
 
+  const sendCompose = async () => {
+    if (!compose.to || !compose.subject || !compose.body) { setComposeErr("Vul ontvanger, onderwerp en bericht in."); return; }
+    if (!compose.to.includes("@")) { setComposeErr("Ongeldig e-mailadres."); return; }
+    setComposeSending(true); setComposeErr("");
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const token = s?.access_token || import.meta.env.VITE_SUPABASE_KEY;
+      const res = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ action: "send-compose-email", to_email: compose.to, subject: compose.subject, message: compose.body }),
+      });
+      if (!res.ok) throw new Error("Versturen mislukt");
+      await logEmail(userId, compose.to, compose.subject, "handmatig", compose.body, "verzonden");
+      setComposeSent(true);
+      setTimeout(() => { setShowCompose(false); setComposeSent(false); setCompose({ klantId:"", to:"", subject:"", body:"" }); refresh(); }, 2200);
+    } catch(e) { setComposeErr(e.message || "Versturen mislukt"); }
+    setComposeSending(false);
+  };
+
   return (
     <div>
       <div className="ph">
         <div><div className="pg-title">Mail</div><div className="pg-sub">Overzicht verzonden e-mails</div></div>
+        <button className="btn btn-dark" onClick={()=>{setShowCompose(true);setComposeSent(false);setComposeErr("");setCompose({klantId:"",to:"",subject:"",body:""});}}>+ Nieuwe email</button>
       </div>
 
       <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
@@ -2886,7 +2984,7 @@ function MailTab({ userId, emailsLog = [], refresh }) {
           onChange={e=>setSearch(e.target.value)}
         />
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {["Alle","Offerte","Factuur","Herinnering","Review","Team"].map(t=>(
+          {["Alle","Offerte","Factuur","Herinnering","Review","Team","Handmatig"].map(t=>(
             <button key={t} onClick={()=>setFilterType(t)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterType===t?"#0F0F14":"#fff",color:filterType===t?"#fff":"#555",borderColor:filterType===t?"#0F0F14":"#E5E7EB"}}>{t}</button>
           ))}
         </div>
@@ -2946,6 +3044,36 @@ function MailTab({ userId, emailsLog = [], refresh }) {
           </div>
         </div>
       )}
+
+      {showCompose&&<div className="overlay"><div className="modal" style={{maxWidth:520}}>
+        <div className="mh"><div><div className="mt">Nieuwe email schrijven</div></div><button className="mc" onClick={()=>{setShowCompose(false);setComposeSent(false);setComposeErr("");}}>✕</button></div>
+        <div className="mb">
+          {composeSent
+            ? <div style={{textAlign:"center",padding:"28px 0"}}>
+                <div style={{fontSize:40,marginBottom:12}}>✓</div>
+                <div style={{fontWeight:700,fontSize:16,color:"#111",marginBottom:6}}>Email verstuurd</div>
+                <div style={{color:"#64748B",fontSize:13}}>Naar {compose.to}</div>
+              </div>
+            : <>
+                {klanten.length>0&&<div className="ig">
+                  <label className="ilbl">Klant (optioneel — vult e-mail in)</label>
+                  <select className="inp" value={compose.klantId} onChange={e=>{const k=klanten.find(kl=>kl.id?.toString()===e.target.value);setCompose({...compose,klantId:e.target.value,to:k?.email||compose.to});}}>
+                    <option value="">— Handmatig invullen —</option>
+                    {klanten.map(k=><option key={k.id} value={k.id?.toString()}>{k.naam}{k.email?` (${k.email})`:""}</option>)}
+                  </select>
+                </div>}
+                <div className="ig"><label className="ilbl">Aan (e-mailadres)</label><input className="inp" type="email" value={compose.to} onChange={e=>setCompose({...compose,to:e.target.value})} placeholder="ontvanger@email.nl"/></div>
+                <div className="ig"><label className="ilbl">Onderwerp</label><input className="inp" value={compose.subject} onChange={e=>setCompose({...compose,subject:e.target.value})} placeholder="Onderwerp"/></div>
+                <div className="ig"><label className="ilbl">Bericht</label><textarea className="inp" style={{minHeight:140}} value={compose.body} onChange={e=>setCompose({...compose,body:e.target.value})} placeholder="Schrijf je bericht hier…"/></div>
+                {composeErr&&<div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{composeErr}</div>}
+                <div className="modal-act">
+                  <button className="btn btn-ghost" onClick={()=>{setShowCompose(false);setComposeErr("");}}>Annuleren</button>
+                  <button className="btn btn-dark btn-full" onClick={sendCompose} disabled={composeSending||!compose.to||!compose.subject||!compose.body}>{composeSending?"Versturen…":"Verstuur email"}</button>
+                </div>
+              </>
+          }
+        </div>
+      </div></div>}
     </div>
   );
 }
@@ -3367,7 +3495,7 @@ function WerkMateApp({ user, onLogout }) {
       case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf} emailSettings={emailSettings}/>;
       case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
       case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings}/>;
-      case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles}/>;
+      case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
       case "social":     return <SocialTab/>;
       case "ritten":     return <RittenTab userId={orgOwnerId} ritten={ritten} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
       case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles} bedrijf={bedrijf} subscription={subscription} onBedrijfUpdate={(b)=>setBedrijf(b)} openTab={setTab}/>;

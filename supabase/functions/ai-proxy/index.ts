@@ -398,6 +398,41 @@ ${reviewBtn}`,
       catch { return json({ error: "Onverwacht antwoord van e-mailservice" }, 500); }
     }
 
+    // ── Send compose email (handmatig vanuit Mail tab) ────────
+    if (body.action === "send-compose-email") {
+      const { to_email, subject, message } = body;
+      if (!to_email || !subject || !message) return json({ error: "to_email, subject en message zijn verplicht" }, 400);
+      if (!isValidEmail(to_email)) return json({ error: "Ongeldig e-mailadres" }, 400);
+
+      const resendKey = Deno.env.get("RESEND_API_KEY");
+      if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
+
+      const profiel      = await fetchProfiel(user.id);
+      const companyName  = esc(profiel?.bedrijfsnaam || "WerkMate");
+      const sig          = buildSignature(profiel);
+      const safeMsg      = esc(message).replace(/\n/g, "<br>");
+
+      const html = emailWrapper(companyName,
+        `<div style="font-size:15px;color:#374151;line-height:1.7;white-space:pre-line;">${safeMsg}</div>`,
+        sig);
+
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+        body: JSON.stringify({
+          from: `${companyName} <info@werkmate.tech>`,
+          to: to_email,
+          subject: esc(subject),
+          text: `${message}\n\nMet vriendelijke groet,\n${companyName}`,
+          html,
+        }),
+      });
+      const text = await res.text();
+      if (!res.ok) return json({ error: "E-mail versturen mislukt" }, res.status);
+      try { return json(JSON.parse(text)); }
+      catch { return json({ error: "Onverwacht antwoord van e-mailservice" }, 500); }
+    }
+
     // ── Send invoice email ────────────────────────────────────
     if (body.action === "send-invoice-email") {
       const { customer_email, customer_name, factuur_nummer } = body;
