@@ -9,4 +9,6 @@ CREATE TABLE IF NOT EXISTS certificaten (
 );
 
 ALTER TABLE certificaten ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own certificaten" ON certificaten FOR ALL USING (auth.uid() = user_id);
+DO $$ BEGIN
+  CREATE POLICY "Users manage own certificaten" ON certificaten FOR ALL USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

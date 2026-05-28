@@ -11,4 +11,6 @@ CREATE TABLE IF NOT EXISTS uitgaven (
 );
 
 ALTER TABLE uitgaven ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own uitgaven" ON uitgaven FOR ALL USING (auth.uid() = user_id);
+DO $$ BEGIN
+  CREATE POLICY "Users manage own uitgaven" ON uitgaven FOR ALL USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

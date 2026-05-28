@@ -11,5 +11,6 @@ CREATE TABLE IF NOT EXISTS email_settings (
 
 ALTER TABLE email_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "own_email_settings" ON email_settings
-  FOR ALL USING (user_id = auth.uid());
+DO $$ BEGIN
+  CREATE POLICY "own_email_settings" ON email_settings FOR ALL USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

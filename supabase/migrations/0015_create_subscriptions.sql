@@ -9,5 +9,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "own_subscription" ON subscriptions
-  FOR ALL USING (user_id = auth.uid());
+DO $$ BEGIN
+  CREATE POLICY "own_subscription" ON subscriptions FOR ALL USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
