@@ -1360,6 +1360,23 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten 
 }
 
 // ── Offertes ──────────────────────────────────────────────────
+function fmtWaPhone(tel) {
+  if (!tel) return "";
+  let n = tel.replace(/[\s\-().]/g, "");
+  if (n.startsWith("+31")) return n;
+  if (n.startsWith("0031")) return "+31" + n.slice(4);
+  if (n.startsWith("0")) return "+31" + n.slice(1);
+  return n;
+}
+
+function waOfferte(o, klanten, bedrijf) {
+  const url = `https://app.werkmate.tech/portal/${o.portal_token}`;
+  const cn  = bedrijf?.bedrijfsnaam || "WerkMate";
+  const msg = `Beste ${o.klant}, hierbij uw offerte. Bekijk en onderteken via: ${url}. Met vriendelijke groet, ${cn}`;
+  const tel = fmtWaPhone((klanten||[]).find(k => k.naam === o.klant)?.tel || "");
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, "_blank");
+}
+
 function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf }) {
   const mob = useMobile();
   const [showAI,setShowAI]=useState(false);
@@ -1488,11 +1505,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf })
             refresh(); setMobDetail({...mobDetail,status:"Verstuurd"});
             alert("Offerte verstuurd naar "+email);
           }}><span className="mob-det-action-ic">📤</span>Stuur naar klant</button>
-          <button className="mob-det-action-btn" onClick={()=>{
-            const url=`https://app.werkmate.tech/portal/${mobDetail.portal_token}`;
-            const tekst=encodeURIComponent(`Beste ${mobDetail.klant},\n\nHierbij stuur ik je de offerte van ${bedrijf?.bedrijfsnaam||"WerkMate"} voor ${mobDetail.dienst||"de opdracht"}.\n\nBekijk en onderteken hier: ${url}\n\nMet vriendelijke groet`);
-            window.open(`https://wa.me/?text=${tekst}`,"_blank");
-          }}><span className="mob-det-action-ic">📱</span>Stuur via WhatsApp</button>
+          <button className="mob-det-action-btn" onClick={()=>waOfferte(mobDetail,klanten,bedrijf)}><span className="mob-det-action-ic">📱</span>Stuur via WhatsApp</button>
         </>)}
         <div style={{background:"#fff",borderRadius:14,border:"1px solid #EAECF0",padding:"14px 16px",marginBottom:8}}>
           <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
@@ -1539,11 +1552,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf })
                 await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
                 alert("Verstuurd naar "+email);
               }}>📤</button>}
-              {o.portal_token&&<button className="btn btn-ghost btn-sm" title="WhatsApp" onClick={()=>{
-                const url=`https://app.werkmate.tech/portal/${o.portal_token}`;
-                const tekst=encodeURIComponent(`Beste ${o.klant},\n\nHierbij stuur ik je de offerte van ${bedrijf?.bedrijfsnaam||"WerkMate"} voor ${o.dienst||"de opdracht"}.\n\nBekijk en onderteken hier: ${url}\n\nMet vriendelijke groet`);
-                window.open(`https://wa.me/?text=${tekst}`,"_blank");
-              }}>📱</button>}
+              {o.portal_token&&<button className="btn btn-ghost btn-sm" title="WhatsApp" onClick={()=>waOfferte(o,klanten,bedrijf)}>📱</button>}
               <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
                 {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
               </select><button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}>✕</button></td>
