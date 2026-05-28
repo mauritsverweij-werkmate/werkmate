@@ -609,10 +609,9 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
   .btn{min-height:44px}
   .btn-sm{min-height:40px}
   .mob-hide{display:none}
-  .modal{border-radius:20px 20px 0 0;max-height:92dvh;position:fixed;bottom:0;left:0;right:0;max-width:100%;margin:0;overflow:hidden;display:flex;flex-direction:column}
+  .modal{border-radius:20px 20px 0 0;max-height:calc(92dvh - 70px - env(safe-area-inset-bottom));position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:0;right:0;max-width:100%;margin:0;overflow:hidden;display:flex;flex-direction:column}
   .modal .mh{flex-shrink:0}
-  .modal .mb{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
-  .modal-act{bottom:calc(64px + env(safe-area-inset-bottom))}
+  .modal .mb{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:22px}
   .overlay{align-items:flex-end;padding:0}
   .sg{grid-template-columns:1fr 1fr !important}
   .sc{padding:14px;border-radius:12px}
