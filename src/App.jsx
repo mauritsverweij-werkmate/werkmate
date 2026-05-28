@@ -455,7 +455,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .off-dienst{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}
 .off-omschr{font-size:12px;opacity:.85;line-height:1.5}
 .off-tbl{border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;margin-bottom:12px}
-.off-tbl-grid{display:grid;grid-template-columns:2fr 80px 100px 100px 80px 40px;align-items:center;gap:0}
+.off-tbl-grid{display:grid;grid-template-columns:3fr 68px 86px 92px 76px 36px;align-items:center;gap:0}
 .off-tbl-hdr{background:#F8FAFC;border-bottom:1px solid #E5E7EB}
 .off-tbl-hdr .off-cell{padding:9px 10px;color:#475569;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .off-tbl-row{border-bottom:1px solid #F0F0F0}
@@ -1202,7 +1202,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
     return recalcTotals({ ...prev, regels });
   });
   const addRule = () => setOff((prev) => {
-    const regels = [...(prev?.regels || []), { omschrijving: "Nieuwe regel", aantal: 1, eenheid: "uur", prijs: 0 }];
+    const regels = [...(prev?.regels || []), { omschrijving: "", aantal: 1, eenheid: "stuk", prijs: 0 }];
     return recalcTotals({ ...(prev || {}), regels });
   });
   const removeRule = (index) => setOff((prev) => {
@@ -1211,7 +1211,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
     return recalcTotals({ ...prev, regels });
   });
   const gen=async()=>{if(!vraag.trim())return;setLoading(true);setStep(1);
-    try{const txt=await aiCall(`Offerte-assistent voor vakman NL. Prijslijst: ${px}. Gebruik exact de prijzen uit deze prijslijst wanneer de dienst overeenkomt met een bestaande dienst. Genereer alleen nieuwe prijzen voor diensten die niet in de prijslijst staan. Nooit afwijken van de prijslijst prijzen. Genereer voor: "${vraag}". ALLEEN JSON: {"dienst":"..","omschrijving":"2 zinnen","regels":[{"omschrijving":"..","aantal":1,"eenheid":"uur","prijs":85}],"subtotaal":285,"btw":59.85,"totaal":344.85,"geldigheid":"30 dagen","opmerkingen":"garantie"}`);
+    try{const txt=await aiCall(`Offerte-assistent voor vakman NL. Prijslijst: ${px}. Gebruik exact de prijzen uit deze prijslijst wanneer de dienst overeenkomt met een bestaande dienst. Genereer alleen nieuwe prijzen voor diensten die niet in de prijslijst staan. Nooit afwijken van de prijslijst prijzen. Kies eenheid per regel: gebruik "uur" voor arbeid/installatie/montage, "stuk" voor producten/apparaten/materialen per stuk, "m²" voor oppervlaktewerk, "m" voor leidingen/kabels, "dag" voor dagtarieven. Genereer voor: "${vraag}". ALLEEN JSON: {"dienst":"..","omschrijving":"2 zinnen","regels":[{"omschrijving":"Arbeid installatie","aantal":3,"eenheid":"uur","prijs":85},{"omschrijving":"Materiaal/product","aantal":1,"eenheid":"stuk","prijs":250}],"subtotaal":505,"btw":106.05,"totaal":611.05,"geldigheid":"30 dagen","opmerkingen":"garantie"}`);
     setOff(recalcTotals(JSON.parse(txt.replace(/```json|```/g,"").trim())));setStep(2);}catch{setOff({dienst:"Fout",omschrijving:"Mislukt.",regels:[],subtotaal:0,btw:0,totaal:0});setStep(2);}setLoading(false);};
 
   const sendOfferEmail = async (email, name, dienst, regels, subtotaal, btw, totaal, portalToken) => {
