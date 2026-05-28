@@ -966,6 +966,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
     btw_nummer: bedrijf?.btw_nummer || "",
     website: bedrijf?.website || "",
     iban: bedrijf?.iban || "",
+    km_vergoeding: bedrijf?.km_vergoeding ?? 0.23,
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
@@ -987,6 +988,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
       btw_nummer: bedrijf?.btw_nummer || "",
       website: bedrijf?.website || "",
       iban: bedrijf?.iban || "",
+      km_vergoeding: bedrijf?.km_vergoeding ?? 0.23,
     });
   }, [bedrijf]);
 
@@ -994,7 +996,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
     setSaving(true);
     setSaveMsg({ type: "", text: "" });
     const payload = { ...profile, user_id: userId };
-    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban"];
+    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban", "km_vergoeding"];
     const filteredPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => allowedColumns.includes(key)));
     console.log("[saveProfile] payload", filteredPayload);
     console.log("[saveProfile] bedrijf", bedrijf);
@@ -1061,6 +1063,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
           <div className="ig"><label className="ilbl">Website</label><input className="inp" value={profile.website} onChange={e=>setProfile({...profile,website:e.target.value})} placeholder="https://jouwbedrijf.nl"/></div>
           <div className="ig"><label className="ilbl">IBAN</label><input className="inp" value={profile.iban} onChange={e=>setProfile({...profile,iban:e.target.value})} placeholder="NL00 BANK 0000 0000 00"/></div>
           <div className="ig"><label className="ilbl">Diensten</label><input className="inp" value={profile.diensten} onChange={e=>setProfile({...profile,diensten:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">KM-vergoeding (€/km)</label><input className="inp" type="number" step="0.01" min="0" max="10" value={profile.km_vergoeding} onChange={e=>setProfile({...profile,km_vergoeding:parseFloat(e.target.value)||0.23})} placeholder="0.23"/></div>
           <div className="ig"><label className="ilbl">Logo upload</label><input className="inp" type="file" accept="image/*" onChange={async(e)=>{
             const file = e.target.files?.[0];
             if (!file) return;
@@ -3244,7 +3247,7 @@ function WerkMateApp({ user, onLogout }) {
       case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings}/>;
       case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles}/>;
       case "social":     return <SocialTab/>;
-      case "ritten":     return <RittenTab userId={orgOwnerId} ritten={ritten} refresh={refreshAlles} klanten={klanten}/>;
+      case "ritten":     return <RittenTab userId={orgOwnerId} ritten={ritten} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
       case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles}/>;
       default: return PH[tab]?<Placeholder {...PH[tab]}/>:null;
     }
@@ -3516,7 +3519,7 @@ function AdminPage() {
 }
 
 // ── Ritten Tab ────────────────────────────────────────────────
-function RittenTab({ userId, ritten, refresh, klanten }) {
+function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
   const mob = useMobile();
   const [showAdd, setShowAdd] = useState(false);
   const [filterDoel, setFilterDoel] = useState("Alle");
@@ -3524,7 +3527,10 @@ function RittenTab({ userId, ritten, refresh, klanten }) {
   const todayStr = new Date().toISOString().slice(0,10);
   const [nieuw, setNieuw] = useState({datum:todayStr, vertrek:"", bestemming:"", km:"", doel:"zakelijk", klant:""});
   const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState("");
   const [kmLoading, setKmLoading] = useState(false);
+
+  const kmRate = Number(bedrijf?.km_vergoeding ?? 0.23);
 
   const calcKm = async (vertrek, bestemming) => {
     if (!vertrek.trim() || !bestemming.trim()) return;
@@ -3553,22 +3559,38 @@ function RittenTab({ userId, ritten, refresh, klanten }) {
     return true;
   });
 
-  const totaalKm = filtered.reduce((s,r) => s + Number(r.km||0), 0);
-  const totaalBedrag = filtered.reduce((s,r) => s + Number(r.km||0) * 0.23, 0);
-  const zakelijkKm = ritten.filter(r=>r.doel==="zakelijk").reduce((s,r)=>s+Number(r.km||0),0);
+  const zakelijkKm  = ritten.filter(r=>r.doel==="zakelijk").reduce((s,r)=>s+Number(r.km||0),0);
+  const priveKm     = ritten.filter(r=>r.doel==="privé").reduce((s,r)=>s+Number(r.km||0),0);
+  const aftrekbaar  = zakelijkKm * kmRate;
 
   const add = async () => {
     if (!nieuw.vertrek || !nieuw.bestemming || !nieuw.km) return;
     setSaving(true);
-    await supabase.from("ritten").insert({ ...nieuw, km: Number(nieuw.km), user_id: userId });
-    setSaving(false); setShowAdd(false); setNieuw({datum:todayStr,vertrek:"",bestemming:"",km:"",doel:"zakelijk",klant:""});
+    setSaveErr("");
+    const { error } = await supabase.from("ritten").insert({
+      datum: nieuw.datum,
+      vertrek: nieuw.vertrek,
+      bestemming: nieuw.bestemming,
+      km: Number(nieuw.km),
+      doel: nieuw.doel,
+      klant: nieuw.klant || null,
+      user_id: userId,
+    });
+    setSaving(false);
+    if (error) { setSaveErr(error.message); return; }
+    setShowAdd(false);
+    setNieuw({datum:todayStr,vertrek:"",bestemming:"",km:"",doel:"zakelijk",klant:""});
     refresh();
   };
 
   const del = async (id) => { if(window.confirm("Rit verwijderen?")) { await supabase.from("ritten").delete().eq("id",id); refresh(); } };
 
   const exportXlsx = () => {
-    const rows = filtered.map(r => ({ Datum: r.datum, Vertrek: r.vertrek, Bestemming: r.bestemming, "KM": Number(r.km), "Doel": r.doel, "Klant": r.klant||"", "Aftrekbaar (€)": (Number(r.km)*0.23).toFixed(2) }));
+    const rows = filtered.map(r => ({
+      Datum: r.datum, Vertrek: r.vertrek, Bestemming: r.bestemming,
+      "KM": Number(r.km), "Doel": r.doel, "Klant": r.klant||"",
+      "Vergoeding (€)": r.doel==="zakelijk" ? (Number(r.km)*kmRate).toFixed(2) : "—",
+    }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Ritten");
@@ -3576,10 +3598,11 @@ function RittenTab({ userId, ritten, refresh, klanten }) {
   };
 
   const maanden = [...new Set(ritten.map(r=>(r.datum||"").slice(0,7)))].sort().reverse();
+  const doelStyle = (d) => ({padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterDoel===d?"#0F0F14":"#fff",color:filterDoel===d?"#fff":"#555",borderColor:filterDoel===d?"#0F0F14":"#E5E7EB"});
 
   return (<div>
     <div className="ph">
-      <div><div className="pg-title">Rittenregistratie</div><div className="pg-sub">{ritten.length} ritten geregistreerd</div></div>
+      <div><div className="pg-title">Rittenregistratie</div><div className="pg-sub">{ritten.length} ritten geregistreerd · €{kmRate.toFixed(2)}/km</div></div>
       <div style={{display:"flex",gap:8}}>
         <button className="btn btn-ghost" onClick={exportXlsx}>📊 Export</button>
         <button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Rit</button>
@@ -3587,13 +3610,13 @@ function RittenTab({ userId, ritten, refresh, klanten }) {
     </div>
 
     <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>
-      {[{label:"Zakelijke KM",val:`${zakelijkKm.toFixed(0)} km`,color:"#6366F1"},{label:"Gefilterd totaal",val:`${totaalKm.toFixed(0)} km`,color:"#0F0F14"},{label:"Aftrekbaar",val:`€ ${totaalBedrag.toFixed(2)}`,color:"#10B981"}].map(s=>(
-        <div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color}}>{s.val}</div></div>
-      ))}
+      <div className="sc"><div className="sl">Zakelijke KM</div><div className="sv" style={{color:"#6366F1"}}>{zakelijkKm.toFixed(0)} km</div></div>
+      <div className="sc"><div className="sl">Privé KM</div><div className="sv" style={{color:"#64748B"}}>{priveKm.toFixed(0)} km</div></div>
+      <div className="sc"><div className="sl">Aftrekbaar zakelijk</div><div className="sv" style={{color:"#10B981"}}>€ {aftrekbaar.toFixed(2)}</div></div>
     </div>
 
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      {["Alle","zakelijk","privé"].map(d=><button key={d} onClick={()=>setFilterDoel(d)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterDoel===d?"#0F0F14":"#fff",color:filterDoel===d?"#fff":"#555",borderColor:filterDoel===d?"#0F0F14":"#E5E7EB"}}>{d==="Alle"?"Alle":d.charAt(0).toUpperCase()+d.slice(1)}</button>)}
+      {["Alle","zakelijk","privé"].map(d=><button key={d} onClick={()=>setFilterDoel(d)} style={doelStyle(d)}>{d==="Alle"?"Alle":d.charAt(0).toUpperCase()+d.slice(1)}</button>)}
       <select value={filterMaand} onChange={e=>setFilterMaand(e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:20,padding:"4px 14px",fontSize:12.5,fontWeight:600,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none",background:"#fff",color:"#555"}}>
         <option value="">Alle maanden</option>
         {maanden.map(m=><option key={m} value={m}>{new Date(m+"-01").toLocaleDateString("nl-NL",{month:"long",year:"numeric"})}</option>)}
@@ -3607,41 +3630,52 @@ function RittenTab({ userId, ritten, refresh, klanten }) {
             <div className="mob-card" key={r.id}>
               <div className="mob-card-top">
                 <div className="mob-card-name">{r.vertrek} → {r.bestemming}</div>
-                <span style={{background:r.doel==="zakelijk"?"#EEF2FF":"#F3F4F6",color:r.doel==="zakelijk"?"#6366F1":"#555",fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:20}}>{r.doel}</span>
+                <span style={{background:r.doel==="zakelijk"?"#EEF2FF":"#F3F4F6",color:r.doel==="zakelijk"?"#6366F1":"#6B7280",fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:20}}>{r.doel}</span>
               </div>
               <div className="mob-card-amount" style={{fontSize:20}}>{r.km} km</div>
-              <div className="mob-card-sub">{r.datum} · Aftrekbaar: €{(Number(r.km)*0.23).toFixed(2)}{r.klant?` · ${r.klant}`:""}</div>
+              <div className="mob-card-sub">{r.datum}{r.doel==="zakelijk"?` · €${(Number(r.km)*kmRate).toFixed(2)}`:" · Privé"}{r.klant?` · ${r.klant}`:""}</div>
               <div className="mob-card-actions"><button className="btn btn-danger btn-sm" onClick={()=>del(r.id)}>✕</button></div>
             </div>
           ))}</div>
-        : <div className="card"><div className="tw"><table><thead><tr>{["Datum","Vertrek","Bestemming","KM","Doel","Klant","Aftrekbaar",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+        : <div className="card"><div className="tw"><table><thead><tr>{["Datum","Vertrek","Bestemming","KM","Doel","Klant","Vergoeding",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>{filtered.map(r=>(
               <tr key={r.id}>
                 <td style={{color:"#888",fontSize:12}}>{r.datum}</td>
                 <td style={{fontWeight:600}}>{r.vertrek}</td>
                 <td style={{fontWeight:600}}>{r.bestemming}</td>
                 <td style={{fontWeight:700}}>{r.km} km</td>
-                <td><span style={{background:r.doel==="zakelijk"?"#EEF2FF":"#F3F4F6",color:r.doel==="zakelijk"?"#6366F1":"#555",fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:20}}>{r.doel}</span></td>
+                <td><span style={{background:r.doel==="zakelijk"?"#EEF2FF":"#F3F4F6",color:r.doel==="zakelijk"?"#6366F1":"#6B7280",fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:20}}>{r.doel}</span></td>
                 <td style={{color:"#555"}}>{r.klant||"—"}</td>
-                <td style={{fontWeight:700,color:"#10B981"}}>€{(Number(r.km)*0.23).toFixed(2)}</td>
+                <td style={{fontWeight:700,color:r.doel==="zakelijk"?"#10B981":"#9CA3AF"}}>{r.doel==="zakelijk"?`€${(Number(r.km)*kmRate).toFixed(2)}`:"—"}</td>
                 <td><button className="btn btn-danger btn-sm" onClick={()=>del(r.id)}>✕</button></td>
               </tr>
             ))}</tbody>
           </table></div></div>
     }
 
-    {showAdd && <div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Rit toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div>
+    {showAdd && <div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Rit toevoegen</div></div><button className="mc" onClick={()=>{setShowAdd(false);setSaveErr("");}}>✕</button></div>
       <div className="mb">
         <div className="ig"><label className="ilbl">Datum</label><input className="inp" type="date" value={nieuw.datum} onChange={e=>setNieuw({...nieuw,datum:e.target.value})}/></div>
         <div className="ig"><label className="ilbl">Vertrekpunt</label><input className="inp" value={nieuw.vertrek} onChange={e=>setNieuw({...nieuw,vertrek:e.target.value})} onBlur={e=>nieuw.bestemming&&calcKm(e.target.value,nieuw.bestemming)} placeholder="Straat 1, Amsterdam"/></div>
         <div className="ig"><label className="ilbl">Bestemming</label><input className="inp" value={nieuw.bestemming} onChange={e=>setNieuw({...nieuw,bestemming:e.target.value})} onBlur={e=>nieuw.vertrek&&calcKm(nieuw.vertrek,e.target.value)} placeholder="Straat 2, Rotterdam"/></div>
         <div className="ig"><label className="ilbl">Afstand (km){kmLoading&&<span style={{marginLeft:6,fontSize:11,color:"#6366F1",fontWeight:600}}>Berekenen…</span>}</label><input className="inp" type="number" value={nieuw.km} onChange={e=>setNieuw({...nieuw,km:e.target.value})} placeholder="Wordt automatisch berekend"/></div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div className="ig"><label className="ilbl">Doel</label><select className="inp" value={nieuw.doel} onChange={e=>setNieuw({...nieuw,doel:e.target.value})}><option value="zakelijk">Zakelijk</option><option value="privé">Privé</option></select></div>
+          <div className="ig">
+            <label className="ilbl">Doel</label>
+            <div style={{display:"flex",borderRadius:9,overflow:"hidden",border:"1.5px solid #E5E7EB"}}>
+              {["zakelijk","privé"].map(d=>(
+                <button key={d} type="button" onClick={()=>setNieuw({...nieuw,doel:d})} style={{flex:1,padding:"10px 0",border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,background:nieuw.doel===d?"#0F0F14":"#fff",color:nieuw.doel===d?"#fff":"#555",transition:"background .15s",borderRight:d==="zakelijk"?"1px solid #E5E7EB":"none"}}>
+                  {d.charAt(0).toUpperCase()+d.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="ig"><label className="ilbl">Klant (optioneel)</label><select className="inp" value={nieuw.klant} onChange={e=>setNieuw({...nieuw,klant:e.target.value})}><option value="">—</option>{(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}</select></div>
         </div>
-        {nieuw.km && <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:9,padding:"10px 13px",fontSize:13,color:"#15803D",marginBottom:12}}>Aftrekbaar: <strong>€{(Number(nieuw.km)*0.23).toFixed(2)}</strong></div>}
-        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={saving||!nieuw.vertrek||!nieuw.bestemming||!nieuw.km}>{saving?"Opslaan…":"Opslaan"}</button></div>
+        {nieuw.km && nieuw.doel==="zakelijk" && <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:9,padding:"10px 13px",fontSize:13,color:"#15803D",marginBottom:12}}>Vergoeding: <strong>€{(Number(nieuw.km)*kmRate).toFixed(2)}</strong> ({kmRate.toFixed(2)}/km)</div>}
+        {nieuw.km && nieuw.doel==="privé" && <div style={{background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:9,padding:"10px 13px",fontSize:13,color:"#64748B",marginBottom:12}}>Privérit — geen zakelijke vergoeding</div>}
+        {saveErr && <div style={{marginBottom:10,padding:"9px 13px",borderRadius:8,fontSize:13,fontWeight:500,background:"#FEE2E2",color:"#B91C1C"}}>{saveErr}</div>}
+        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setSaveErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={saving||!nieuw.vertrek||!nieuw.bestemming||!nieuw.km}>{saving?"Opslaan…":"Opslaan"}</button></div>
       </div>
     </div></div>}
   </div>);
