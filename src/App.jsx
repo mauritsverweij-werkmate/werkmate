@@ -3465,7 +3465,7 @@ function PortalPage({ token }) {
   const btw = offerte?.btw ?? subtotaal * 0.21;
   const totaal = offerte?.totaal ?? subtotaal + btw;
 
-  const portalStyle = {fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#EEF2FF",color:"#111"};
+  const portalStyle = {fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#F8FAFC",color:"#111"};
   const headStyle = {background:"#0F0F14",padding:"20px 24px",display:"flex",alignItems:"center",gap:16};
 
   if (loading) return <div style={{...portalStyle,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{color:"#64748B"}}>Laden…</div></div></div>;
