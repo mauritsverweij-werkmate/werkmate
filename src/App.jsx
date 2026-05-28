@@ -786,7 +786,18 @@ const createOfferPdfDocument = (offer, bedrijf) => {
   doc.text(`Totaal:`, 140, summaryY + 18);
   doc.text(`€ ${formatMoney(total)}`, 190, summaryY + 18, { align: "right" });
 
-  const footerY = summaryY + 34;
+  let notesHeight = 0;
+  if (offer.opmerkingen) {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Opmerkingen / garantie:", 20, summaryY + 30);
+    doc.setFont("helvetica", "normal");
+    const noteLines = doc.splitTextToSize(String(offer.opmerkingen), 170);
+    doc.text(noteLines, 20, summaryY + 37);
+    notesHeight = noteLines.length * 5 + 18;
+  }
+
+  const footerY = summaryY + 34 + notesHeight;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text("Contact", 20, footerY);
@@ -1255,6 +1266,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
       subtotaal: updatedOff.subtotaal || 0,
       btw: updatedOff.btw || 0,
       totaal: updatedOff.totaal || 0,
+      opmerkingen: updatedOff.opmerkingen || null,
     };
     console.log("offerte insert payload:", JSON.stringify(insertPayload, null, 2));
     const insertResult = await supabase.from("offertes").insert(insertPayload).select("portal_token").single();
@@ -1308,7 +1320,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
         </div>
         <button className="btn btn-outline" style={{marginBottom:12}} onClick={addRule}>+ Regel toevoegen</button>
         <div className="tot-box"><div>Subtotaal: <strong>€ {off.subtotaal}</strong></div><div>BTW: <strong>€ {off.btw}</strong></div><div style={{fontSize:15,fontWeight:800,marginTop:3}}>Totaal: € {off.totaal}</div></div>
-        {off.opmerkingen&&<div className="note-box">📝 {off.opmerkingen}</div>}
+        <div className="ig"><label className="ilbl">Opmerkingen / garantietekst (optioneel)</label><textarea className="inp" rows={3} value={off.opmerkingen||""} onChange={e=>updateOff({opmerkingen:e.target.value})} placeholder="Bijv. 2 jaar garantie op installatie. Onderdelen inclusief. Geldigheid offerte: 30 dagen."/></div>
         <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setStep(0);setOff(null);setVraag("");}}>Opnieuw</button><button className="btn btn-ai" style={{flex:1,justifyContent:"center"}} onClick={opslaan}>💾 Opslaan & Verstuur</button></div>
       </>}
     </div>
@@ -1471,7 +1483,18 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf })
     doc.text(`Totaal:`, 140, summaryY + 18);
     doc.text(`€ ${formatMoney(totaalValue)}`, 190, summaryY + 18, { align: "right" });
 
-    const footerY = summaryY + 34;
+    let notesHeight = 0;
+    if (offer.opmerkingen) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Opmerkingen / garantie:", 20, summaryY + 30);
+      doc.setFont("helvetica", "normal");
+      const noteLines = doc.splitTextToSize(String(offer.opmerkingen), 170);
+      doc.text(noteLines, 20, summaryY + 37);
+      notesHeight = noteLines.length * 5 + 18;
+    }
+
+    const footerY = summaryY + 34 + notesHeight;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Contact", 20, footerY);
@@ -3441,7 +3464,7 @@ function PortalPage({ token }) {
   const btw = offerte?.btw ?? subtotaal * 0.21;
   const totaal = offerte?.totaal ?? subtotaal + btw;
 
-  const portalStyle = {fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#F8FAFC",color:"#111"};
+  const portalStyle = {fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#EEF2FF",color:"#111"};
   const headStyle = {background:"#0F0F14",padding:"20px 24px",display:"flex",alignItems:"center",gap:16};
 
   if (loading) return <div style={{...portalStyle,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{color:"#64748B"}}>Laden…</div></div></div>;
@@ -3499,6 +3522,13 @@ function PortalPage({ token }) {
                 <div style={{fontSize:18,fontWeight:800,color:"#0F0F14",marginTop:4}}>Totaal: {fmtEur(totaal)}</div>
               </div>
             </div>
+
+            {offerte.opmerkingen && (
+              <div style={{background:"#fff",borderRadius:16,border:"1px solid #EAECF0",padding:"18px 24px",marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".5px",marginBottom:8}}>Opmerkingen / garantie</div>
+                <div style={{fontSize:14,color:"#374151",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{offerte.opmerkingen}</div>
+              </div>
+            )}
 
             {step === "view" && (
               <div style={{background:"#fff",borderRadius:16,border:"1px solid #EAECF0",padding:"22px 24px",marginBottom:16}}>
