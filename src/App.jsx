@@ -1199,7 +1199,8 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
     try{const txt=await aiCall(`Offerte-assistent voor vakman NL. Prijslijst: ${px}. Gebruik exact de prijzen uit deze prijslijst wanneer de dienst overeenkomt met een bestaande dienst. Genereer alleen nieuwe prijzen voor diensten die niet in de prijslijst staan. Nooit afwijken van de prijslijst prijzen. Genereer voor: "${vraag}". ALLEEN JSON: {"dienst":"..","omschrijving":"2 zinnen","regels":[{"omschrijving":"..","aantal":1,"eenheid":"uur","prijs":85}],"subtotaal":285,"btw":59.85,"totaal":344.85,"geldigheid":"30 dagen","opmerkingen":"garantie"}`);
     setOff(recalcTotals(JSON.parse(txt.replace(/```json|```/g,"").trim())));setStep(2);}catch{setOff({dienst:"Fout",omschrijving:"Mislukt.",regels:[],subtotaal:0,btw:0,totaal:0});setStep(2);}setLoading(false);};
 
-  const sendOfferEmail = async (email, name, dienst, regels, subtotaal, btw, totaal) => {
+  const sendOfferEmail = async (email, name, dienst, regels, subtotaal, btw, totaal, portalToken) => {
+    const portal_url = portalToken ? `https://app.werkmate.tech/portal/${portalToken}` : undefined;
     const payload = {
       action: "send-offer-email",
       customer_email: email,
@@ -1210,6 +1211,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
       subtotaal,
       btw,
       totaal,
+      portal_url,
       attachments: [
         {
           type: "application/pdf",
@@ -1251,11 +1253,12 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
       totaal: updatedOff.totaal || 0,
     };
     console.log("offerte insert payload:", JSON.stringify(insertPayload, null, 2));
-    const insertResult = await supabase.from("offertes").insert(insertPayload);
+    const insertResult = await supabase.from("offertes").insert(insertPayload).select("portal_token").single();
     console.log("AIOfferte opslaan: supabase insert result", insertResult);
+    const portalToken = insertResult.data?.portal_token;
     if (klantEmail) {
       try {
-        await sendOfferEmail(klantEmail, klant, off.dienst, off.regels || [], off.subtotaal, off.btw, off.totaal);
+        await sendOfferEmail(klantEmail, klant, off.dienst, off.regels || [], off.subtotaal, off.btw, off.totaal, portalToken);
       } catch (error) {
         console.error("Kan offerte e-mail niet verzenden", error);
       }

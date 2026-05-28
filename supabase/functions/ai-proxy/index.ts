@@ -297,7 +297,9 @@ serve(async (req: Request) => {
 
     // ── Send offer email ──────────────────────────────────────
     if (body.action === "send-offer-email") {
-      const { customer_email, customer_name } = body;
+      const { customer_email, customer_name, portal_url } = body as {
+        customer_email?: string; customer_name?: string; portal_url?: string;
+      };
       if (!customer_email || !customer_name) {
         return json({ error: "customer_email en customer_name zijn verplicht" }, 400);
       }
@@ -309,11 +311,19 @@ serve(async (req: Request) => {
       const profiel      = await fetchProfiel(user.id);
       const companyName  = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
       const safeCustomer = esc(customer_name);
+      const safePortal   = portal_url ? esc(portal_url) : null;
       const sig          = buildSignature(profiel);
+
+      const portalBlock = safePortal ? `
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">U kunt de offerte ook online bekijken en digitaal ondertekenen via de knop hieronder:</p>
+<p style="text-align:center;margin:28px 0;">
+  <a href="${safePortal}" style="background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">📋 Bekijk en onderteken uw offerte</a>
+</p>
+<p style="margin:0 0 16px;font-size:13px;color:#9ca3af;">Of kopieer deze link: <a href="${safePortal}" style="color:#6366F1;">${safePortal}</a></p>` : "";
 
       const html = emailWrapper(companyName,
         `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u uw offerte in de bijlage.</p>`,
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u uw offerte in de bijlage.${safePortal ? "" : ""}</p>${portalBlock}`,
         sig);
 
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
