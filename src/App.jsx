@@ -3469,24 +3469,30 @@ function PortalPage({ token }) {
             <div style={{background:"#fff",borderRadius:16,border:"1px solid #EAECF0",padding:"22px 24px",marginBottom:16}}>
               <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#0F0F14",marginBottom:4}}>Offerte</div>
               <div style={{fontSize:13,color:"#64748B",marginBottom:16}}>Opgesteld voor: <strong style={{color:"#111"}}>{offerte.klant}</strong></div>
-              {offerte.dienst && <div style={{background:"linear-gradient(135deg,#6366F1,#8B5CF6)",borderRadius:12,padding:"14px 18px",color:"#fff",marginBottom:16}}>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15}}>{offerte.dienst}</div>
-                {offerte.omschrijving && <div style={{fontSize:12,opacity:.85,marginTop:4,lineHeight:1.5}}>{offerte.omschrijving}</div>}
+              {offerte.dienst && <div style={{background:"#F8FAFC",borderRadius:12,padding:"14px 18px",border:"1px solid #E5E7EB",marginBottom:16}}>
+                <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{offerte.dienst}</div>
+                {offerte.omschrijving && <div style={{fontSize:13,color:"#64748B",marginTop:6,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{offerte.omschrijving}</div>}
               </div>}
-              <table style={{width:"100%",borderCollapse:"collapse",marginBottom:12}}>
+              <div style={{overflowX:"auto",marginBottom:12}}>
+              <table style={{width:"100%",minWidth:480,borderCollapse:"collapse"}}>
                 <thead><tr style={{background:"#F8FAFC",borderBottom:"1px solid #E5E7EB"}}>
-                  {["Omschrijving","Aantal","Eenheid","Prijs","Totaal"].map(h=><th key={h} style={{padding:"9px 10px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>{h}</th>)}
+                  <th style={{padding:"9px 10px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px",width:"42%"}}>Omschrijving</th>
+                  <th style={{padding:"9px 10px",textAlign:"right",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>Aantal</th>
+                  <th style={{padding:"9px 10px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>Eenheid</th>
+                  <th style={{padding:"9px 10px",textAlign:"right",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>Prijs</th>
+                  <th style={{padding:"9px 10px",textAlign:"right",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>Totaal</th>
                 </tr></thead>
                 <tbody>{regels.map((r,i)=>(
                   <tr key={i} style={{borderBottom:"1px solid #F5F5F5"}}>
-                    <td style={{padding:"10px",fontSize:13,color:"#111"}}>{r.omschrijving}</td>
-                    <td style={{padding:"10px",fontSize:13,textAlign:"right"}}>{r.aantal}</td>
-                    <td style={{padding:"10px",fontSize:13,color:"#64748B"}}>{r.eenheid}</td>
-                    <td style={{padding:"10px",fontSize:13,textAlign:"right"}}>{fmtEur(r.prijs)}</td>
-                    <td style={{padding:"10px",fontSize:13,fontWeight:700,textAlign:"right"}}>{fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</td>
+                    <td style={{padding:"10px",fontSize:13,color:"#111",wordBreak:"break-word",whiteSpace:"pre-wrap"}}>{r.omschrijving}</td>
+                    <td style={{padding:"10px",fontSize:13,textAlign:"right",whiteSpace:"nowrap"}}>{r.aantal}</td>
+                    <td style={{padding:"10px",fontSize:13,color:"#64748B",whiteSpace:"nowrap"}}>{r.eenheid}</td>
+                    <td style={{padding:"10px",fontSize:13,textAlign:"right",whiteSpace:"nowrap"}}>{fmtEur(r.prijs)}</td>
+                    <td style={{padding:"10px",fontSize:13,fontWeight:700,textAlign:"right",whiteSpace:"nowrap"}}>{fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</td>
                   </tr>
                 ))}</tbody>
               </table>
+              </div>
               <div style={{textAlign:"right",fontSize:13,color:"#555",lineHeight:2,background:"#F8FAFC",borderRadius:10,padding:"12px 16px"}}>
                 <div>Subtotaal: <strong>{fmtEur(subtotaal)}</strong></div>
                 <div>BTW (21%): <strong>{fmtEur(btw)}</strong></div>
@@ -3496,23 +3502,27 @@ function PortalPage({ token }) {
 
             {step === "view" && (
               <div style={{background:"#fff",borderRadius:16,border:"1px solid #EAECF0",padding:"22px 24px",marginBottom:16}}>
-                <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>Uw e-mailadres <span style={{fontSize:12,fontWeight:400,color:"#94A3B8"}}>(voor bevestiging)</span></div>
-                <input value={klantEmail} onChange={e=>{setKlantEmail(e.target.value);setSignErr("");}} placeholder="uw@email.nl" style={{width:"100%",border:`1.5px solid ${signErr?"#EF4444":"#E5E7EB"}`,borderRadius:10,padding:"12px 14px",fontSize:16,fontFamily:"'DM Sans',sans-serif",outline:"none",marginBottom:signErr?8:16,boxSizing:"border-box"}}/>
-                {signErr&&<div style={{color:"#EF4444",fontSize:13,marginBottom:16}}>{signErr}</div>}
-                <button onClick={()=>{if(!klantEmail||!klantEmail.includes("@")){setSignErr("Vul een geldig e-mailadres in.");return;}setStep("sign");}} style={{width:"100%",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",color:"#fff",border:"none",borderRadius:12,padding:"16px",fontSize:16,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                  ✍️ Offerte ondertekenen
+                <div style={{fontSize:14,color:"#374151",marginBottom:16,lineHeight:1.6}}>
+                  Gaat u akkoord met deze offerte? Vul uw e-mailadres in en zet uw digitale handtekening.
+                </div>
+                <label style={{display:"block",fontSize:12,fontWeight:600,color:"#6B7280",marginBottom:6,textTransform:"uppercase",letterSpacing:".5px"}}>E-mailadres</label>
+                <input value={klantEmail} onChange={e=>{setKlantEmail(e.target.value);setSignErr("");}} placeholder="uw@email.nl" style={{width:"100%",border:`1.5px solid ${signErr?"#EF4444":"#E5E7EB"}`,borderRadius:9,padding:"11px 13px",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",marginBottom:signErr?6:14,boxSizing:"border-box",color:"#111"}}/>
+                {signErr&&<div style={{color:"#EF4444",fontSize:12,marginBottom:14}}>{signErr}</div>}
+                <button onClick={()=>{if(!klantEmail||!klantEmail.includes("@")){setSignErr("Vul een geldig e-mailadres in.");return;}setStep("sign");}} style={{background:"#0F0F14",color:"#fff",border:"none",borderRadius:9,padding:"11px 22px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                  Offerte ondertekenen
                 </button>
+                <div style={{marginTop:12,fontSize:12,color:"#94A3B8",lineHeight:1.5}}>Door te ondertekenen accepteert u de offerte en de daarin vermelde bedragen.</div>
               </div>
             )}
 
             {step === "sign" && (
               <div style={{background:"#fff",borderRadius:16,border:"1px solid #EAECF0",padding:"22px 24px"}}>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:16,marginBottom:4}}>Digitale handtekening</div>
-                <div style={{fontSize:13,color:"#64748B",marginBottom:16}}>Teken hieronder met uw vinger of muis. Door te ondertekenen accepteert u de offerte.</div>
-                <SignatureCanvas onSave={handleSign} label="Teken hier uw handtekening"/>
+                <div style={{fontWeight:700,fontSize:15,color:"#0F0F14",marginBottom:4}}>Handtekening</div>
+                <div style={{fontSize:13,color:"#64748B",marginBottom:16}}>Teken hieronder met uw vinger of muis om de offerte te accepteren.</div>
+                <SignatureCanvas onSave={handleSign} label="Teken hier"/>
                 {signing && <div style={{textAlign:"center",marginTop:12,color:"#6366F1",fontWeight:600}}>Verwerken…</div>}
                 {signErr && <div style={{color:"#EF4444",marginTop:12,fontSize:13}}>{signErr}</div>}
-                <button onClick={()=>setStep("view")} style={{marginTop:12,background:"none",border:"none",color:"#64748B",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>← Terug</button>
+                <button onClick={()=>setStep("view")} style={{marginTop:14,background:"none",border:"none",color:"#64748B",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",padding:0}}>← Terug</button>
               </div>
             )}
           </>
