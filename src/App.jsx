@@ -2510,13 +2510,18 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     setEmailSending(true); setEmailMsg("");
     try {
       const pdfB64=createFactuurPdfBase64(showEmail, bedrijf);
-      const {error}=await supabase.functions.invoke("ai-proxy",{body:{action:"send-invoice-email",customer_email:emailAddr,customer_name:showEmail.klant,factuur_nummer:showEmail.nummer,company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Factuur-${showEmail.nummer||"factuur"}.pdf`,content:pdfB64}]}});
-      if(error) throw new Error(error.message);
+      const {data:iData, error:iErr}=await supabase.functions.invoke("ai-proxy",{body:{action:"send-invoice-email",customer_email:emailAddr,customer_name:showEmail.klant,factuur_nummer:showEmail.nummer,company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Factuur-${showEmail.nummer||"factuur"}.pdf`,content:pdfB64}]}});
+      console.log("[sendInvoiceEmail] invoke result:", {iData, iErr});
+      if(iErr) throw new Error(iErr.message||"Versturen mislukt");
+      if(iData?.error) throw new Error(iData.error);
       await supabase.from("facturen").update({status:"Verstuurd"}).eq("id",showEmail.id);
       await logEmail(userId, emailAddr, `Factuur ${showEmail.nummer||""}`, "factuur", `Factuur ${showEmail.nummer||""} voor ${showEmail.klant}`, "verzonden");
       setEmailMsg(`Email verstuurd naar ${emailAddr}`); refresh();
       setTimeout(()=>{setShowEmail(null);setEmailMsg("");setEmailAddr("");},2200);
-    } catch(e){setEmailMsg("Fout: "+e.message);}
+    } catch(e){
+      console.error("[sendInvoiceEmail] fout:", e);
+      setEmailMsg("Fout: "+e.message);
+    }
     setEmailSending(false);
   };
 
@@ -2525,12 +2530,19 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     setEmailSending(true); setEmailMsg("");
     try {
       const pdfB64=createFactuurPdfBase64(showReminder, bedrijf);
-      await supabase.functions.invoke("ai-proxy",{body:{action:"send-reminder-email",customer_email:emailAddr,customer_name:showReminder.klant,factuur_nummer:showReminder.nummer,totaal:getTotal(showReminder),company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Herinnering-${showReminder.nummer||"factuur"}.pdf`,content:pdfB64}]}});
+      const {data:rData, error:rErr}=await supabase.functions.invoke("ai-proxy",{body:{action:"send-reminder-email",customer_email:emailAddr,customer_name:showReminder.klant,factuur_nummer:showReminder.nummer,totaal:getTotal(showReminder),company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Herinnering-${showReminder.nummer||"factuur"}.pdf`,content:pdfB64}]}});
+      console.log("[sendReminder] invoke result:", {rData, rErr});
+      if(rErr) throw new Error(rErr.message||"Versturen mislukt");
+      if(rData?.error) throw new Error(rData.error);
       await supabase.from("facturen").update({status:"Herinnering"}).eq("id",showReminder.id);
       await logEmail(userId, emailAddr, `Herinnering factuur ${showReminder.nummer||""}`, "herinnering", `Betalingsherinnering factuur ${showReminder.nummer||""} voor ${showReminder.klant}`, "verzonden");
       setEmailMsg(`Herinnering verstuurd naar ${emailAddr}`); refresh();
       setTimeout(()=>{setShowReminder(null);setEmailMsg("");setEmailAddr("");},2200);
-    } catch(e){setEmailMsg("Fout: "+e.message);}
+    } catch(e){
+      console.error("[sendReminder] fout:", e);
+      await logEmail(userId, emailAddr, `Herinnering factuur ${showReminder.nummer||""}`, "herinnering", e.message, "mislukt");
+      setEmailMsg("Fout: "+e.message);
+    }
     setEmailSending(false);
   };
 
