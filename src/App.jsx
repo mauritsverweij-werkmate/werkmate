@@ -3460,7 +3460,7 @@ function PortalPage({ token }) {
   };
 
   const fmtEur = (n) => `€ ${Number(n||0).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  const regels = Array.isArray(offerte?.regels) ? offerte.regels : [];
+  const regels = parseOfferRules(offerte);
   const subtotaal = offerte?.subtotaal ?? regels.reduce((s,r)=>s+(Number(r.aantal)||0)*(Number(r.prijs)||0),0);
   const btw = offerte?.btw ?? subtotaal * 0.21;
   const totaal = offerte?.totaal ?? subtotaal + btw;
