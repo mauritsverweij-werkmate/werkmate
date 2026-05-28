@@ -602,6 +602,9 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
   .ph .pg-title{font-size:20px}
   .mb [style*="1fr"]{grid-template-columns:1fr !important}
   .inp{font-size:16px;padding:12px 14px}
+  .off-inp,.off-inp-ta{font-size:16px}
+  .off-tbl{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px}
+  .off-tbl-grid{min-width:520px}
   .btn{min-height:44px}
   .btn-sm{min-height:40px}
   .mob-hide{display:none}
@@ -2677,11 +2680,11 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
             {["Omschrijving","Aantal","Eenheid","Prijs","Totaal",""].map((h,i)=><div key={i} className="off-cell" style={{fontWeight:700,fontSize:12,color:"#94A3B8",justifyContent:i>=3&&i<5?"flex-end":i===1?"center":"flex-start"}}>{h}</div>)}
           </div>
           {nieuw.regels.map((r,i)=>(
-            <div key={i} className="off-tbl-grid" style={{borderBottom:"1px solid #F3F4F6"}}>
-              <div className="off-cell"><input className="off-inp" value={r.omschrijving} onChange={e=>setRegel(i,"omschrijving",e.target.value)} placeholder="Omschrijving"/></div>
-              <div className="off-cell"><input className="off-inp" type="number" value={r.aantal} onChange={e=>setRegel(i,"aantal",e.target.value)} style={{textAlign:"center"}}/></div>
-              <div className="off-cell"><select className="off-inp" value={r.eenheid} onChange={e=>setRegel(i,"eenheid",e.target.value)} style={{minWidth:80}}>{["stuk","uur","dag","m²","m","kg","l"].map(u=><option key={u}>{u}</option>)}</select></div>
-              <div className="off-cell"><input className="off-inp" type="number" value={r.prijs} onChange={e=>setRegel(i,"prijs",e.target.value)} style={{textAlign:"right"}}/></div>
+            <div key={i} className="off-tbl-grid" style={{borderBottom:"1px solid #F3F4F6",alignItems:"flex-start"}}>
+              <div className="off-cell" style={{alignItems:"flex-start",paddingTop:8}}><textarea className="off-inp off-inp-ta" rows={1} value={r.omschrijving} ref={el=>{if(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}}} onChange={e=>{e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px";setRegel(i,"omschrijving",e.target.value);}} placeholder="Omschrijving"/></div>
+              <div className="off-cell" style={{paddingTop:8}}><input className="off-inp" type="number" value={r.aantal} onChange={e=>setRegel(i,"aantal",e.target.value)} style={{textAlign:"center"}}/></div>
+              <div className="off-cell" style={{paddingTop:8}}><select className="off-inp" value={r.eenheid} onChange={e=>setRegel(i,"eenheid",e.target.value)} style={{minWidth:80}}>{["stuk","uur","dag","m²","m","kg","l"].map(u=><option key={u}>{u}</option>)}</select></div>
+              <div className="off-cell" style={{paddingTop:8}}><input className="off-inp" type="number" value={r.prijs} onChange={e=>setRegel(i,"prijs",e.target.value)} style={{textAlign:"right"}}/></div>
               <div className="off-cell off-cell-totaal">{fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</div>
               <div className="off-cell"><button onClick={()=>removeRegel(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:16}}>×</button></div>
             </div>
