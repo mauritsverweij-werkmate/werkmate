@@ -467,6 +467,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .off-cell.del{justify-content:center}
 .off-cell-totaal{font-size:13px;font-weight:700;color:#111;text-align:right;justify-content:flex-end}
 .off-inp{height:36px;width:100%;box-sizing:border-box;border:1.5px solid #E5E7EB;border-radius:7px;padding:0 9px;font-family:'DM Sans',sans-serif;font-size:13px;color:#111;outline:none;background:#fff;transition:border-color .14s}
+.off-inp-ta{height:auto;min-height:36px;padding:8px 9px;resize:none;overflow:hidden;line-height:1.5;vertical-align:top}
 .off-inp:focus{border-color:#6366F1}
 .off-inp.right{text-align:right}
 .off-inp.center{text-align:center}
@@ -1309,13 +1310,13 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
             <div className="off-cell right">Totaal</div>
             <div className="off-cell del"></div>
           </div>
-          {off.regels?.map((r,i)=><div key={i} className="off-tbl-grid off-tbl-row">
-            <div className="off-cell"><input className="off-inp" value={r.omschrijving} onChange={e=>updateRule(i,"omschrijving",e.target.value)} /></div>
-            <div className="off-cell"><input className="off-inp right" type="number" min="0" step="0.1" value={r.aantal} onChange={e=>updateRule(i,"aantal",e.target.value)} /></div>
-            <div className="off-cell center"><select className="off-inp center" value={r.eenheid} onChange={e=>updateRule(i,"eenheid",e.target.value)}>{["uur","st","m²","m","rit","dag","persoon","km"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
-            <div className="off-cell"><input className="off-inp right" type="number" min="0" step="0.01" value={r.prijs} onChange={e=>updateRule(i,"prijs",e.target.value)} /></div>
-            <div className="off-cell off-cell-totaal">€{((Number(r.aantal)||0)*(Number(r.prijs)||0)).toFixed(2)}</div>
-            <div className="off-cell del"><button className="btn btn-danger btn-sm" onClick={()=>removeRule(i)}>✕</button></div>
+          {off.regels?.map((r,i)=><div key={i} className="off-tbl-grid off-tbl-row" style={{alignItems:"flex-start"}}>
+            <div className="off-cell" style={{paddingTop:8}}><textarea className="off-inp off-inp-ta" rows={1} value={r.omschrijving} ref={el=>{if(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}}} onChange={e=>{e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px";updateRule(i,"omschrijving",e.target.value);}}/></div>
+            <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.1" value={r.aantal} onChange={e=>updateRule(i,"aantal",e.target.value)} /></div>
+            <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.eenheid} onChange={e=>updateRule(i,"eenheid",e.target.value)}>{["uur","stuk","st","m²","m","rit","dag","persoon","km"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+            <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.01" value={r.prijs} onChange={e=>updateRule(i,"prijs",e.target.value)} /></div>
+            <div className="off-cell off-cell-totaal" style={{paddingTop:12}}>€{((Number(r.aantal)||0)*(Number(r.prijs)||0)).toFixed(2)}</div>
+            <div className="off-cell del" style={{paddingTop:8}}><button className="btn btn-danger btn-sm" onClick={()=>removeRule(i)}>✕</button></div>
           </div>)}
         </div>
         <button className="btn btn-outline" style={{marginBottom:12}} onClick={addRule}>+ Regel toevoegen</button>
