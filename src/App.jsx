@@ -474,6 +474,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .off-inp::-webkit-outer-spin-button,.off-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .off-inp{-moz-appearance:textfield}
 .tot-box{text-align:right;font-size:12.5px;color:#555;line-height:2;padding:11px 14px;background:#FAFAFA;border-radius:9px;margin-bottom:12px}
+.modal-act{position:sticky;bottom:0;background:#fff;padding:12px 0 0;margin-top:4px;display:flex;gap:9px}
 .note-box{background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;padding:11px 13px;font-size:12px;color:#78350F;margin-bottom:14px;line-height:1.5}
 .pl-row{display:flex;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid #F5F5F5}
 .pl-inp{border:1.5px solid #E5E7EB;border-radius:7px;padding:6px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:#111;outline:none;transition:border-color .14s;background:#fff}
@@ -611,6 +612,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
   .modal{border-radius:20px 20px 0 0;max-height:92dvh;position:fixed;bottom:0;left:0;right:0;max-width:100%;margin:0;overflow:hidden;display:flex;flex-direction:column}
   .modal .mh{flex-shrink:0}
   .modal .mb{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+  .modal-act{bottom:calc(64px + env(safe-area-inset-bottom))}
   .overlay{align-items:flex-end;padding:0}
   .sg{grid-template-columns:1fr 1fr !important}
   .sc{padding:14px;border-radius:12px}
@@ -1300,7 +1302,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
         </select></div>
         {!selectedKlant && <div className="ig"><label className="ilbl">Klant e-mail</label><input className="inp" value={newKlantEmail} onChange={e=>setNewKlantEmail(e.target.value)} placeholder="klant@email.nl"/></div>}
         {selectedKlant && selectedKlant.email && <div className="ig"><label className="ilbl">Klant e-mail</label><input className="inp" value={selectedKlant.email} disabled /></div>}
-        <div className="ig"><label className="ilbl">Beschrijf de klantvraag</label><textarea className="inp" value={vraag} onChange={e=>setVraag(e.target.value)} placeholder="Bijv: CV ketel onderhoud Utrecht, klant Jan Vermeer"/></div><div style={{position:"sticky",bottom:0,background:"#fff",padding:"12px 0 0",marginTop:4}}><button className="btn btn-ai btn-full" onClick={gen} disabled={!vraag.trim()} style={{opacity:vraag.trim()?1:.5}}>✨ Maak offerte</button></div></>}
+        <div className="ig"><label className="ilbl">Beschrijf de klantvraag</label><textarea className="inp" value={vraag} onChange={e=>setVraag(e.target.value)} placeholder="Bijv: CV ketel onderhoud Utrecht, klant Jan Vermeer"/></div><div className="modal-act"><button className="btn btn-ai btn-full" onClick={gen} disabled={!vraag.trim()} style={{opacity:vraag.trim()?1:.5}}>✨ Maak offerte</button></div></>}
       {step===1&&<div style={{textAlign:"center",padding:"44px 0"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:16}}>Bezig<span className="dot">…</span></div></div>}
       {step===2&&off&&<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
           <div className="ig"><label className="ilbl">Dienst</label><input className="inp" value={off.dienst} onChange={e=>updateOff({dienst:e.target.value})} /></div>
@@ -1327,7 +1329,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
         <button className="btn btn-outline" style={{marginBottom:12}} onClick={addRule}>+ Regel toevoegen</button>
         <div className="tot-box"><div>Subtotaal: <strong>€ {off.subtotaal}</strong></div><div>BTW: <strong>€ {off.btw}</strong></div><div style={{fontSize:15,fontWeight:800,marginTop:3}}>Totaal: € {off.totaal}</div></div>
         <div className="ig"><label className="ilbl">Opmerkingen / garantietekst (optioneel)</label><textarea className="inp" rows={3} value={off.opmerkingen||""} onChange={e=>updateOff({opmerkingen:e.target.value})} placeholder="Bijv. 2 jaar garantie op installatie. Onderdelen inclusief. Geldigheid offerte: 30 dagen."/></div>
-        <div style={{display:"flex",gap:9,position:"sticky",bottom:0,background:"#fff",padding:"12px 0 0",marginTop:4}}><button className="btn btn-ghost" onClick={()=>{setStep(0);setOff(null);setVraag("");}}>Opnieuw</button><button className="btn btn-ai" style={{flex:1,justifyContent:"center"}} onClick={opslaan}>💾 Opslaan & Verstuur</button></div>
+        <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setStep(0);setOff(null);setVraag("");}}>Opnieuw</button><button className="btn btn-ai" style={{flex:1,justifyContent:"center"}} onClick={opslaan}>💾 Opslaan & Verstuur</button></div>
       </>}
     </div>
   </div></div>);
