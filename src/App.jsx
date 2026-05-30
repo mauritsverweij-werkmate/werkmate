@@ -868,7 +868,11 @@ const createOfferPdfDocument = (offer, bedrijf) => {
   return doc;
 };
 
-const createOfferPdfBase64 = (offer, bedrijf) => createOfferPdfDocument(offer, bedrijf).output("datauristring").split(",")[1];
+const createOfferPdfBase64 = (offer, bedrijf) => {
+  const dataUri = createOfferPdfDocument(offer, bedrijf).output("datauristring");
+  const idx = dataUri.indexOf(",");
+  return idx >= 0 ? dataUri.slice(idx + 1) : dataUri;
+};
 
 const createFactuurPdf = (factuur, bedrijf) => {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -1387,9 +1391,8 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
         await sendOfferEmail(klantEmail, klant, off.dienst, off.regels || [], off.subtotaal, off.btw, off.totaal, portalToken);
       } catch (error) {
         console.error("Kan offerte e-mail niet verzenden", error);
+        alert(`Offerte opgeslagen, maar de e-mail kon niet worden verzonden:\n${error?.message || error}\n\nProbeer het later opnieuw via de offertelijst.`);
       }
-    } else {
-      console.log("AIOfferte opslaan: klantEmail is empty, skipping sendOfferEmail", { selectedKlant, newKlantEmail });
     }
     onSaved && onSaved();
     onClose();
@@ -1532,87 +1535,13 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
   };
 
   const exportOfferPdf = (offer) => {
-    const company = {
-      bedrijfsnaam: bedrijf?.bedrijfsnaam || "WerkMate Bedrijf",
-      telefoon: bedrijf?.telefoon || "",
-      email: bedrijf?.email || "",
-      adres: bedrijf?.adres || "",
-    };
-    const regels = parseOfferRules(offer);
-    const subtotal = offer.subtotaal != null ? Number(offer.subtotaal) : regels.reduce((sum, r) => sum + ((Number(r.aantal) || 0) * (Number(r.prijs) || 0)), 0);
-    const btw = offer.btw != null ? Number(offer.btw) : Math.round(subtotal * 0.21 * 100) / 100;
-    const totaalValue = offer.totaal != null ? Number(offer.totaal) : subtotal + btw;
-    const today = new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
-
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.text(String(company.bedrijfsnaam || "Bedrijf"), 20, 25);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Datum: ${today}`, 20, 34);
-    doc.text(`Offerte voor: ${offer.klant || "klant"}`, 20, 42);
-    doc.text(`Geachte ${offer.klant || "heer/mevrouw"},`, 20, 52);
-    doc.text(`Hierbij ontvangt u onze offerte voor ${offer.dienst || "uw aanvraag"}.`, 20, 58);
-
-    const startY = 70;
-    const rowX = [20, 85, 115, 145, 175];
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Omschrijving", rowX[0], startY);
-    doc.text("Aantal", rowX[1], startY);
-    doc.text("Eenheid", rowX[2], startY);
-    doc.text("Prijs", rowX[3], startY);
-    doc.text("Totaal", rowX[4], startY);
-    doc.setDrawColor(200);
-    doc.line(20, startY + 2, 190, startY + 2);
-
-    let y = startY + 10;
-    doc.setFont("helvetica", "normal");
-    regels.forEach((regel) => {
-      const regelTotaal = (Number(regel.aantal) || 0) * (Number(regel.prijs) || 0);
-      doc.text(String(regel.omschrijving || ""), rowX[0], y);
-      doc.text(String(regel.aantal || ""), rowX[1], y, { align: "right" });
-      doc.text(String(regel.eenheid || ""), rowX[2], y, { align: "right" });
-      doc.text(`€ ${formatMoney(regel.prijs)}`, rowX[3], y, { align: "right" });
-      doc.text(`€ ${formatMoney(regelTotaal)}`, rowX[4], y, { align: "right" });
-      y += 8;
-      if (y > 250) {
-        doc.addPage();
-        y = 20;
-      }
-    });
-
-    const summaryY = y + 12;
-    doc.setFont("helvetica", "bold");
-    doc.text(`Subtotaal:`, 140, summaryY);
-    doc.text(`€ ${formatMoney(subtotal)}`, 190, summaryY, { align: "right" });
-    doc.text(`BTW (21%):`, 140, summaryY + 8);
-    doc.text(`€ ${formatMoney(btw)}`, 190, summaryY + 8, { align: "right" });
-    doc.setFontSize(13);
-    doc.text(`Totaal:`, 140, summaryY + 18);
-    doc.text(`€ ${formatMoney(totaalValue)}`, 190, summaryY + 18, { align: "right" });
-
-    let notesHeight = 0;
-    if (offer.opmerkingen) {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("Opmerkingen / garantie:", 20, summaryY + 30);
-      doc.setFont("helvetica", "normal");
-      const noteLines = doc.splitTextToSize(String(offer.opmerkingen), 170);
-      doc.text(noteLines, 20, summaryY + 37);
-      notesHeight = noteLines.length * 5 + 18;
+    try {
+      const doc = createOfferPdfDocument(offer, bedrijf);
+      doc.save(`${(offer.klant || "offerte").replace(/\s+/g, "_")}_offerte.pdf`);
+    } catch (err) {
+      console.error("PDF genereren mislukt:", err);
+      alert("PDF kon niet worden gegenereerd. Probeer het opnieuw.");
     }
-
-    const footerY = summaryY + 34 + notesHeight;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("Contact", 20, footerY);
-    doc.text(`Telefoon: ${company.telefoon}`, 20, footerY + 6);
-    doc.text(`Email: ${company.email}`, 20, footerY + 12);
-    doc.text(`Adres: ${company.adres}`, 20, footerY + 18);
-
-    doc.save(`${(offer.klant || "offerte").replace(/\s+/g, "_")}_offerte.pdf`);
   };
 
   return(<div>
