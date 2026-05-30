@@ -1789,6 +1789,7 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
   const [filterMedewerker,setFilterMedewerker]=useState(null);
   const [nieuw,setNieuw]=useState({datum:todayStr,tijd:"08:00",eindtijd:"",klant:"",adres:"",dienst:"",status:"Ingepland",herhaal:"",categorie:"",medewerker:""});
   const [newCat,setNewCat]=useState({naam:"",kleur:"#6366F1"});
+  const [deleteTaskDialog,setDeleteTaskDialog]=useState(null); // {id, herhaal_group_id, dienst, klant}
   const DAYS=["Ma","Di","Wo","Do","Vr","Za","Zo"];
   const MONTHS=["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
   const MC=["#6366F1","#8B5CF6","#EC4899","#14B8A6","#F59E0B","#10B981","#3B82F6","#EF4444"];
@@ -1819,13 +1820,14 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
     setSaveErr("");
     const base=new Date(nieuw.datum+"T00:00:00");
     const count=nieuw.herhaal==="daily"?365:nieuw.herhaal==="weekly"?52:nieuw.herhaal==="biweekly"?26:nieuw.herhaal==="monthly"?12:1;
+    const groupId=nieuw.herhaal?(crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(36).slice(2)}`):null;
     const rows=Array.from({length:count},(_,i)=>{
       const d=new Date(base);
       if(nieuw.herhaal==="daily")d.setDate(base.getDate()+i);
       else if(nieuw.herhaal==="weekly")d.setDate(base.getDate()+i*7);
       else if(nieuw.herhaal==="biweekly")d.setDate(base.getDate()+i*14);
       else if(nieuw.herhaal==="monthly")d.setMonth(base.getMonth()+i);
-      return{datum:fmtDate(d),tijd:nieuw.tijd,eindtijd:nieuw.eindtijd||null,klant:nieuw.klant,adres:nieuw.adres,dienst:nieuw.dienst,status:nieuw.status,herhaal:nieuw.herhaal||null,categorie:nieuw.categorie||null,medewerker:nieuw.medewerker||null,user_id:userId};
+      return{datum:fmtDate(d),tijd:nieuw.tijd,eindtijd:nieuw.eindtijd||null,klant:nieuw.klant,adres:nieuw.adres,dienst:nieuw.dienst,status:nieuw.status,herhaal:nieuw.herhaal||null,herhaal_group_id:groupId,categorie:nieuw.categorie||null,medewerker:nieuw.medewerker||null,user_id:userId};
     });
     const{error}=await supabase.from("planning").insert(rows);
     if(error){setSaveErr(error.message);return;}
@@ -1849,12 +1851,11 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
     await supabase.from("planning").update({status:cur==="Klaar"?"Ingepland":"Klaar"}).eq("id",id);
     refresh();
   };
-  const verwijder=async id=>{await supabase.from("planning").delete().eq("id",id);refresh();};
-  const verwijderHerhaling=async t=>{
-    if(!t.herhaal)return;
-    if(!window.confirm(`Alle herhalingen van "${t.dienst}" (${t.klant}) verwijderen?`))return;
-    await supabase.from("planning").delete().eq("user_id",userId).eq("klant",t.klant).eq("dienst",t.dienst).eq("tijd",t.tijd).eq("herhaal",t.herhaal);
-    refresh();
+  const verwijderEnkel=async id=>{await supabase.from("planning").delete().eq("id",id);setDeleteTaskDialog(null);refresh();};
+  const verwijderGroep=async groupId=>{await supabase.from("planning").delete().eq("herhaal_group_id",groupId);setDeleteTaskDialog(null);refresh();};
+  const initieerVerwijder=t=>{
+    if(t.herhaal_group_id){setDeleteTaskDialog(t);}
+    else{if(window.confirm("Afspraak verwijderen?"))verwijderEnkel(t.id);}
   };
 
   const prev=()=>view==="month"?setCursor(c=>new Date(c.getFullYear(),c.getMonth()-1,1)):setCursor(c=>{const n=new Date(c);n.setDate(c.getDate()-7);return n;});
@@ -1878,6 +1879,29 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
   const HOURS = Array.from({length:14},(_,i)=>i+7); // 7:00–20:00
 
   return(<div>
+    {deleteTaskDialog&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteTaskDialog(null)}>
+        <div style={{background:"#fff",borderRadius:18,padding:"32px 28px",maxWidth:380,width:"100%",boxShadow:"0 24px 64px rgba(0,0,0,.18)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontSize:22,marginBottom:10}}>🗑️</div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#0F172A",marginBottom:8}}>Afspraak verwijderen</div>
+          <div style={{fontSize:14,color:"#64748B",marginBottom:24,lineHeight:1.6}}>
+            <strong>{deleteTaskDialog.dienst}</strong> — {deleteTaskDialog.klant}<br/>
+            Dit is een terugkerende afspraak. Wat wil je verwijderen?
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <button onClick={()=>verwijderEnkel(deleteTaskDialog.id)} style={{background:"#F8FAFC",border:"1.5px solid #E5E7EB",borderRadius:12,padding:"13px 18px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#374151",fontFamily:"'DM Sans',sans-serif",textAlign:"left"}}>
+              📅 Alleen deze afspraak verwijderen
+            </button>
+            <button onClick={()=>verwijderGroep(deleteTaskDialog.herhaal_group_id)} style={{background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:12,padding:"13px 18px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#DC2626",fontFamily:"'DM Sans',sans-serif",textAlign:"left"}}>
+              🗑️ Alle herhalingen verwijderen
+            </button>
+            <button onClick={()=>setDeleteTaskDialog(null)} style={{background:"none",border:"none",fontSize:14,color:"#94A3B8",cursor:"pointer",padding:"8px",fontFamily:"'DM Sans',sans-serif"}}>
+              Annuleren
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="ph">
       <div><div className="pg-title">Planning</div><div className="pg-sub">{planning.length} opdrachten totaal</div></div>
       <div style={{display:"flex",gap:8}}>
@@ -1920,7 +1944,7 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
                             {t.adres&&<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.adres)}`} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:3,marginTop:4,fontSize:11.5,fontWeight:600,color:"#6366F1",textDecoration:"none"}}>📍 Navigeer</a>}
                             <div style={{display:"flex",gap:6,marginTop:8}}>
                               <button className="btn btn-outline btn-sm" style={{flex:1,fontSize:12}} onClick={e=>markDone(e,t.id,t.status)}>{t.status==="Klaar"?"↩ Open":"✓ Klaar"}</button>
-                              <button className="btn btn-danger btn-sm" style={{fontSize:12}} onClick={e=>{e.stopPropagation();if(window.confirm("Verwijderen?"))verwijder(t.id);}}>✕</button>
+                              <button className="btn btn-danger btn-sm" style={{fontSize:12}} onClick={e=>{e.stopPropagation();initieerVerwijder(t);}}>✕</button>
                             </div>
                           </div>
                         );
@@ -2004,7 +2028,7 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
                     {height>55&&<div className="cal-tbk-dienst">{t.dienst}</div>}
                     <div className="cal-tbk-actions">
                       <button style={{background:"none",border:"1px solid currentColor",borderRadius:3,padding:"1px 4px",fontSize:9,cursor:"pointer",color:"currentColor",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}} onClick={e=>markDone(e,t.id,t.status)}>{t.status==="Klaar"?"↩":"✓"}</button>
-                      <button style={{background:"none",border:"1px solid currentColor",borderRadius:3,padding:"1px 4px",fontSize:9,cursor:"pointer",color:"currentColor",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}} onClick={e=>{e.stopPropagation();if(window.confirm("Verwijderen?"))verwijder(t.id);}}>&#x2715;</button>
+                      <button style={{background:"none",border:"1px solid currentColor",borderRadius:3,padding:"1px 4px",fontSize:9,cursor:"pointer",color:"currentColor",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}} onClick={e=>{e.stopPropagation();initieerVerwijder(t);}}>&#x2715;</button>
                     </div>
                   </div>;
                 })}
@@ -2059,7 +2083,7 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
 }
 
 // ── CRM ───────────────────────────────────────────────────────
-function CRMTab({ userId, klanten, refresh }) {
+function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
   const mob = useMobile();
   const [mobDetail,setMobDetail]=useState(null);
   const [q,setQ]=useState("");
@@ -2109,9 +2133,21 @@ function CRMTab({ userId, klanten, refresh }) {
     refresh();
   };
 
-  const verwijder = async (id) => {
-    const {error}=await supabase.from("klanten").delete().eq("id",id);
-    if(!error)refresh();
+  const verwijder = async (id, naam) => {
+    const nO=(offertes||[]).filter(o=>o.klant===naam).length;
+    const nF=(facturen||[]).filter(f=>f.klant===naam).length;
+    const nW=(werkbonnen||[]).filter(w=>w.klant===naam).length;
+    const parts=[];
+    if(nO>0)parts.push(`${nO} offerte${nO!==1?"s":""}`);
+    if(nF>0)parts.push(`${nF} factuur${nF!==1?" / facturen":""}`);
+    if(nW>0)parts.push(`${nW} werkbon${nW!==1?"nen":""}`);
+    const waarschuwing=parts.length>0
+      ?`⚠️ "${naam}" heeft nog ${parts.join(", ")} in het systeem.\n\nDeze records blijven bestaan maar zijn niet meer aan een klant gekoppeld.\n\nWeet je zeker dat je deze klant wil verwijderen?`
+      :`Klant "${naam}" verwijderen?`;
+    if(!window.confirm(waarschuwing))return false;
+    const{error}=await supabase.from("klanten").delete().eq("id",id);
+    if(!error){refresh();return true;}
+    return false;
   };
 
   return(<div>
@@ -2132,7 +2168,7 @@ function CRMTab({ userId, klanten, refresh }) {
         {mobDetail.tel&&<a href={`tel:${mobDetail.tel}`} className="mob-det-action-btn" style={{textDecoration:"none"}}><span className="mob-det-action-ic">📞</span>Bellen</a>}
         {mobDetail.email&&<a href={`mailto:${mobDetail.email}`} className="mob-det-action-btn" style={{textDecoration:"none"}}><span className="mob-det-action-ic">✉️</span>E-mailen</a>}
         <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic">✎</span>Bewerken</button>
-        <button className="mob-det-action-btn danger" onClick={()=>{if(window.confirm("Klant verwijderen?")){verwijder(mobDetail.id);setMobDetail(null);}}}><span className="mob-det-action-ic">🗑</span>Verwijderen</button>
+        <button className="mob-det-action-btn danger" onClick={async()=>{if(await verwijder(mobDetail.id,mobDetail.naam))setMobDetail(null);}}><span className="mob-det-action-ic">🗑</span>Verwijderen</button>
       </MobDetailScreen>
     )}
     <div className="ph"><div><div className="pg-title">Klantenbeheer</div><div className="pg-sub">{klanten.length} klanten</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Klant</button></div>
@@ -2154,7 +2190,7 @@ function CRMTab({ userId, klanten, refresh }) {
             </div>
           ))}</div>
         : <div style={{display:"flex",flexDirection:"column",gap:9}}>
-            {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-outline btn-sm" onClick={()=>startEdit(k)}>✎</button><button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Klant verwijderen?"))verwijder(k.id);}}>✕</button></div>)}
+            {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-outline btn-sm" onClick={()=>startEdit(k)}>✎</button><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id,k.naam)}>✕</button></div>)}
           </div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
@@ -3720,6 +3756,21 @@ function WerkMateApp({ user, onLogout }) {
     setShowSubscription(true);
   };
 
+  const handleTabSwitch = async (newTab) => {
+    setTab(newTab);
+    if (SUBSCRIPTION_WHITELIST.includes(user.email)) return;
+    // Re-check subscription status in the background on every tab switch.
+    // Only block if we get back a definitively expired status.
+    try {
+      const { data: sub } = await supabase.from("subscriptions").select("status,trial_ends_at").eq("user_id", orgOwnerId).maybeSingle();
+      if (!sub) return;
+      setSubscription(sub);
+      const isActive = sub.status === "active";
+      const inTrial  = sub.status === "trialing" && sub.trial_ends_at && new Date(sub.trial_ends_at) > new Date();
+      if (!isActive && !inTrial) setMustSubscribe(true);
+    } catch { /* network error — don't block the user */ }
+  };
+
   if (loadingData) return (
     <div style={{ minHeight:"100vh", background:"#0F0F14", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:18, fontFamily:"sans-serif" }}>
       ⚡ Laden...
@@ -3732,7 +3783,7 @@ function WerkMateApp({ user, onLogout }) {
       case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={orgOwnerId} offertes={offertes} klanten={klanten} refresh={refreshAlles} bedrijf={bedrijf} emailTemplates={emailTemplates}/>;
       case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst}/>;
       case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
-      case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} refresh={refreshAlles}/>;
+      case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} offertes={offertes} facturen={facturen} werkbonnen={werkbonnen} refresh={refreshAlles}/>;
       case "profiel":     return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} certificaten={certificaten} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} />;
       case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf} emailSettings={emailSettings} emailTemplates={emailTemplates}/>;
       case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
@@ -3771,7 +3822,7 @@ function WerkMateApp({ user, onLogout }) {
           </div>
           <div className="nav-wrap">
             {NAV_ITEMS.map(item=>(
-              <button key={item.id} className={`nb ${tab===item.id?"on":""}`} onClick={()=>setTab(item.id)}>
+              <button key={item.id} className={`nb ${tab===item.id?"on":""}`} onClick={()=>handleTabSwitch(item.id)}>
                 <span className="nb-ic">{item.icon}</span>{item.label}
               </button>
             ))}
@@ -3791,7 +3842,7 @@ function WerkMateApp({ user, onLogout }) {
                 <span className="mob-nb-ic">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
-            : <button key={item.id} className={`mob-nb${tab === item.id && !mobMore ? " mob-nb-on" : ""}`} onClick={() => { setTab(item.id); setMobMore(false); }}>
+            : <button key={item.id} className={`mob-nb${tab === item.id && !mobMore ? " mob-nb-on" : ""}`} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }}>
                 <span className="mob-nb-ic">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
@@ -3801,7 +3852,7 @@ function WerkMateApp({ user, onLogout }) {
         {mobMore && (
           <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,borderTop:"1px solid #E5E7EB",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
             {MOB_MORE.map(item => (
-              <button key={item.id} onClick={() => { setTab(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:tab===item.id?"#EEF2FF":"#F8FAFC",border:`1.5px solid ${tab===item.id?"#C7D2FE":"#E5E7EB"}`,borderRadius:12,color:tab===item.id?"#6366F1":"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+              <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:tab===item.id?"#EEF2FF":"#F8FAFC",border:`1.5px solid ${tab===item.id?"#C7D2FE":"#E5E7EB"}`,borderRadius:12,color:tab===item.id?"#6366F1":"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
                 <span style={{fontSize:18}}>{item.icon}</span>{item.label}
               </button>
             ))}
