@@ -115,7 +115,7 @@ function Auth({ onLogin }) {
     setLoading(false);
   };
 
-  const inputStyle = { width:"100%", border:"1.5px solid #E5E7EB", borderRadius:9, padding:"10px 13px", fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" };
+  const inputStyle = { width:"100%", border:"1.5px solid #E5E7EB", borderRadius:9, padding:"10px 13px", fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box", color:"#111", background:"#fff" };
   const berichtStyle = { background:"#EEF2FF", border:"1px solid #C7D2FE", borderRadius:8, padding:"10px 13px", fontSize:12.5, color:"#4338CA", marginBottom:14 };
 
   return (
