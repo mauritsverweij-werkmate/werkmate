@@ -1055,57 +1055,178 @@ function LeegScherm({ icon, titel, sub, actie, onActie }) {
 }
 
 // ── Onboarding Wizard ─────────────────────────────────────────
-function OnboardingWizard({ onDone }) {
+function OnboardingWizard({ userId, onDone }) {
+  const mob = useMobile();
   const [step, setStep] = useState(0);
-  const [data, setData] = useState({ bedrijfsnaam:"", sector:"", stad:"", adres:"", telefoon:"", email:"", diensten:"", logo:"" });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const [data, setData] = useState({ bedrijfsnaam:"", sector:"", telefoon:"", email:"", adres:"", logo:"", google_review_url:"" });
+  const [logoPreview, setLogoPreview] = useState("");
+
   const sectoren = [
-    {id:"bouw",icon:"🔨",label:"Bouw"},{id:"schoonmaak",icon:"🧹",label:"Schoonmaak"},
-    {id:"catering",icon:"🍽️",label:"Catering"},{id:"tuinieren",icon:"🌿",label:"Tuinieren"},
-    {id:"beveiliging",icon:"🛡️",label:"Beveiliging"},{id:"transport",icon:"🚚",label:"Transport"},
-    {id:"airco",icon:"❄️",label:"Airco/Klimaat"},{id:"loodgieter",icon:"🔧",label:"Loodgieter"},
-    {id:"elektricien",icon:"⚡",label:"Elektricien"},{id:"overig",icon:"🔨",label:"Overig"},
+    {id:"elektricien",icon:"⚡",label:"Elektricien"},{id:"loodgieter",icon:"🔧",label:"Loodgieter"},
+    {id:"bouw",icon:"🏗️",label:"Bouw"},{id:"schoonmaak",icon:"🧹",label:"Schoonmaak"},
+    {id:"airco",icon:"❄️",label:"Airco/Klimaat"},{id:"tuinieren",icon:"🌿",label:"Tuinieren"},
+    {id:"transport",icon:"🚚",label:"Transport"},{id:"beveiliging",icon:"🛡️",label:"Beveiliging"},
+    {id:"catering",icon:"🍽️",label:"Catering"},{id:"overig",icon:"🔩",label:"Overig"},
   ];
-  const steps = ["Sector","Bedrijf","Diensten","Klaar"];
+  const STEPS = ["Bedrijf","Logo","Prijslijst","Reviews","Klaar"];
+
+  const saveProfiel = async (fields) => {
+    const { error } = await supabase.from("bedrijfsprofiel").upsert(
+      { user_id: userId, ...fields },
+      { onConflict: "user_id" }
+    );
+    return error;
+  };
+
+  const next = async (fields) => {
+    if (fields) {
+      setSaving(true); setErr("");
+      const error = await saveProfiel(fields);
+      setSaving(false);
+      if (error) { setErr("Opslaan mislukt. Probeer het opnieuw."); return; }
+    }
+    setStep(s => s + 1);
+  };
+
+  const skip = () => setStep(s => s + 1);
+
+  const prijs = getPrijslijstTemplate(data.sector);
+  const cardStyle = {background:"#fff",borderRadius:24,padding:mob?"28px 20px 24px":"44px 44px 36px",width:"100%",maxWidth:560,boxShadow:"0 24px 64px rgba(99,102,241,0.12)"};
+  const h2 = {fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:17,color:"#111",marginBottom:4};
+  const sub = {fontSize:13,color:"#888",marginBottom:16};
+
   return (
-    <div className="overlay"><div className="modal modal-lg">
-      <div className="mh"><div><div className="mt">👋 Welkom bij WerkMate</div><div className="ms">Even snel je bedrijf instellen — duurt minder dan 2 minuten</div></div></div>
-      <div className="mb">
-        <div className="step-bar">{steps.map((s,i)=><div key={s} className={`step ${i<step?"done":i===step?"active":"todo"}`}><div className="step-dot">{i<step?"✓":i+1}</div><div className="step-lbl">{s}</div></div>)}</div>
-        {step===0&&<><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:16,color:"#111",marginBottom:18}}>Wat voor bedrijf heb je?</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
-            {sectoren.map(s=><div key={s.id} className={`onboard-card ${data.sector===s.id?"sel":""}`} onClick={()=>setData({...data,sector:s.id})}><div style={{fontSize:26,marginBottom:6}}>{s.icon}</div><div style={{fontSize:13,fontWeight:600,color:"#111"}}>{s.label}</div></div>)}
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#F0F4FF 0%,#FAF5FF 100%)",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"32px 20px 48px",fontFamily:"'DM Sans',sans-serif"}}>
+      <div style={cardStyle}>
+        {/* Brand */}
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:36,marginBottom:6}}>⚡</div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:22,color:"#0F0F14"}}>WerkMate instellen</div>
+          <div style={{fontSize:13,color:"#94A3B8",marginTop:3}}>Duurt minder dan 2 minuten</div>
+        </div>
+        {/* Progress */}
+        <div className="step-bar" style={{marginBottom:28}}>
+          {STEPS.map((s,i)=>(
+            <div key={s} className={`step ${i<step?"done":i===step?"active":"todo"}`}>
+              <div className="step-dot">{i<step?"✓":i+1}</div>
+              <div className="step-lbl">{s}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Stap 1: Bedrijfsgegevens ── */}
+        {step===0&&<>
+          <div style={h2}>Wat voor bedrijf heb je?</div>
+          <div style={{...sub,marginBottom:14}}>Kies je sector — we stellen WerkMate dan voor jou in.</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:20}}>
+            {sectoren.map(s=>(
+              <div key={s.id} className={`onboard-card${data.sector===s.id?" sel":""}`} onClick={()=>setData({...data,sector:s.id})} style={{padding:"10px 4px"}}>
+                <div style={{fontSize:20,marginBottom:4}}>{s.icon}</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#111",lineHeight:1.3}}>{s.label}</div>
+              </div>
+            ))}
           </div>
-          <button className="btn btn-dark btn-full" style={{marginTop:20,opacity:data.sector?1:.5}} onClick={()=>setStep(1)} disabled={!data.sector}>Volgende →</button>
-        </>}
-        {step===1&&<><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:16,color:"#111",marginBottom:16}}>Je bedrijfsgegevens</div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15,color:"#111",marginBottom:12}}>Jouw bedrijfsgegevens</div>
+          <div className="ig"><label className="ilbl">Bedrijfsnaam *</label><input className="inp" value={data.bedrijfsnaam} onChange={e=>setData({...data,bedrijfsnaam:e.target.value})} placeholder="Bijv. Jansen Installatie BV"/></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div className="ig"><label className="ilbl">Bedrijfsnaam</label><input className="inp" value={data.bedrijfsnaam} onChange={e=>setData({...data,bedrijfsnaam:e.target.value})} placeholder="Bijv: Jansen Installatie"/></div>
-            <div className="ig"><label className="ilbl">Stad</label><input className="inp" value={data.stad} onChange={e=>setData({...data,stad:e.target.value})} placeholder="Bijv: Rotterdam"/></div>
-            <div className="ig"><label className="ilbl">Adres</label><input className="inp" value={data.adres} onChange={e=>setData({...data,adres:e.target.value})} placeholder="Straat 12, 1011AB Amsterdam"/></div>
-            <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" value={data.telefoon} onChange={e=>setData({...data,telefoon:e.target.value})} placeholder="06-12345678"/></div>
-            <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={data.email} onChange={e=>setData({...data,email:e.target.value})} placeholder="info@bedrijf.nl"/></div>
-            <div className="ig"><label className="ilbl">Logo upload</label><input className="inp" type="file" accept="image/*" onChange={async(e)=>{
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => setData({...data,logo: reader.result?.toString() || data.logo});
-                reader.readAsDataURL(file);
-              }} /></div>
+            <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" type="tel" value={data.telefoon} onChange={e=>setData({...data,telefoon:e.target.value})} placeholder="06-12345678"/></div>
+            <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={data.email} onChange={e=>setData({...data,email:e.target.value})} placeholder="info@bedrijf.nl"/></div>
           </div>
-          <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setStep(0)}>← Terug</button><button className="btn btn-dark btn-full" onClick={()=>setStep(2)} disabled={!data.bedrijfsnaam||!data.stad}>Volgende →</button></div>
+          <div className="ig"><label className="ilbl">Adres</label><input className="inp" value={data.adres} onChange={e=>setData({...data,adres:e.target.value})} placeholder="Straat 12, 1234AB Amsterdam"/></div>
+          {err&&<div style={{color:"#B91C1C",fontSize:13,marginBottom:10}}>{err}</div>}
+          <button className="btn btn-dark btn-full" style={{marginTop:4,opacity:(!data.sector||!data.bedrijfsnaam)?0.5:1}} disabled={saving||!data.sector||!data.bedrijfsnaam}
+            onClick={()=>next({bedrijfsnaam:data.bedrijfsnaam,sector:data.sector,telefoon:data.telefoon,email:data.email,adres:data.adres,stad:""})}>
+            {saving?"Opslaan…":"Volgende →"}
+          </button>
         </>}
-        {step===2&&<><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:16,color:"#111",marginBottom:16}}>Welke diensten bied je aan?</div>
-          <div className="ig"><label className="ilbl">Diensten (komma gescheiden)</label><input className="inp" value={data.diensten} onChange={e=>setData({...data,diensten:e.target.value})} placeholder="Bijv: CV ketel onderhoud, Airco installatie"/></div>
-          <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setStep(1)}>← Terug</button><button className="btn btn-dark btn-full" onClick={()=>setStep(3)}>Volgende →</button></div>
+
+        {/* ── Stap 2: Logo ── */}
+        {step===1&&<>
+          <div style={h2}>Logo uploaden</div>
+          <div style={sub}>Optioneel — je kunt dit ook later toevoegen via je profiel.</div>
+          <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,border:"2px dashed #E2E8F0",borderRadius:16,padding:"36px 20px",cursor:"pointer",background:"#FAFAFA",marginBottom:14}}>
+            {logoPreview
+              ? <img src={logoPreview} alt="Logo" style={{maxWidth:180,maxHeight:110,objectFit:"contain",borderRadius:10}}/>
+              : <>
+                  <div style={{fontSize:44}}>🖼️</div>
+                  <div style={{fontWeight:600,fontSize:14,color:"#374151"}}>Klik om je logo te kiezen</div>
+                  <div style={{fontSize:12,color:"#94A3B8"}}>PNG, JPG of SVG</div>
+                </>}
+            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
+              const file=e.target.files?.[0]; if(!file)return;
+              const r=new FileReader();
+              r.onload=()=>{const s=r.result?.toString()||"";setData(d=>({...d,logo:s}));setLogoPreview(s);};
+              r.readAsDataURL(file);
+            }}/>
+          </label>
+          {logoPreview&&<button type="button" className="btn btn-ghost btn-sm" style={{marginBottom:14}} onClick={()=>{setLogoPreview("");setData(d=>({...d,logo:""}));}}>✕ Verwijderen</button>}
+          {err&&<div style={{color:"#B91C1C",fontSize:13,marginBottom:10}}>{err}</div>}
+          <div style={{display:"flex",gap:9}}>
+            <button className="btn btn-ghost" onClick={skip}>Overslaan</button>
+            <button className="btn btn-dark btn-full" disabled={saving} onClick={()=>logoPreview?next({logo:data.logo}):skip()}>{saving?"Opslaan…":"Volgende →"}</button>
+          </div>
         </>}
-        {step===3&&<div style={{textAlign:"center",padding:"20px 0 10px"}}>
-          <div style={{fontSize:48,marginBottom:12}}>🎉</div>
-          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#111",marginBottom:8}}>{data.bedrijfsnaam||"Jouw bedrijf"} staat klaar!</div>
-          <div style={{fontSize:13.5,color:"#888",marginBottom:24}}>WerkMate is ingesteld voor jouw bedrijf.</div>
-          <button className="btn btn-ai btn-full" onClick={()=>onDone(data)} style={{fontSize:14,padding:"12px"}}>🚀 Start met WerkMate</button>
-        </div>}
+
+        {/* ── Stap 3: Prijslijst ── */}
+        {step===2&&<>
+          <div style={h2}>Jouw startprijslijst</div>
+          <div style={sub}>We hebben een standaardprijslijst klaargemaakt voor jouw sector. Je kunt dit later aanpassen onder <strong>Prijslijst</strong>.</div>
+          <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:14,padding:"4px 16px",marginBottom:20}}>
+            {prijs.slice(0,5).map((item,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<Math.min(4,prijs.length-1)?"1px solid #F1F5F9":"none"}}>
+                <span style={{fontSize:13,color:"#374151"}}>{item.dienst}</span>
+                <span style={{fontSize:13,fontWeight:600,color:"#111",whiteSpace:"nowrap",marginLeft:12}}>€ {item.prijs} / {item.eenheid}</span>
+              </div>
+            ))}
+            {prijs.length>5&&<div style={{fontSize:12,color:"#94A3B8",padding:"8px 0"}}>+ {prijs.length-5} meer diensten</div>}
+          </div>
+          <div style={{display:"flex",gap:9}}>
+            <button className="btn btn-ghost" onClick={skip}>Overslaan</button>
+            <button className="btn btn-dark btn-full" onClick={skip}>Gebruik deze lijst →</button>
+          </div>
+        </>}
+
+        {/* ── Stap 4: Google reviews ── */}
+        {step===3&&<>
+          <div style={h2}>Google reviews</div>
+          <div style={sub}>Vraag klanten automatisch om een review na een klus. Optioneel — je kunt dit ook later instellen.</div>
+          <div style={{background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:14,padding:"14px 18px",marginBottom:18}}>
+            <div style={{fontWeight:700,color:"#3730A3",fontSize:13,marginBottom:10}}>📍 Zo vind je jouw Google review link:</div>
+            <div style={{fontSize:13,color:"#4338CA",lineHeight:2}}>
+              <div>1. Ga naar <strong>Google Maps</strong></div>
+              <div>2. Zoek je <strong>bedrijfsnaam</strong></div>
+              <div>3. Klik op het tabblad <strong>"Reviews"</strong></div>
+              <div>4. <strong>Kopieer de link</strong> uit de adresbalk</div>
+            </div>
+          </div>
+          <div className="ig"><label className="ilbl">Review link (optioneel)</label><input className="inp" value={data.google_review_url} onChange={e=>setData({...data,google_review_url:e.target.value})} placeholder="https://g.page/r/..."/></div>
+          {err&&<div style={{color:"#B91C1C",fontSize:13,marginBottom:10}}>{err}</div>}
+          <div style={{display:"flex",gap:9}}>
+            <button className="btn btn-ghost" onClick={skip}>Overslaan</button>
+            <button className="btn btn-dark btn-full" disabled={saving} onClick={()=>data.google_review_url?next({google_review_url:data.google_review_url}):skip()}>{saving?"Opslaan…":"Volgende →"}</button>
+          </div>
+        </>}
+
+        {/* ── Stap 5: Klaar! ── */}
+        {step===4&&(
+          <div style={{textAlign:"center",padding:"8px 0 4px"}}>
+            <div style={{fontSize:60,marginBottom:14}}>🎉</div>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:22,color:"#0F0F14",marginBottom:10}}>
+              {data.bedrijfsnaam||"Je bedrijf"} staat klaar!
+            </div>
+            <div style={{fontSize:14,color:"#64748B",lineHeight:1.8,marginBottom:24}}>
+              WerkMate is ingesteld voor jouw bedrijf.<br/>
+              Maak je eerste offerte, klant of werkbon aan.
+            </div>
+            <button className="btn btn-ai btn-full" style={{fontSize:15,padding:"14px",justifyContent:"center"}} onClick={()=>onDone(data)}>
+              🚀 Start met WerkMate
+            </button>
+          </div>
+        )}
       </div>
-    </div></div>
+    </div>
   );
 }
 
@@ -3814,9 +3935,7 @@ function WerkMateApp({ user, onLogout }) {
       }
     };
 
-  const onDone = async (data) => {
-    const {error}=await supabase.from("bedrijfsprofiel").insert({ ...data, user_id: orgOwnerId });
-    if(error){console.error("Bedrijfsprofiel opslaan mislukt:",error);return;}
+  const onDone = (data) => {
     setBedrijf(data);
     setPrijslijst(getPrijslijstTemplate(data.sector));
     setShowOnboard(false);
@@ -3882,6 +4001,13 @@ function WerkMateApp({ user, onLogout }) {
     setShowSubscription(false);
   };
 
+  if (showOnboard) return (
+    <>
+      <style>{css}</style>
+      <OnboardingWizard userId={orgOwnerId} onDone={onDone}/>
+    </>
+  );
+
   if (showSubscription) return (
     <>
       <style>{css}</style>
@@ -3892,7 +4018,6 @@ function WerkMateApp({ user, onLogout }) {
   return (
     <>
       <style>{css}</style>
-      {showOnboard && <OnboardingWizard onDone={onDone}/>}
       <div className="shell">
         <div className="sidebar">
           <div className="sb-logo">
@@ -3913,7 +4038,7 @@ function WerkMateApp({ user, onLogout }) {
             <button className="logout-btn" onClick={onLogout}>Uitloggen</button>
           </div>
         </div>
-        <div className="main">{!showOnboard&&render()}</div>
+        <div className="main">{render()}</div>
         {/* bottom nav – mobile only (hidden via CSS on desktop) */}
         <nav className="mob-nav">
           {MOB_NAV.map(item => item.id === "meer"
