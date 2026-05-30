@@ -1583,6 +1583,48 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
     }
   };
 
+  const resendOfferEmail = async (o) => {
+    const k = (klanten||[]).find(x => x.naam === o.klant);
+    const email = k?.email || "";
+    if (!email) { alert("Geen e-mailadres bekend voor deze klant"); return null; }
+    const portal_url = o.portal_token ? `https://app.werkmate.tech/portal/${o.portal_token}` : undefined;
+    const tpl = emailTemplates?.offerte;
+    const vars = { klantnaam: o.klant, bedrijfsnaam: bedrijf?.bedrijfsnaam || "WerkMate", nummer: "" };
+    const regels = parseOfferRules(o);
+    const payload = {
+      action: "send-offer-email",
+      customer_email: email,
+      customer_name: o.klant,
+      company_name: bedrijf?.bedrijfsnaam,
+      dienst: o.dienst,
+      regels,
+      subtotaal: o.subtotaal || 0,
+      btw: o.btw || 0,
+      totaal: o.totaal || 0,
+      portal_url,
+      ...(tpl?.subject ? { custom_subject: fillVars(tpl.subject, vars) } : {}),
+      ...(tpl?.body    ? { custom_body:    fillVars(tpl.body,    vars) } : {}),
+      ...(bedrijf?.email ? { reply_to: bedrijf.email } : {}),
+      attachments: [{
+        type: "application/pdf",
+        filename: `offerte-${o.klant.replace(/\s+/g,"_")}.pdf`,
+        content: createOfferPdfBase64(o, bedrijf),
+      }],
+    };
+    const { data: { session: s } } = await supabase.auth.getSession();
+    const token = s?.access_token || import.meta.env.VITE_SUPABASE_KEY;
+    const response = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(data?.error || data?.message || String(response.status));
+    const subjectLogged = tpl?.subject ? fillVars(tpl.subject, vars) : `Offerte voor ${o.klant}`;
+    await logEmail(userId, email, subjectLogged, "offerte", `Offerte — ${o.dienst}`, "verzonden", data?.html || null);
+    return email;
+  };
+
   return(<div>
     {showAI&&<AIOfferte onClose={()=>setShowAI(false)} prijslijst={prijslijst} userId={userId} klanten={klanten} onSaved={refresh} bedrijf={bedrijf} emailTemplates={emailTemplates}/>}
     {mob && mobDetail && (
@@ -1597,17 +1639,13 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         <button className="mob-det-action-btn" onClick={()=>exportOfferPdf(mobDetail)}><span className="mob-det-action-ic">📄</span>PDF downloaden</button>
         {mobDetail.portal_token && (<>
           <button className="mob-det-action-btn" onClick={async()=>{
-            const url=`https://app.werkmate.tech/portal/${mobDetail.portal_token}`;
-            const k=(klanten||[]).find(x=>x.naam===mobDetail.klant);
-            const email=k?.email||"";
-            if(!email){alert("Geen e-mailadres bekend voor deze klant");return;}
-            const {data:{session:s}}=await supabase.auth.getSession();
-            const portalRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${s?.access_token}`},body:JSON.stringify({action:"send-portal-link",customer_email:email,customer_name:mobDetail.klant,portal_url:url,company_name:bedrijf?.bedrijfsnaam||"WerkMate"})});
-            const portalData=await portalRes.json().catch(()=>({}));
-            if(!portalRes.ok){alert("Versturen mislukt: "+(portalData.error||portalData.message||portalRes.status));return;}
-            await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",mobDetail.id);
-            refresh(); setMobDetail({...mobDetail,status:"Verstuurd"});
-            alert("Offerte verstuurd naar "+email);
+            try {
+              const email = await resendOfferEmail(mobDetail);
+              if (!email) return;
+              await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",mobDetail.id);
+              refresh(); setMobDetail({...mobDetail,status:"Verstuurd"});
+              alert("Offerte verstuurd naar "+email);
+            } catch(err) { alert("Versturen mislukt: "+err.message); }
           }}><span className="mob-det-action-ic">📤</span>Stuur naar klant</button>
           <button className="mob-det-action-btn" onClick={()=>waOfferte(mobDetail,klanten,bedrijf)}><span className="mob-det-action-ic">📱</span>Stuur via WhatsApp</button>
         </>)}
@@ -1646,17 +1684,13 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
               <td style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button>
-              {o.portal_token&&<button className="btn btn-ghost btn-sm" title="Stuur portaallink naar klant" onClick={async()=>{
-                const url=`https://app.werkmate.tech/portal/${o.portal_token}`;
-                const k=(klanten||[]).find(x=>x.naam===o.klant);
-                const email=k?.email||"";
-                if(!email){alert("Geen e-mailadres bekend");return;}
-                const {data:{session:s}}=await supabase.auth.getSession();
-                const plRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${s?.access_token}`},body:JSON.stringify({action:"send-portal-link",customer_email:email,customer_name:o.klant,portal_url:url,company_name:bedrijf?.bedrijfsnaam||"WerkMate"})});
-                const plData=await plRes.json().catch(()=>({}));
-                if(!plRes.ok){alert("Versturen mislukt: "+(plData.error||plData.message||plRes.status));return;}
-                await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
-                alert("Verstuurd naar "+email);
+              {o.portal_token&&<button className="btn btn-ghost btn-sm" title="Stuur offerte met PDF naar klant" onClick={async()=>{
+                try {
+                  const email = await resendOfferEmail(o);
+                  if (!email) return;
+                  await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
+                  alert("Verstuurd naar "+email);
+                } catch(err) { alert("Versturen mislukt: "+err.message); }
               }}>📤</button>}
               {o.portal_token&&<button className="btn btn-ghost btn-sm" title="WhatsApp" onClick={()=>waOfferte(o,klanten,bedrijf)}>📱</button>}
               <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
