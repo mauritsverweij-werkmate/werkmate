@@ -170,7 +170,8 @@ serve(async (req: Request) => {
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (resendKey) {
       const profiel = await fetchProfiel(offerte.user_id);
-      const companyName = esc(profiel?.bedrijfsnaam || "WerkMate");
+      const rawCompanySign = String(profiel?.bedrijfsnaam || "WerkMate");
+      const companyName = esc(rawCompanySign);
       const safeKlant   = esc(offerte.klant || klant_naam || "klant");
       const safeNummer  = esc(nummer);
       const sig = buildSignature(profiel);
@@ -179,7 +180,7 @@ serve(async (req: Request) => {
         fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-          body: JSON.stringify({ from: `${companyName} <info@werkmate.tech>`, to, subject, html }),
+          body: JSON.stringify({ from: `${rawCompanySign} <info@werkmate.tech>`, to, subject, html }),
         });
 
       const clientEmail = isValidEmail(klant_email) ? klant_email! : (isValidEmail(offerte.klant_email) ? offerte.klant_email : null);
@@ -227,7 +228,8 @@ serve(async (req: Request) => {
     if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
     const profiel = await fetchProfiel(u2.id);
-    const cn       = esc(company_name || profiel?.bedrijfsnaam || "WerkMate");
+    const rawCn    = String(company_name || profiel?.bedrijfsnaam || "WerkMate");
+    const cn       = esc(rawCn);
     const safeName = esc(customer_name || "");
     const safeUrl  = esc(portal_url || "");
     const sig      = buildSignature(profiel);
@@ -242,8 +244,8 @@ serve(async (req: Request) => {
       sig);
 
     const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
-    const finalSubject = customSubject || `Offerte van ${cn} — bekijk en onderteken`;
-    const r2 = await sendViaResend(resendKey, { from: `${cn} <info@werkmate.tech>`, to: customer_email, subject: finalSubject, html });
+    const finalSubject = customSubject || `Offerte van ${rawCn} — bekijk en onderteken`;
+    const r2 = await sendViaResend(resendKey, { from: `${rawCn} <info@werkmate.tech>`, to: customer_email, subject: finalSubject, html });
     if (!r2.ok) return json({ error: r2.error, message: r2.error }, 422);
     return json({ success: true, id: r2.id, html });
   }
@@ -342,10 +344,11 @@ serve(async (req: Request) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const profiel     = await fetchProfiel(user.id);
-      const companyName = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
-      const acceptLink  = `${appUrl}?invite_token=${encodeURIComponent(inviteToken as string)}&email=${encodeURIComponent(inviteEmail as string)}`;
-      const sig         = buildSignature(profiel);
+      const profiel         = await fetchProfiel(user.id);
+      const rawCompanyName  = String(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
+      const companyName     = esc(rawCompanyName);
+      const acceptLink      = `${appUrl}?invite_token=${encodeURIComponent(inviteToken as string)}&email=${encodeURIComponent(inviteEmail as string)}`;
+      const sig             = buildSignature(profiel);
 
       const html = emailWrapper(companyName,
         `<p style="margin:0 0 16px;font-size:16px;">Je bent uitgenodigd om WerkMate te gebruiken.</p>
@@ -359,7 +362,7 @@ serve(async (req: Request) => {
 
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const payload: Record<string, unknown> = {
-        from: `${companyName} <info@werkmate.tech>`,
+        from: `${rawCompanyName} <info@werkmate.tech>`,
         to: inviteEmail,
         subject: "Je bent uitgenodigd voor WerkMate",
         text: `Je bent uitgenodigd voor WerkMate. Open deze link: ${acceptLink}`,
@@ -385,11 +388,12 @@ serve(async (req: Request) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const profiel      = await fetchProfiel(user.id);
-      const companyName  = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
-      const safeCustomer = esc(customer_name);
-      const safePortal   = portal_url ? esc(portal_url) : null;
-      const sig          = buildSignature(profiel);
+      const profiel          = await fetchProfiel(user.id);
+      const rawCompanyName   = String(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
+      const companyName      = esc(rawCompanyName);
+      const safeCustomer     = esc(customer_name);
+      const safePortal       = portal_url ? esc(portal_url) : null;
+      const sig              = buildSignature(profiel);
 
       const portalBlock = safePortal ? `
 <p style="margin:0 0 10px;font-size:13px;color:#6b7280;">U kunt de offerte ook online inzien en ondertekenen:</p>
@@ -408,9 +412,9 @@ serve(async (req: Request) => {
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const payload: Record<string, unknown> = {
-        from: `${companyName} <info@werkmate.tech>`,
+        from: `${rawCompanyName} <info@werkmate.tech>`,
         to: customer_email,
-        subject: customSubject || `Offerte van ${companyName} voor ${safeCustomer}`,
+        subject: customSubject || `Offerte van ${rawCompanyName} voor ${safeCustomer}`,
         html,
         ...(replyTo ? { reply_to: replyTo } : {}),
       };
@@ -430,11 +434,12 @@ serve(async (req: Request) => {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const profiel        = await fetchProfiel(user.id);
-      const companyName    = esc(company_name || profiel?.bedrijfsnaam || "WerkMate");
-      const serviceText    = esc(service_description || "de service");
-      const sig            = buildSignature(profiel);
-      const rawReviewUrl   = body.google_review_url || (profiel as Record<string,unknown>)?.google_review_url;
+      const profiel            = await fetchProfiel(user.id);
+      const rawCompanyName     = String(company_name || profiel?.bedrijfsnaam || "WerkMate");
+      const companyName        = esc(rawCompanyName);
+      const serviceText        = esc(service_description || "de service");
+      const sig                = buildSignature(profiel);
+      const rawReviewUrl       = body.google_review_url || (profiel as Record<string,unknown>)?.google_review_url;
       const safeReviewUrl  = typeof rawReviewUrl === "string" && rawReviewUrl.startsWith("http") ? rawReviewUrl : null;
 
       const reviewBtn = safeReviewUrl
@@ -458,10 +463,10 @@ ${reviewBtn}`;
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const reviewLinkText = safeReviewUrl ? `\n\nLaat een review achter: ${safeReviewUrl}` : "";
       const payload: Record<string, unknown> = {
-        from: `${companyName} <info@werkmate.tech>`,
+        from: `${rawCompanyName} <info@werkmate.tech>`,
         to: customer_email,
-        subject: customSubject || `Hoe was uw ervaring met ${companyName}?`,
-        text: `Hallo,\n\nBedankt voor het vertrouwen in ${companyName}! We hopen dat u tevreden bent over ${service_description || "de service"}.\n\nZou u een review willen achterlaten? Dat helpt ons enorm.${reviewLinkText}\n\nMet vriendelijke groet,\n${companyName}`,
+        subject: customSubject || `Hoe was uw ervaring met ${rawCompanyName}?`,
+        text: `Hallo,\n\nBedankt voor het vertrouwen in ${rawCompanyName}! We hopen dat u tevreden bent over ${service_description || "de service"}.\n\nZou u een review willen achterlaten? Dat helpt ons enorm.${reviewLinkText}\n\nMet vriendelijke groet,\n${rawCompanyName}`,
         html,
         ...(replyTo ? { reply_to: replyTo } : {}),
       };
@@ -480,20 +485,21 @@ ${reviewBtn}`;
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const profiel      = await fetchProfiel(user.id);
-      const companyName  = esc(profiel?.bedrijfsnaam || "WerkMate");
-      const sig          = buildSignature(profiel);
-      const safeMsg      = esc(message).replace(/\n/g, "<br>");
+      const profiel          = await fetchProfiel(user.id);
+      const rawCompanyName   = String(profiel?.bedrijfsnaam || "WerkMate");
+      const companyName      = esc(rawCompanyName);
+      const sig              = buildSignature(profiel);
+      const safeMsg          = esc(message).replace(/\n/g, "<br>");
 
       const html = emailWrapper(companyName,
         `<div style="font-size:15px;color:#374151;line-height:1.7;white-space:pre-line;">${safeMsg}</div>`,
         sig);
 
       const r = await sendViaResend(resendKey, {
-        from: `${companyName} <info@werkmate.tech>`,
+        from: `${rawCompanyName} <info@werkmate.tech>`,
         to: to_email,
-        subject: esc(subject),
-        text: `${message}\n\nMet vriendelijke groet,\n${companyName}`,
+        subject: String(subject),
+        text: `${message}\n\nMet vriendelijke groet,\n${rawCompanyName}`,
         html,
       });
       if (!r.ok) return json({ error: r.error, message: r.error }, 422);
@@ -511,11 +517,12 @@ ${reviewBtn}`;
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const profiel      = await fetchProfiel(user.id);
-      const companyName  = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
-      const safeCustomer = esc(customer_name);
-      const safeNummer   = esc(factuur_nummer || "");
-      const sig          = buildSignature(profiel);
+      const profiel          = await fetchProfiel(user.id);
+      const rawCompanyName   = String(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
+      const companyName      = esc(rawCompanyName);
+      const safeCustomer     = esc(customer_name);
+      const safeNummer       = esc(factuur_nummer || "");
+      const sig              = buildSignature(profiel);
 
       const customBody = typeof body.custom_body === "string" && body.custom_body.trim() ? body.custom_body.trim() : null;
       const bodyContent = customBody
@@ -528,12 +535,12 @@ ${reviewBtn}`;
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const textInv = customBody
-        ? `${customBody}\n\nMet vriendelijke groet,\n${companyName}`
-        : `Geachte ${safeCustomer},\n\nHierbij ontvangt u factuur ${safeNummer} in de bijlage.\n\nBij vragen kunt u altijd contact met ons opnemen.\n\nMet vriendelijke groet,\n${companyName}`;
+        ? `${customBody}\n\nMet vriendelijke groet,\n${rawCompanyName}`
+        : `Geachte ${safeCustomer},\n\nHierbij ontvangt u factuur ${safeNummer} in de bijlage.\n\nBij vragen kunt u altijd contact met ons opnemen.\n\nMet vriendelijke groet,\n${rawCompanyName}`;
       const payload: Record<string, unknown> = {
-        from: `${companyName} <info@werkmate.tech>`,
+        from: `${rawCompanyName} <info@werkmate.tech>`,
         to: customer_email,
-        subject: customSubject || `Factuur ${safeNummer} van ${companyName}`,
+        subject: customSubject || `Factuur ${safeNummer} van ${rawCompanyName}`,
         text: textInv,
         html,
       };
@@ -555,11 +562,12 @@ ${reviewBtn}`;
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
 
-      const profiel      = await fetchProfiel(user.id);
-      const companyName  = esc(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
-      const safeCustomer = esc(customer_name);
-      const safeNummer   = esc(factuur_nummer || "");
-      const totaalFmt    = totaal != null
+      const profiel          = await fetchProfiel(user.id);
+      const rawCompanyName   = String(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
+      const companyName      = esc(rawCompanyName);
+      const safeCustomer     = esc(customer_name);
+      const safeNummer       = esc(factuur_nummer || "");
+      const totaalFmt        = totaal != null
         ? `€ ${Number(totaal).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`
         : "";
       const sig = buildSignature(profiel);
@@ -575,12 +583,12 @@ ${reviewBtn}`;
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       // Avoid spam-trigger words ("betalingsherinnering") and Unicode em-dashes in subject
-      const defaultSubjectRem = `Factuur ${safeNummer} - nog openstaand (${companyName})`;
+      const defaultSubjectRem = `Factuur ${safeNummer} - nog openstaand (${rawCompanyName})`;
       const textRem = customBody
-        ? `${customBody}\n\nMet vriendelijke groet,\n${companyName}`
-        : `Geachte ${safeCustomer},\n\nWij willen u vriendelijk herinneren aan openstaande factuur ${safeNummer}${totaalFmt ? ` van ${totaalFmt}` : ""}.\n\nGelieve het bedrag zo spoedig mogelijk over te maken.\n\nMet vriendelijke groet,\n${companyName}`;
+        ? `${customBody}\n\nMet vriendelijke groet,\n${rawCompanyName}`
+        : `Geachte ${safeCustomer},\n\nWij willen u vriendelijk herinneren aan openstaande factuur ${safeNummer}${totaalFmt ? ` van ${totaalFmt}` : ""}.\n\nGelieve het bedrag zo spoedig mogelijk over te maken.\n\nMet vriendelijke groet,\n${rawCompanyName}`;
       const payload: Record<string, unknown> = {
-        from: `${companyName} <info@werkmate.tech>`,
+        from: `${rawCompanyName} <info@werkmate.tech>`,
         to: customer_email,
         subject: customSubject || defaultSubjectRem,
         text: textRem,

@@ -793,7 +793,7 @@ const createOfferPdfDocument = (offer, bedrijf) => {
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text(company.bedrijfsnaam, 20, 25);
+  doc.text(String(company.bedrijfsnaam || "Bedrijf"), 20, 25);
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
   doc.text(`Datum: ${today}`, 20, 34);
@@ -1547,7 +1547,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
     const doc = new jsPDF({ unit: "mm", format: "a4" });
     doc.setFont("helvetica", "bold");
     doc.setFontSize(20);
-    doc.text(company.bedrijfsnaam, 20, 25);
+    doc.text(String(company.bedrijfsnaam || "Bedrijf"), 20, 25);
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     doc.text(`Datum: ${today}`, 20, 34);
@@ -1634,7 +1634,9 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
             const email=k?.email||"";
             if(!email){alert("Geen e-mailadres bekend voor deze klant");return;}
             const {data:{session:s}}=await supabase.auth.getSession();
-            await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${s?.access_token}`},body:JSON.stringify({action:"send-portal-link",klant_email:email,klant_naam:mobDetail.klant,portal_url:url,company_name:bedrijf?.bedrijfsnaam||"WerkMate",bedrag:mobDetail.bedrag})});
+            const portalRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${s?.access_token}`},body:JSON.stringify({action:"send-portal-link",customer_email:email,customer_name:mobDetail.klant,portal_url:url,company_name:bedrijf?.bedrijfsnaam||"WerkMate"})});
+            const portalData=await portalRes.json().catch(()=>({}));
+            if(!portalRes.ok){alert("Versturen mislukt: "+(portalData.error||portalData.message||portalRes.status));return;}
             await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",mobDetail.id);
             refresh(); setMobDetail({...mobDetail,status:"Verstuurd"});
             alert("Offerte verstuurd naar "+email);
@@ -1682,7 +1684,9 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
                 const email=k?.email||"";
                 if(!email){alert("Geen e-mailadres bekend");return;}
                 const {data:{session:s}}=await supabase.auth.getSession();
-                await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${s?.access_token}`},body:JSON.stringify({action:"send-portal-link",klant_email:email,klant_naam:o.klant,portal_url:url,company_name:bedrijf?.bedrijfsnaam||"WerkMate",bedrag:o.bedrag})});
+                const plRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${s?.access_token}`},body:JSON.stringify({action:"send-portal-link",customer_email:email,customer_name:o.klant,portal_url:url,company_name:bedrijf?.bedrijfsnaam||"WerkMate"})});
+                const plData=await plRes.json().catch(()=>({}));
+                if(!plRes.ok){alert("Versturen mislukt: "+(plData.error||plData.message||plRes.status));return;}
                 await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
                 alert("Verstuurd naar "+email);
               }}>📤</button>}
@@ -1697,11 +1701,33 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
 }
 
 // ── Prijslijst ────────────────────────────────────────────────
+// Fuzzy column detector for Excel import: returns the best-matching header key for each field.
+function detectPrijslijstColumns(headers) {
+  const scored = (keywords) => {
+    let best = null, bestScore = 0;
+    for (const h of headers) {
+      const lh = String(h).toLowerCase();
+      for (const kw of keywords) {
+        const s = lh === kw ? 100 : lh.includes(kw) ? 80 : kw.includes(lh) && lh.length >= 3 ? 60 : 0;
+        if (s > bestScore) { bestScore = s; best = h; }
+      }
+    }
+    return bestScore >= 60 ? best : null;
+  };
+  return {
+    dienst:    scored(["dienst","service","omschrijving","beschrijving","naam","artikel","product","activiteit","werk","taak","title","titel"]),
+    prijs:     scored(["prijs","price","tarief","bedrag","rate","kosten","cost","euro","€","amount"]),
+    eenheid:   scored(["eenheid","unit","per","maat"]),
+    categorie: scored(["categorie","category","type","soort","groep","group"]),
+  };
+}
+
 function PrijslijstTab({ initialItems, onSaveItems }) {
   const [items,setItems]=useState(initialItems || []);
   const [saved,setSaved]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
   const [nieuw,setNieuw]=useState({dienst:"",eenheid:"uur",prijs:"",categorie:"Arbeid"});
+  const [importError,setImportError]=useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -1725,32 +1751,59 @@ function PrijslijstTab({ initialItems, onSaveItems }) {
   const importFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setImportError(null);
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    event.target.value = "";
+    if (!rows.length) { setImportError({ type:"empty" }); return; }
+    const headers = Object.keys(rows[0]);
+    const cols = detectPrijslijstColumns(headers);
+    if (!cols.dienst || !cols.prijs) {
+      const missing = [!cols.dienst && "dienst / omschrijving", !cols.prijs && "prijs / tarief"].filter(Boolean);
+      setImportError({ type:"cols", missing, found: headers });
+      return;
+    }
     const imported = rows.map((row, index) => {
-      const dienst = String(row.dienst || row.Dienst || row.service || row.Service || "").trim();
+      const dienst = String(row[cols.dienst] || "").trim();
       if (!dienst) return null;
       return {
         id: Date.now() + index,
         dienst,
-        prijs: parsePrice(row.prijs || row.Prijs || row.price || row.Price),
-        eenheid: String(row.eenheid || row.Eenheid || row.unit || row.Unit || "uur").trim() || "uur",
-        categorie: "Overig",
+        prijs: parsePrice(row[cols.prijs]),
+        eenheid: cols.eenheid ? String(row[cols.eenheid] || "uur").trim() || "uur" : "uur",
+        categorie: cols.categorie ? String(row[cols.categorie] || "Overig").trim() || "Overig" : "Overig",
       };
     }).filter(Boolean);
-    if (imported.length > 0) {
-      setItems((current) => [...current, ...imported]);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    }
-    event.target.value = "";
+    if (!imported.length) { setImportError({ type:"norows" }); return; }
+    setItems((current) => [...current, ...imported]);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
   return(<div>
     <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — de slimme generator gebruikt deze als basis</div></div><div style={{display:"flex",gap:8,alignItems:"center"}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}>+ Dienst</button><button className="btn btn-outline" onClick={()=>fileInputRef.current?.click()}>Excel importeren</button><button className="btn btn-dark" onClick={save}>{saved?"✓ Opgeslagen!":"Opslaan"}</button><input ref={fileInputRef} type="file" accept=".xlsx,.csv" style={{display:"none"}} onChange={importFile} /></div></div>
     <div className="card cp">
       <div style={{background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:9,padding:"10px 13px",marginBottom:18,fontSize:12.5,color:"#4338CA"}}>💡 De slimme offerte generator gebruikt jouw tarieven automatisch als basis.</div>
+      {importError&&<div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:9,padding:"14px 16px",marginBottom:18,fontSize:13,color:"#B91C1C",lineHeight:1.6}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+          <div>
+            {importError.type==="empty"&&<><strong>Het bestand is leeg.</strong> Voeg rijen toe en probeer opnieuw.</>}
+            {importError.type==="norows"&&<><strong>Geen geldige rijen gevonden.</strong> Controleer of de kolom met dienstnamen gevuld is.</>}
+            {importError.type==="cols"&&<>
+              <strong>Kolom niet herkend: {importError.missing.join(" en ")}.</strong><br/>
+              Gevonden kolommen: <em>{importError.found.join(", ")}</em>.<br/>
+              <span style={{color:"#991B1B"}}>Gebruik één van deze kolomnamen (hoofdletter maakt niet uit):</span>
+              <div style={{marginTop:8,background:"#FFF1F2",border:"1px solid #FECDD3",borderRadius:6,padding:"8px 10px",fontFamily:"monospace",fontSize:12,color:"#7F1D1D",lineHeight:1.8}}>
+                <strong>dienst</strong> &nbsp;of&nbsp; omschrijving &nbsp;|&nbsp; <strong>prijs</strong> &nbsp;of&nbsp; tarief &nbsp;|&nbsp; eenheid &nbsp;|&nbsp; categorie<br/>
+                Schilderwerk buitengevel &nbsp;|&nbsp; 65 &nbsp;|&nbsp; uur &nbsp;|&nbsp; Arbeid<br/>
+                Verfmateriaal &nbsp;|&nbsp; 18,50 &nbsp;|&nbsp; m² &nbsp;|&nbsp; Materiaal
+              </div>
+            </>}
+          </div>
+          <button onClick={()=>setImportError(null)} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:"#B91C1C",flexShrink:0,padding:"0 2px"}}>✕</button>
+        </div>
+      </div>}
       {cats.map(cat=><div key={cat} style={{marginBottom:20}}>
         <div style={{fontSize:10.5,fontWeight:700,letterSpacing:".7px",textTransform:"uppercase",color:"#94A3B8",marginBottom:8}}>{cat}</div>
         {items.filter(i=>i.categorie===cat).map(item=><div key={item.id} className="pl-row">
