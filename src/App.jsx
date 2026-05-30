@@ -50,10 +50,21 @@ function Auth({ onLogin }) {
   const [email, setEmail] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
   const [isRegistreren, setIsRegistreren] = useState(false);
+  const [showReset, setShowReset] = useState(false);
   const [inviteToken, setInviteToken] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [bericht, setBericht] = useState("");
+
+  const handleReset = async () => {
+    if (!email) { setBericht("❌ Vul je e-mailadres in."); return; }
+    setLoading(true); setBericht("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    setBericht(error ? "❌ " + error.message : "✅ Reset link verstuurd! Controleer je inbox.");
+    setLoading(false);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -104,35 +115,63 @@ function Auth({ onLogin }) {
     setLoading(false);
   };
 
+  const inputStyle = { width:"100%", border:"1.5px solid #E5E7EB", borderRadius:9, padding:"10px 13px", fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" };
+  const berichtStyle = { background:"#EEF2FF", border:"1px solid #C7D2FE", borderRadius:8, padding:"10px 13px", fontSize:12.5, color:"#4338CA", marginBottom:14 };
+
   return (
     <div style={{ minHeight:"100vh", background:"#0F0F14", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif" }}>
       <div style={{ background:"#fff", borderRadius:20, padding:40, width:"100%", maxWidth:400, boxShadow:"0 24px 56px rgba(0,0,0,0.3)" }}>
         <div style={{ textAlign:"center", marginBottom:32 }}>
           <div style={{ fontSize:40, marginBottom:8 }}>⚡</div>
           <div style={{ fontFamily:"'Syne',sans-serif", fontSize:24, fontWeight:800, color:"#0F0F14" }}>WerkMate</div>
-          <div style={{ fontSize:13, color:"#94A3B8", marginTop:4 }}>{isRegistreren ? "Maak een gratis account aan" : "Log in op je account"}</div>
+          <div style={{ fontSize:13, color:"#94A3B8", marginTop:4 }}>
+            {showReset ? "Wachtwoord herstellen" : isRegistreren ? "Maak een gratis account aan" : "Log in op je account"}
+          </div>
         </div>
-        <div style={{ marginBottom:14 }}>
-          <label style={{ fontSize:12, fontWeight:600, color:"#555", display:"block", marginBottom:5 }}>E-mailadres</label>
-          <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="jouw@email.nl" onKeyDown={e=>e.key==="Enter"&&handleSubmit()}
-            style={{ width:"100%", border:"1.5px solid #E5E7EB", borderRadius:9, padding:"10px 13px", fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
-        </div>
-        <div style={{ marginBottom:20 }}>
-          <label style={{ fontSize:12, fontWeight:600, color:"#555", display:"block", marginBottom:5 }}>Wachtwoord</label>
-          <input type="password" value={wachtwoord} onChange={e=>setWachtwoord(e.target.value)} placeholder="Minimaal 6 tekens" onKeyDown={e=>e.key==="Enter"&&handleSubmit()}
-            style={{ width:"100%", border:"1.5px solid #E5E7EB", borderRadius:9, padding:"10px 13px", fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
-        </div>
-        {bericht && <div style={{ background:"#EEF2FF", border:"1px solid #C7D2FE", borderRadius:8, padding:"10px 13px", fontSize:12.5, color:"#4338CA", marginBottom:14 }}>{bericht}</div>}
-        <button onClick={handleSubmit} disabled={loading||!email||!wachtwoord}
-          style={{ width:"100%", background:"linear-gradient(135deg,#6366F1,#8B5CF6)", color:"#fff", border:"none", borderRadius:10, padding:"12px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit", opacity:(!email||!wachtwoord)?0.5:1 }}>
-          {loading ? "Bezig..." : isRegistreren ? "Account aanmaken" : "Inloggen"}
-        </button>
-        <div style={{ textAlign:"center", marginTop:16, fontSize:13, color:"#888" }}>
-          {isRegistreren ? "Al een account? " : "Nog geen account? "}
-          <span onClick={()=>{setIsRegistreren(!isRegistreren);setBericht("");}} style={{ color:"#6366F1", fontWeight:600, cursor:"pointer" }}>
-            {isRegistreren ? "Inloggen" : "Registreren"}
-          </span>
-        </div>
+
+        {showReset ? (
+          <>
+            <div style={{ marginBottom:20 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#555", display:"block", marginBottom:5 }}>E-mailadres</label>
+              <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="jouw@email.nl" onKeyDown={e=>e.key==="Enter"&&handleReset()} style={inputStyle}/>
+            </div>
+            {bericht && <div style={berichtStyle}>{bericht}</div>}
+            <button onClick={handleReset} disabled={loading||!email}
+              style={{ width:"100%", background:"linear-gradient(135deg,#6366F1,#8B5CF6)", color:"#fff", border:"none", borderRadius:10, padding:"12px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit", opacity:!email?0.5:1, marginBottom:12 }}>
+              {loading ? "Versturen…" : "Verstuur reset link"}
+            </button>
+            <div style={{ textAlign:"center", fontSize:13, color:"#888" }}>
+              <span onClick={()=>{setShowReset(false);setBericht("");}} style={{ color:"#6366F1", fontWeight:600, cursor:"pointer" }}>← Terug naar inloggen</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#555", display:"block", marginBottom:5 }}>E-mailadres</label>
+              <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="jouw@email.nl" onKeyDown={e=>e.key==="Enter"&&handleSubmit()} style={inputStyle}/>
+            </div>
+            <div style={{ marginBottom:6 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:"#555", display:"block", marginBottom:5 }}>Wachtwoord</label>
+              <input type="password" value={wachtwoord} onChange={e=>setWachtwoord(e.target.value)} placeholder="Minimaal 6 tekens" onKeyDown={e=>e.key==="Enter"&&handleSubmit()} style={inputStyle}/>
+            </div>
+            {!isRegistreren && (
+              <div style={{ textAlign:"right", marginBottom:16 }}>
+                <span onClick={()=>{setShowReset(true);setBericht("");}} style={{ fontSize:12, color:"#6366F1", cursor:"pointer", fontWeight:500 }}>Wachtwoord vergeten?</span>
+              </div>
+            )}
+            {bericht && <div style={berichtStyle}>{bericht}</div>}
+            <button onClick={handleSubmit} disabled={loading||!email||!wachtwoord}
+              style={{ width:"100%", background:"linear-gradient(135deg,#6366F1,#8B5CF6)", color:"#fff", border:"none", borderRadius:10, padding:"12px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit", opacity:(!email||!wachtwoord)?0.5:1 }}>
+              {loading ? "Bezig..." : isRegistreren ? "Account aanmaken" : "Inloggen"}
+            </button>
+            <div style={{ textAlign:"center", marginTop:16, fontSize:13, color:"#888" }}>
+              {isRegistreren ? "Al een account? " : "Nog geen account? "}
+              <span onClick={()=>{setIsRegistreren(!isRegistreren);setBericht("");}} style={{ color:"#6366F1", fontWeight:600, cursor:"pointer" }}>
+                {isRegistreren ? "Inloggen" : "Registreren"}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1286,7 +1325,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
 }
 
 // ── AI Offerte ─────────────────────────────────────────────────
-function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
+function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, emailTemplates = {} }) {
   const [step,setStep]=useState(0);const [vraag,setVraag]=useState("");const [loading,setLoading]=useState(false);const [off,setOff]=useState(null);const [selectedKlantId,setSelectedKlantId]=useState("");const [newKlantEmail,setNewKlantEmail]=useState("");
   const selectedKlant = klanten?.find(k=>k.id?.toString()===selectedKlantId);
   useEffect(()=>{if(!selectedKlantId && klanten?.length){setSelectedKlantId(klanten[0].id?.toString()||"");} },[klanten, selectedKlantId]);
@@ -1545,7 +1584,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
   };
 
   return(<div>
-    {showAI&&<AIOfferte onClose={()=>setShowAI(false)} prijslijst={prijslijst} userId={userId} klanten={klanten} onSaved={refresh} bedrijf={bedrijf}/>}
+    {showAI&&<AIOfferte onClose={()=>setShowAI(false)} prijslijst={prijslijst} userId={userId} klanten={klanten} onSaved={refresh} bedrijf={bedrijf} emailTemplates={emailTemplates}/>}
     {mob && mobDetail && (
       <MobDetailScreen title={mobDetail.klant} onBack={()=>setMobDetail(null)}>
         <div className="mob-det-section">
@@ -2204,12 +2243,11 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
   const [showAdd,setShowAdd]=useState(false);
   const [showEdit,setShowEdit]=useState(false);
   const [editingId,setEditingId]=useState(null);
-  const [lightboxFoto,setLightboxFoto]=useState(null);
+  const [lightboxFotos,setLightboxFotos]=useState([]);
+  const [lightboxIdx,setLightboxIdx]=useState(0);
   const originalStatusRef = useRef("Nieuw");
-  const [nieuw,setNieuw]=useState({klant:"",datum:localToday(),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw",handtekening:""});
-  const [bewerkt,setBewerkt]=useState({klant:"",datum:localToday(),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw",handtekening:""});
-  const [fotoPreview,setFotoPreview]=useState("");
-  const [editFotoPreview,setEditFotoPreview]=useState("");
+  const [nieuw,setNieuw]=useState({klant:"",datum:localToday(),omschrijving:"",fotos:[],uren:"",materialen:"",status:"Nieuw",handtekening:""});
+  const [bewerkt,setBewerkt]=useState({klant:"",datum:localToday(),omschrijving:"",fotos:[],uren:"",materialen:"",status:"Nieuw",handtekening:""});
   const [saving,setSaving]=useState(false);
   const [editSaving,setEditSaving]=useState(false);
   const [error,setError]=useState("");
@@ -2219,28 +2257,34 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
   const [reviewSent,setReviewSent]=useState(false);
   const [reviewErr,setReviewErr]=useState("");
 
-  const handleFotoChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      setNieuw(prev=>({ ...prev, foto: dataUrl }));
-      setFotoPreview(dataUrl);
-    };
-    reader.readAsDataURL(file);
+  const getWerkbonFotos = (b) => {
+    if (b?.fotos?.length > 0) return b.fotos;
+    if (b?.foto) return [b.foto];
+    return [];
   };
 
-  const handleEditFotoChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      setBewerkt(prev=>({ ...prev, foto: dataUrl }));
-      setEditFotoPreview(dataUrl);
-    };
-    reader.readAsDataURL(file);
+  const openLightbox = (fotos, idx) => { setLightboxFotos(fotos); setLightboxIdx(idx); };
+
+  const handleFotoAdd = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => setNieuw(prev=>({ ...prev, fotos: [...prev.fotos, reader.result] }));
+      reader.readAsDataURL(file);
+    });
+    event.target.value = "";
+  };
+
+  const handleEditFotoAdd = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => setBewerkt(prev=>({ ...prev, fotos: [...prev.fotos, reader.result] }));
+      reader.readAsDataURL(file);
+    });
+    event.target.value = "";
   };
 
   const add = async () => {
@@ -2255,7 +2299,8 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       klant: nieuw.klant,
       datum: nieuw.datum,
       omschrijving: nieuw.omschrijving || "",
-      foto: nieuw.foto || "",
+      foto: nieuw.fotos[0] || "",
+      fotos: nieuw.fotos,
       uren: nieuw.uren ? parseFloat(nieuw.uren) : 0,
       materialen: nieuw.materialen || "",
       status: nieuw.status,
@@ -2267,8 +2312,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       setSaving(false);
       return;
     }
-    setNieuw({klant:"",datum:localToday(),omschrijving:"",foto:"",uren:"",materialen:"",status:"Nieuw",handtekening:""});
-    setFotoPreview("");
+    setNieuw({klant:"",datum:localToday(),omschrijving:"",fotos:[],uren:"",materialen:"",status:"Nieuw",handtekening:""});
     setShowAdd(false);
     if (typeof refresh === "function") await refresh();
     setSaving(false);
@@ -2281,13 +2325,12 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       klant: werkbon.klant || "",
       datum: werkbon.datum ? werkbon.datum.slice(0,10) : localToday(),
       omschrijving: werkbon.omschrijving || "",
-      foto: werkbon.foto || "",
+      fotos: getWerkbonFotos(werkbon),
       uren: werkbon.uren != null ? String(werkbon.uren) : "",
       materialen: werkbon.materialen || "",
       status: werkbon.status || "Nieuw",
       handtekening: werkbon.handtekening || "",
     });
-    setEditFotoPreview(werkbon.foto || "");
     setEditError("");
     setShowEdit(true);
   };
@@ -2338,7 +2381,8 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       klant: bewerkt.klant,
       datum: bewerkt.datum,
       omschrijving: bewerkt.omschrijving,
-      foto: bewerkt.foto,
+      foto: bewerkt.fotos[0] || "",
+      fotos: bewerkt.fotos,
       uren: bewerkt.uren ? parseFloat(bewerkt.uren) : 0,
       materialen: bewerkt.materialen,
       status: bewerkt.status,
@@ -2361,7 +2405,6 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
     }
     setShowEdit(false);
     setEditingId(null);
-    setEditFotoPreview("");
     if (typeof refresh === "function") await refresh();
     setEditSaving(false);
   };
@@ -2378,8 +2421,13 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
           {mobDetail.omschrijving&&<div className="mob-det-row"><span className="mob-det-lbl">Omschrijving</span><span className="mob-det-val">{mobDetail.omschrijving}</span></div>}
           {mobDetail.materialen&&<div className="mob-det-row"><span className="mob-det-lbl">Materialen</span><span className="mob-det-val">{mobDetail.materialen}</span></div>}
         </div>
-        {mobDetail.foto&&<div className="mob-det-section" style={{padding:0,overflow:"hidden"}}>
-          <img src={mobDetail.foto} alt="Werkbon foto" style={{width:"100%",maxHeight:240,objectFit:"cover"}}/>
+        {getWerkbonFotos(mobDetail).length>0&&<div className="mob-det-section">
+          <div style={{fontSize:13,color:"#64748B",fontWeight:600,marginBottom:8}}>Foto's ({getWerkbonFotos(mobDetail).length})</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {getWerkbonFotos(mobDetail).map((url,i)=>(
+              <img key={i} src={url} alt="" style={{width:100,height:80,objectFit:"cover",borderRadius:10,cursor:"pointer",border:"2px solid #E2E8F0"}} onClick={()=>openLightbox(getWerkbonFotos(mobDetail),i)}/>
+            ))}
+          </div>
         </div>}
         {mobDetail.handtekening&&<div className="mob-det-section">
           <div style={{fontSize:13,color:"#64748B",fontWeight:600,marginBottom:8}}>Handtekening klant</div>
@@ -2405,7 +2453,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
             </div>
           ))}</div>
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Datum","Uren","Status","Materialen","Foto","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{b.foto ? <img src={b.foto} alt="Werkbon foto" style={{width:80,height:60,objectFit:"cover",borderRadius:10,cursor:"pointer"}} onClick={()=>setLightboxFoto(b.foto)}/> : "-"}</td><td style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎ Bewerken</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>{setReviewErr("");setReviewSent(false);setReviewConfirm({email:bKlant.email,name:bKlant.naam,omschrijving:b.omschrijving});}}>⭐ Review verzoek</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>);})}
+            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());const bFotos=getWerkbonFotos(b);return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{bFotos.length>0?<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{bFotos.slice(0,3).map((url,i)=><img key={i} src={url} alt="" style={{width:56,height:44,objectFit:"cover",borderRadius:8,cursor:"pointer"}} onClick={()=>openLightbox(bFotos,i)}/>)}{bFotos.length>3&&<div style={{width:56,height:44,borderRadius:8,background:"#F1F5F9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#64748B",cursor:"pointer"}} onClick={()=>openLightbox(bFotos,3)}>+{bFotos.length-3}</div>}</div>:"-"}</td><td style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}>✎ Bewerken</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>{setReviewErr("");setReviewSent(false);setReviewConfirm({email:bKlant.email,name:bKlant.naam,omschrijving:b.omschrijving});}}>⭐ Review verzoek</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}>✕</button></td></tr>);})}
 </tbody>
           </table></div></div>
     }
@@ -2417,7 +2465,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       </div>
       <div className="ig"><label className="ilbl">Omschrijving</label><textarea className="inp" style={{minHeight:100}} value={nieuw.omschrijving} onChange={e=>setNieuw({...nieuw,omschrijving:e.target.value})} placeholder="Wat is er gedaan?"/></div>
       <div className="ig"><label className="ilbl">Materialen</label><textarea className="inp" style={{minHeight:60}} value={nieuw.materialen} onChange={e=>setNieuw({...nieuw,materialen:e.target.value})} placeholder="Gewerkte materialen"/></div>
-      <div className="ig"><label className="ilbl">Foto</label><input className="inp" type="file" accept="image/*" capture="environment" onChange={handleFotoChange}/>{fotoPreview&&<img src={fotoPreview} alt="Voorbeeld" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}</div>
+      <div className="ig"><label className="ilbl">Foto's</label><label style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,background:"#F8FAFC",border:"1px dashed #CBD5E1",cursor:"pointer",fontSize:13,color:"#475569",fontWeight:500}}>📷 Foto toevoegen<input type="file" accept="image/*" capture="environment" multiple onChange={handleFotoAdd} style={{display:"none"}}/></label>{nieuw.fotos.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>{nieuw.fotos.map((url,i)=><div key={i} style={{position:"relative",display:"inline-block"}}><img src={url} alt="" style={{width:80,height:60,objectFit:"cover",borderRadius:8,cursor:"pointer",border:"2px solid #E2E8F0"}} onClick={()=>openLightbox(nieuw.fotos,i)}/><button type="button" onClick={()=>setNieuw(prev=>({...prev,fotos:prev.fotos.filter((_,j)=>j!==i)}))} style={{position:"absolute",top:-7,right:-7,width:20,height:20,borderRadius:"50%",background:"#EF4444",border:"none",color:"#fff",fontSize:13,cursor:"pointer",lineHeight:"20px",padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button></div>)}</div>}</div>
       <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Nieuw","Bezig","Klaar","Ondertekend","Afgerond"].map(s=><option key={s}>{s}</option>)}</select></div>
       <div className="ig"><label className="ilbl">Handtekening klant (optioneel)</label>
         {nieuw.handtekening?<div><img src={nieuw.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB",marginBottom:8}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setNieuw({...nieuw,handtekening:""})}>Wissen</button></div>:<SignatureCanvas onSave={sig=>setNieuw({...nieuw,handtekening:sig})}/>}
@@ -2433,7 +2481,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       </div>
       <div className="ig"><label className="ilbl">Omschrijving</label><textarea className="inp" style={{minHeight:100}} value={bewerkt.omschrijving} onChange={e=>setBewerkt({...bewerkt,omschrijving:e.target.value})} placeholder="Wat is er gedaan?"/></div>
       <div className="ig"><label className="ilbl">Materialen</label><textarea className="inp" style={{minHeight:60}} value={bewerkt.materialen} onChange={e=>setBewerkt({...bewerkt,materialen:e.target.value})} placeholder="Gewerkte materialen"/></div>
-      <div className="ig"><label className="ilbl">Foto</label><input className="inp" type="file" accept="image/*" capture="environment" onChange={handleEditFotoChange}/>{editFotoPreview&&<img src={editFotoPreview} alt="Voorbeeld" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}</div>
+      <div className="ig"><label className="ilbl">Foto's</label><label style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,background:"#F8FAFC",border:"1px dashed #CBD5E1",cursor:"pointer",fontSize:13,color:"#475569",fontWeight:500}}>📷 Foto toevoegen<input type="file" accept="image/*" capture="environment" multiple onChange={handleEditFotoAdd} style={{display:"none"}}/></label>{bewerkt.fotos.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>{bewerkt.fotos.map((url,i)=><div key={i} style={{position:"relative",display:"inline-block"}}><img src={url} alt="" style={{width:80,height:60,objectFit:"cover",borderRadius:8,cursor:"pointer",border:"2px solid #E2E8F0"}} onClick={()=>openLightbox(bewerkt.fotos,i)}/><button type="button" onClick={()=>setBewerkt(prev=>({...prev,fotos:prev.fotos.filter((_,j)=>j!==i)}))} style={{position:"absolute",top:-7,right:-7,width:20,height:20,borderRadius:"50%",background:"#EF4444",border:"none",color:"#fff",fontSize:13,cursor:"pointer",lineHeight:"20px",padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button></div>)}</div>}</div>
       <div className="ig"><label className="ilbl">Status</label><select className="inp" value={bewerkt.status} onChange={e=>setBewerkt({...bewerkt,status:e.target.value})}>{["Nieuw","Bezig","Klaar","Ondertekend","Afgerond"].map(s=><option key={s}>{s}</option>)}</select></div>
       <div className="ig"><label className="ilbl">Handtekening klant</label>
         {bewerkt.handtekening?<div><img src={bewerkt.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB",marginBottom:8}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setBewerkt({...bewerkt,handtekening:""})}>Wissen</button></div>:<SignatureCanvas onSave={sig=>setBewerkt({...bewerkt,handtekening:sig})}/>}
@@ -2441,9 +2489,12 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       {editError && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{editError}</div>}
       <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowEdit(false);setEditError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={saveEdit} disabled={editSaving||!bewerkt.klant||!bewerkt.datum}>{editSaving?"Opslaan…":"Opslaan"}</button></div>
     </div></div></div>}
-    {lightboxFoto&&<div onClick={()=>setLightboxFoto(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-      <img src={lightboxFoto} alt="Foto" style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:14,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}/>
-      <button onClick={()=>setLightboxFoto(null)} style={{position:"absolute",top:20,right:24,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:28,cursor:"pointer",borderRadius:"50%",width:44,height:44}}>✕</button>
+    {lightboxFotos.length>0&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightboxFotos([])}>
+      {lightboxFotos.length>1&&<button onClick={e=>{e.stopPropagation();setLightboxIdx(i=>(i-1+lightboxFotos.length)%lightboxFotos.length);}} style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:28,cursor:"pointer",borderRadius:"50%",width:48,height:48,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>}
+      <img src={lightboxFotos[lightboxIdx]} alt="Foto" style={{maxWidth:"90vw",maxHeight:"86vh",borderRadius:14,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}} onClick={e=>e.stopPropagation()}/>
+      {lightboxFotos.length>1&&<button onClick={e=>{e.stopPropagation();setLightboxIdx(i=>(i+1)%lightboxFotos.length);}} style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:28,cursor:"pointer",borderRadius:"50%",width:48,height:48,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>}
+      <button onClick={()=>setLightboxFotos([])} style={{position:"absolute",top:20,right:24,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:28,cursor:"pointer",borderRadius:"50%",width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+      {lightboxFotos.length>1&&<div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)",display:"flex",gap:6}}>{lightboxFotos.map((_,i)=><div key={i} onClick={e=>{e.stopPropagation();setLightboxIdx(i);}} style={{width:8,height:8,borderRadius:"50%",background:i===lightboxIdx?"#fff":"rgba(255,255,255,0.35)",cursor:"pointer"}}/>)}</div>}
     </div>}
     {reviewConfirm&&<EmailConfirmModal
       toEmail={reviewConfirm.email}
@@ -3785,10 +3836,22 @@ function WerkMateApp({ user, onLogout }) {
     </>
   );
 
+  const handleSkipTrial = async () => {
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 14);
+    await supabase.from("subscriptions").upsert({
+      user_id: orgOwnerId,
+      status: "trialing",
+      trial_ends_at: trialEnd.toISOString().slice(0, 10),
+    }, { onConflict: "user_id" });
+    setSubscription({ status: "trialing", trial_ends_at: trialEnd.toISOString().slice(0, 10) });
+    setShowSubscription(false);
+  };
+
   if (showSubscription) return (
     <>
       <style>{css}</style>
-      <SubscriptieScherm bedrijfsnaam={bedrijf?.bedrijfsnaam} onSkip={()=>setShowSubscription(false)}/>
+      <SubscriptieScherm bedrijfsnaam={bedrijf?.bedrijfsnaam} onSkip={handleSkipTrial}/>
     </>
   );
 
