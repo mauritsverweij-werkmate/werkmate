@@ -1684,15 +1684,15 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
               <td style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button>
-              {o.portal_token&&<button className="btn btn-ghost btn-sm" title="Stuur offerte met PDF naar klant" onClick={async()=>{
+              {o.portal_token&&<button className="btn btn-ghost btn-sm" onClick={async()=>{
                 try {
                   const email = await resendOfferEmail(o);
                   if (!email) return;
                   await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
                   alert("Verstuurd naar "+email);
                 } catch(err) { alert("Versturen mislukt: "+err.message); }
-              }}>📤</button>}
-              {o.portal_token&&<button className="btn btn-ghost btn-sm" title="WhatsApp" onClick={()=>waOfferte(o,klanten,bedrijf)}>📱</button>}
+              }}>Verstuur mail</button>}
+              {o.portal_token&&<button className="btn btn-ghost btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}>WhatsApp</button>}
               <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
                 {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
               </select><button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}>✕</button></td>
