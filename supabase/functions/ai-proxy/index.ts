@@ -151,13 +151,11 @@ serve(async (req: Request) => {
 
     await admin.from("offertes").update({ status: "Geaccepteerd", handtekening: handtekening || null }).eq("portal_token", portal_token);
 
-    // Auto-create factuur
+    // Auto-create factuur — use the atomic DB counter to avoid race conditions
     const now = new Date();
-    const yr = now.getFullYear();
-    const { data: existing } = await admin.from("facturen").select("nummer").eq("user_id", offerte.user_id).like("nummer", `${yr}-%`);
-    const nums = (existing || []).map((f: { nummer: string }) => parseInt((f.nummer || "").split("-")[1]) || 0);
-    const nextNum = nums.length ? Math.max(...nums) + 1 : 1;
-    const nummer = `${yr}-${String(nextNum).padStart(3, "0")}`;
+    const { data: numData, error: numErr } = await admin.rpc("next_factuur_nummer", { p_user_id: offerte.user_id });
+    if (numErr) return json({ error: "Kon factuurnummer niet genereren: " + numErr.message }, 500);
+    const nummer = numData as string;
     const datum = now.toISOString().slice(0, 10);
     const vervalD = new Date(now); vervalD.setDate(vervalD.getDate() + 30);
     const vervaldatum = vervalD.toISOString().slice(0, 10);

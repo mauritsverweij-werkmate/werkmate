@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Component } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { jsPDF } from "jspdf";
 import * as XLSX from "xlsx";
@@ -185,16 +185,57 @@ function AuthApp() {
   return <WerkMateApp user={user} onLogout={() => supabase.auth.signOut()} />;
 }
 
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error("WerkMate fout:", error, info?.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#F8FAFC", fontFamily:"'DM Sans',sans-serif" }}>
+          <div style={{ background:"#fff", border:"1.5px solid #E8EEF6", borderRadius:20, padding:"48px 40px", maxWidth:480, textAlign:"center", boxShadow:"0 8px 32px rgba(0,0,0,.06)" }}>
+            <div style={{ fontSize:48, marginBottom:16 }}>⚠️</div>
+            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:22, color:"#0F172A", marginBottom:10 }}>Er ging iets mis</div>
+            <div style={{ fontSize:14, color:"#64748B", lineHeight:1.65, marginBottom:28 }}>
+              Er is een onverwachte fout opgetreden. Je gegevens zijn veilig — ververs de pagina om opnieuw te beginnen.
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ background:"linear-gradient(135deg,#6366F1,#8B5CF6)", color:"#fff", border:"none", borderRadius:12, padding:"13px 28px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+            >
+              Pagina verversen
+            </button>
+            {this.state.error && (
+              <details style={{ marginTop:20, textAlign:"left" }}>
+                <summary style={{ fontSize:12, color:"#94A3B8", cursor:"pointer" }}>Technische details</summary>
+                <pre style={{ fontSize:11, color:"#64748B", marginTop:8, whiteSpace:"pre-wrap", wordBreak:"break-word" }}>{this.state.error.message}</pre>
+              </details>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const path = window.location.pathname;
   if (path.startsWith("/portal/")) {
     const token = path.replace("/portal/", "").split(/[?#]/)[0];
-    return <><style>{css}</style><PortalPage token={token}/></>;
+    return <ErrorBoundary><style>{css}</style><PortalPage token={token}/></ErrorBoundary>;
   }
   if (path === "/admin") {
-    return <><style>{css}</style><AdminPage/></>;
+    return <ErrorBoundary><style>{css}</style><AdminPage/></ErrorBoundary>;
   }
-  return <AuthApp/>;
+  return <ErrorBoundary><AuthApp/></ErrorBoundary>;
 }
 
 // ── Nav items ─────────────────────────────────────────────────
@@ -2439,10 +2480,13 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     if (!emailSettings.auto_reminder_email && !emailSettings.auto_invoice_reminder) return;
     autoReminderSentRef.current = true;
     const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
     const reminderDays = Number(emailSettings.reminder_days_before ?? 3);
     const invoiceDays  = Number(emailSettings.invoice_reminder_days ?? 7);
     const candidates = facturen.filter(f => {
       if (f.status !== "Verstuurd" || !f.klant_email) return false;
+      // Skip if a reminder was already sent today (prevents double-send on re-mount)
+      if (f.last_reminder_sent_at === todayIso) return false;
       const nearDue   = emailSettings.auto_reminder_email  && f.vervaldatum && ((new Date(f.vervaldatum) - today) / 86400000) >= 0 && ((new Date(f.vervaldatum) - today) / 86400000) <= reminderDays;
       const oldUnpaid = emailSettings.auto_invoice_reminder && f.datum      && ((today - new Date(f.datum)) / 86400000) >= invoiceDays;
       return nearDue || oldUnpaid;
@@ -2469,7 +2513,8 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
             await logEmail(userId, f.klant_email, `Herinnering factuur ${f.nummer||""}`, "herinnering", msg, "mislukt");
             continue;
           }
-          await supabase.from("facturen").update({ status:"Herinnering" }).eq("id", f.id);
+          // Record both the status change and the send date atomically
+          await supabase.from("facturen").update({ status:"Herinnering", last_reminder_sent_at: todayIso }).eq("id", f.id);
           const subjectA = tplRem?.subject ? fillVars(tplRem.subject, vars) : `Herinnering factuur ${f.nummer||""}`;
           await logEmail(userId, f.klant_email, subjectA, "herinnering", `Automatische herinnering factuur ${f.nummer||""} voor ${f.klant}`, "verzonden", autoData?.html||null);
           sent++;
@@ -2539,7 +2584,9 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     if(!nieuw.regels.length){setSaveErr("Voeg minimaal één regel toe.");return;}
     setSaving(true); setSaveErr("");
     const {btw,totaal}=calcTotals(nieuw.regels);
-    const {error}=await supabase.from("facturen").insert({user_id:userId,nummer:nextNummer(),klant:nieuw.klant,klant_email:nieuw.klant_email,datum:nieuw.datum,vervaldatum:nieuw.vervaldatum,regels:nieuw.regels,btw,totaal,status:nieuw.status});
+    const {data:numData,error:numErr}=await supabase.rpc("next_factuur_nummer",{p_user_id:userId});
+    if(numErr){setSaveErr("Kon factuurnummer niet genereren: "+numErr.message);setSaving(false);return;}
+    const {error}=await supabase.from("facturen").insert({user_id:userId,nummer:numData,klant:nieuw.klant,klant_email:nieuw.klant_email,datum:nieuw.datum,vervaldatum:nieuw.vervaldatum,regels:nieuw.regels,btw,totaal,status:nieuw.status});
     setSaving(false);
     if(error){setSaveErr(error.message);return;}
     setShowCreate(false); refresh();
@@ -3107,7 +3154,7 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
                   <div style={{borderRadius:10,overflow:"hidden",border:"1px solid #E5E7EB"}}>
                     <iframe
                       srcDoc={detail.html_body}
-                      sandbox="allow-same-origin"
+                      sandbox=""
                       style={{width:"100%",height:420,border:"none",display:"block"}}
                       title="E-mail preview"
                     />
