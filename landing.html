@@ -996,16 +996,33 @@ document.addEventListener('mouseleave', () => {
 });
 
 // Contact form
-document.getElementById('contact-form').addEventListener('submit', function(e) {
+document.getElementById('contact-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const naam    = document.getElementById('cf-naam').value.trim();
   const email   = document.getElementById('cf-email').value.trim();
   const bericht = document.getElementById('cf-bericht').value.trim();
-  const subject = encodeURIComponent(`WerkMate contact van ${naam}`);
-  const body    = encodeURIComponent(`Naam: ${naam}\nE-mail: ${email}\n\nBericht:\n${bericht}`);
-  window.location.href = `mailto:info@werkmate.tech?subject=${subject}&body=${body}`;
-  document.getElementById('cf-success').style.display = 'block';
-  this.reset();
+  const btn     = document.querySelector('.cf-submit');
+  const success = document.getElementById('cf-success');
+
+  btn.disabled = true;
+  btn.textContent = 'Versturen…';
+
+  try {
+    const res = await fetch('https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'send-contact-form', naam, email, bericht }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.error || 'Versturen mislukt');
+    success.style.display = 'block';
+    this.reset();
+  } catch (err) {
+    alert('Er ging iets mis: ' + err.message + '\n\nProbeer het opnieuw of mail ons op info@werkmate.tech.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Verstuur bericht →';
+  }
 });
 </script>
 

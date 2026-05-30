@@ -250,6 +250,69 @@ serve(async (req: Request) => {
     return json({ success: true, id: r2.id, html });
   }
 
+  // ── Contact form (public — no auth needed) ─────────────────
+  if (body.action === "send-contact-form") {
+    const { naam, email, bericht } = body as {
+      naam?: string; email?: string; bericht?: string;
+    };
+    if (!naam || !email || !bericht) return json({ error: "Naam, e-mail en bericht zijn verplicht" }, 400);
+    if (!isValidEmail(email)) return json({ error: "Ongeldig e-mailadres" }, 400);
+    if (String(bericht).length > 4000) return json({ error: "Bericht te lang" }, 400);
+
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return json({ error: "E-mailservice niet geconfigureerd" }, 500);
+
+    const safeNaam    = esc(naam);
+    const safeEmail   = esc(email);
+    const safeBericht = esc(bericht).replace(/\n/g, "<br>");
+
+    const html = `<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;font-family:Inter,system-ui,sans-serif;background:#f5f7fb;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;padding:24px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(15,23,42,.08);">
+<tr><td style="background:#111827;padding:24px 28px;">
+  <p style="margin:0;color:#fff;font-size:20px;font-weight:700;">📩 Nieuw contactbericht via werkmate.tech</p>
+</td></tr>
+<tr><td style="padding:28px;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding-bottom:16px;border-bottom:1px solid #f0f0f0;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Naam</p>
+      <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">${safeNaam}</p>
+    </td></tr>
+    <tr><td style="padding:16px 0;border-bottom:1px solid #f0f0f0;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">E-mailadres</p>
+      <p style="margin:0;font-size:15px;color:#111827;"><a href="mailto:${safeEmail}" style="color:#6366F1;text-decoration:none;">${safeEmail}</a></p>
+    </td></tr>
+    <tr><td style="padding:16px 0;">
+      <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Bericht</p>
+      <p style="margin:0;font-size:15px;color:#374151;line-height:1.65;">${safeBericht}</p>
+    </td></tr>
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+    <tr><td style="background:#f8fafc;border-radius:10px;padding:14px 16px;">
+      <p style="margin:0;font-size:13px;color:#6b7280;">Beantwoord dit bericht door te antwoorden op deze e-mail — het antwoord gaat direct naar <strong>${safeEmail}</strong>.</p>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+    const r = await sendViaResend(resendKey, {
+      from: "WerkMate Website <info@werkmate.tech>",
+      to: "info@werkmate.tech",
+      reply_to: email,
+      subject: `Nieuw contactbericht van ${safeNaam}`,
+      html,
+    });
+    if (!r.ok) return json({ error: r.error, message: r.error }, 422);
+    return json({ success: true });
+  }
+
   // ── Authentication ─────────────────────────────────────────
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) {

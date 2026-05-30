@@ -3,49 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WerkMate — Offerte software & werkbonnen app voor vakmensen</title>
-  <meta name="description" content="WerkMate is de complete bedrijfsapp voor vakmensen en ZZP'ers. Maak offertes, werkbonnen en facturen in seconden. Planning voor loodgieters, elektriciens en aannemers. Gratis proberen." />
-  <meta name="keywords" content="offerte software vakman, werkbonnen app, planning loodgieter, boekhouding ZZP, facturen app vakman, offerte app elektricien, werkbon app aannemer, ZZP boekhouding, bedrijfssoftware vakman" />
-  <link rel="canonical" href="https://werkmate.tech/" />
-
-  <!-- Open Graph -->
+  <title>WerkMate — Bedrijfssoftware voor vakmensen</title>
+  <meta name="description" content="WerkMate is het complete platform voor loodgieters, timmermannen, tuiniers en andere vakmensen. AI-offertes, digitaal tekenen, facturen, planning, werkbonnen, rittenregistratie en meer." />
+  <meta property="og:title" content="WerkMate — Bedrijfssoftware voor vakmensen" />
+  <meta property="og:description" content="Van AI-offerte tot digitale handtekening, van automatische herinneringen tot rittenregistratie. Alles op één plek voor de Nederlandse vakman." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://werkmate.tech/" />
-  <meta property="og:title" content="WerkMate — Offerte software & werkbonnen app voor vakmensen" />
-  <meta property="og:description" content="Van offerte tot factuur, van planning tot klantenbeheer. Alles op één plek, met AI. Voor loodgieters, elektriciens, aannemers en ZZP'ers." />
-  <meta property="og:image" content="https://werkmate.tech/og-image.png" />
-  <meta property="og:locale" content="nl_NL" />
-  <meta property="og:site_name" content="WerkMate" />
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="WerkMate — Offerte software & werkbonnen app voor vakmensen" />
-  <meta name="twitter:description" content="Van offerte tot factuur, van planning tot klantenbeheer. Alles op één plek, met AI." />
-  <meta name="twitter:image" content="https://werkmate.tech/og-image.png" />
-
-  <!-- Structured data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "WerkMate",
-    "url": "https://werkmate.tech",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web, iOS, Android",
-    "description": "Compleet bedrijfsplatform voor vakmensen: offertes, werkbonnen, facturen, planning en klantenbeheer.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "EUR",
-      "description": "14 dagen gratis proberen"
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "reviewCount": "47"
-    }
-  }
-  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
@@ -55,6 +17,7 @@
       --dark2:   #0D0D25;
       --primary: #6366F1;
       --p2:      #8B5CF6;
+      --accent:  #10B981;
       --light:   #F9FAFB;
       --muted:   #94A3B8;
       --border:  rgba(255,255,255,0.07);
@@ -62,116 +25,120 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body { font-family: 'DM Sans', sans-serif; background: var(--dark); color: #fff; overflow-x: hidden; }
-    a { text-decoration: none; }
+    a { text-decoration: none; color: inherit; }
 
-    /* ── Utilities ── */
-    .syne { font-family: 'Syne', sans-serif; }
-    .grad-text { background: linear-gradient(135deg, #fff 0%, #A5B4FC 45%, #C4B5FD 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .center { text-align: center; }
-    .section-inner { max-width: 1200px; margin: 0 auto; }
+    .syne       { font-family: 'Syne', sans-serif; }
+    .grad-text  { background: linear-gradient(135deg, #fff 0%, #A5B4FC 45%, #C4B5FD 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .green-text { background: linear-gradient(135deg, #34D399, #10B981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .center     { text-align: center; }
+    .section-inner { max-width: 1160px; margin: 0 auto; }
     section { padding: 96px 48px; }
 
-    /* ── Scroll animation ── */
-    .fade-up { opacity: 0; transform: translateY(28px); transition: opacity .65s ease, transform .65s ease; }
+    .fade-up { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
     .fade-up.in { opacity: 1; transform: none; }
-    .d1 { transition-delay: .08s; } .d2 { transition-delay: .16s; } .d3 { transition-delay: .24s; }
-    .d4 { transition-delay: .32s; } .d5 { transition-delay: .40s; } .d6 { transition-delay: .48s; }
+    .d1{transition-delay:.06s}.d2{transition-delay:.12s}.d3{transition-delay:.18s}
+    .d4{transition-delay:.24s}.d5{transition-delay:.30s}.d6{transition-delay:.36s}
+    .d7{transition-delay:.42s}.d8{transition-delay:.48s}.d9{transition-delay:.54s}
 
-    /* ── Buttons ── */
     .btn-pri {
       display: inline-flex; align-items: center; gap: 8px;
       background: linear-gradient(135deg, var(--primary), var(--p2));
-      color: #fff; border: none; border-radius: 12px; padding: 14px 28px;
+      color: #fff; border: none; border-radius: 12px; padding: 15px 30px;
       font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
-      box-shadow: 0 8px 28px rgba(99,102,241,.38);
+      box-shadow: 0 8px 30px rgba(99,102,241,.38);
       transition: transform .2s, box-shadow .2s;
+      white-space: nowrap;
     }
-    .btn-pri:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(99,102,241,.55); }
+    .btn-pri:hover { transform: translateY(-2px); box-shadow: 0 14px 44px rgba(99,102,241,.55); }
     .btn-ghost {
       display: inline-flex; align-items: center; gap: 8px;
       background: rgba(255,255,255,.07); color: #fff;
       border: 1px solid rgba(255,255,255,.16); border-radius: 12px;
-      padding: 14px 24px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+      padding: 15px 26px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
       transition: background .2s;
+      white-space: nowrap;
     }
     .btn-ghost:hover { background: rgba(255,255,255,.13); }
 
-    /* ── Section label ── */
     .s-badge {
       display: inline-flex; align-items: center; gap: 6px;
       background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.25);
       border-radius: 20px; padding: 5px 14px;
-      font-size: 12.5px; font-weight: 600; color: #818CF8;
-      margin-bottom: 14px;
+      font-size: 12px; font-weight: 700; letter-spacing: .3px; color: #818CF8;
+      margin-bottom: 16px; text-transform: uppercase;
     }
-    .s-h2 { font-family: 'Syne', sans-serif; font-size: clamp(28px,4vw,46px); font-weight: 800; line-height: 1.13; margin-bottom: 14px; }
-    .s-sub { font-size: 17px; color: var(--muted); line-height: 1.75; max-width: 600px; }
+    .s-h2  { font-family: 'Syne', sans-serif; font-size: clamp(28px,4vw,46px); font-weight: 800; line-height: 1.12; margin-bottom: 16px; }
+    .s-sub { font-size: 17px; color: var(--muted); line-height: 1.8; max-width: 580px; }
     .center .s-sub { margin: 0 auto; }
 
-    /* ════════════════════════════════════════
-       NAV
-    ════════════════════════════════════════ */
+    /* ── NAV ── */
     #nav {
       position: fixed; inset: 0 0 auto; z-index: 200;
       display: flex; align-items: center; justify-content: space-between;
       padding: 16px 48px;
-      background: rgba(7,7,27,.82);
-      backdrop-filter: blur(18px);
+      background: rgba(7,7,27,.85);
+      backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       transition: background .3s, box-shadow .3s;
     }
     .nav-logo { display: flex; align-items: center; gap: 10px; }
-    .nav-icon  { width: 34px; height: 34px; background: linear-gradient(135deg,var(--primary),var(--p2)); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .nav-icon  { width: 36px; height: 36px; background: linear-gradient(135deg,var(--primary),var(--p2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
     .nav-name  { font-family: 'Syne',sans-serif; font-weight: 800; font-size: 20px; }
-    .nav-cta   { background: linear-gradient(135deg,var(--primary),var(--p2)); color: #fff; border: none; border-radius: 10px; padding: 10px 22px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: transform .2s, opacity .2s; }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a { font-size: 14px; font-weight: 500; color: #94A3B8; transition: color .2s; }
+    .nav-links a:hover { color: #fff; }
+    .nav-cta { background: linear-gradient(135deg,var(--primary),var(--p2)); color: #fff; border: none; border-radius: 10px; padding: 10px 22px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: transform .2s, opacity .2s; }
     .nav-cta:hover { transform: translateY(-1px); opacity: .9; }
 
-    /* ════════════════════════════════════════
-       HERO
-    ════════════════════════════════════════ */
+    /* ── HERO ── */
     #hero {
       min-height: 100vh; display: flex; align-items: center;
       padding: 110px 48px 80px; position: relative; overflow: hidden;
     }
     #hero-canvas { position: absolute; inset: 0; z-index: 0; }
     .glow  { position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; }
-    .glow1 { width: 700px; height: 700px; background: radial-gradient(circle, rgba(99,102,241,.22) 0%, transparent 65%); top: -140px; left: -120px; }
-    .glow2 { width: 450px; height: 450px; background: radial-gradient(circle, rgba(139,92,246,.18) 0%, transparent 65%); bottom: -60px; right: 80px; }
+    .glow1 { width: 800px; height: 800px; background: radial-gradient(circle, rgba(99,102,241,.20) 0%, transparent 65%); top: -200px; left: -160px; }
+    .glow2 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(139,92,246,.16) 0%, transparent 65%); bottom: -80px; right: 60px; }
 
     .hero-grid {
       position: relative; z-index: 1;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
-      max-width: 1200px; margin: 0 auto; width: 100%;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center;
+      max-width: 1160px; margin: 0 auto; width: 100%;
     }
     .hero-badge {
-      display: inline-flex; align-items: center; gap: 7px;
-      background: rgba(99,102,241,.14); border: 1px solid rgba(99,102,241,.28);
-      border-radius: 20px; padding: 5px 14px; font-size: 12.5px; font-weight: 600;
-      color: #A5B4FC; margin-bottom: 20px;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.28);
+      border-radius: 20px; padding: 6px 14px; font-size: 12.5px; font-weight: 700;
+      color: #34D399; margin-bottom: 22px; letter-spacing: .2px;
     }
-    .badge-dot { width: 6px; height: 6px; background: #A5B4FC; border-radius: 50%; animation: blink 2s infinite; }
-    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.25; } }
+    .badge-dot { width: 6px; height: 6px; background: #34D399; border-radius: 50%; animation: blink 2s infinite; }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.2; } }
 
-    .hero-h1 { font-family: 'Syne',sans-serif; font-size: clamp(36px,5vw,64px); font-weight: 800; line-height: 1.08; margin-bottom: 22px; }
-    .hero-sub { font-size: 17px; color: var(--muted); line-height: 1.75; max-width: 480px; margin-bottom: 36px; }
-    .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-    .hero-note { font-size: 12px; color: #475569; margin-top: 14px; }
+    .hero-h1 { font-family: 'Syne',sans-serif; font-size: clamp(38px,5vw,66px); font-weight: 800; line-height: 1.06; margin-bottom: 24px; }
+    .hero-sub { font-size: 18px; color: var(--muted); line-height: 1.8; max-width: 500px; margin-bottom: 38px; }
+    .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .hero-note { font-size: 12.5px; color: #475569; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .hero-note span { display: flex; align-items: center; gap: 4px; }
+    .hero-note span::before { content:'✓'; color:#34D399; font-weight:800; }
 
-    /* 3-D mockup */
+    .hero-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 28px; }
+    .hero-pill { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 5px 12px; font-size: 12px; color: #94A3B8; font-weight: 500; }
+
+    /* App mockup */
     .hero-vis { display: flex; justify-content: center; align-items: center; }
-    .mock-scene { perspective: 1100px; }
+    .mock-scene { perspective: 1200px; }
     .mock-card {
       width: 520px; max-width: 100%;
       background: #12122A;
-      border: 1px solid rgba(99,102,241,.3);
+      border: 1px solid rgba(99,102,241,.28);
       border-radius: 20px;
-      box-shadow: 0 50px 120px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.05), inset 0 1px 0 rgba(255,255,255,.07);
+      box-shadow: 0 60px 120px rgba(0,0,0,.75), 0 0 0 1px rgba(255,255,255,.04), inset 0 1px 0 rgba(255,255,255,.06);
       overflow: hidden;
       animation: float3d 7s ease-in-out infinite;
     }
     @keyframes float3d {
-      0%,100% { transform: rotateX(7deg) rotateY(-13deg) translateY(0); }
-      50%      { transform: rotateX(4deg) rotateY(-7deg) translateY(-18px); }
+      0%,100% { transform: rotateX(7deg) rotateY(-12deg) translateY(0); }
+      50%      { transform: rotateX(4deg) rotateY(-6deg) translateY(-16px); }
     }
     .mock-bar { background: #0A0A1E; padding: 10px 16px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255,255,255,.05); }
     .mock-dot { width: 10px; height: 10px; border-radius: 50%; }
@@ -187,66 +154,93 @@
     .mock-task { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
     .mock-td { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
     .mock-tx { font-size: 9.5px; color: #CBD5E1; }
-    .mock-chart { display: flex; align-items: flex-end; gap: 5px; height: 50px; }
-    .mock-b { flex: 1; border-radius: 3px 3px 0 0; background: rgba(99,102,241,.4); }
+    .mock-chart { display: flex; align-items: flex-end; gap: 5px; height: 52px; }
+    .mock-b { flex: 1; border-radius: 3px 3px 0 0; background: rgba(99,102,241,.38); }
     .mock-b.hi { background: linear-gradient(to top,#6366F1,#A855F7); }
 
-    /* ════════════════════════════════════════
-       PAIN POINTS
-    ════════════════════════════════════════ */
-    #pain { background: #fff; color: #111; }
-    #pain .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
+    /* ── STATS STRIP ── */
+    #stats {
+      background: #fff; color: #0F172A;
+      padding: 36px 48px;
+      border-top: 1px solid #E8EEF6; border-bottom: 1px solid #E8EEF6;
+    }
+    .stats-row { display: flex; justify-content: center; gap: 64px; flex-wrap: wrap; max-width: 1160px; margin: 0 auto; }
+    .stat-item { text-align: center; }
+    .stat-val { font-family: 'Syne',sans-serif; font-size: 36px; font-weight: 800; color: #6366F1; line-height: 1; margin-bottom: 6px; }
+    .stat-lbl { font-size: 13.5px; color: #64748B; font-weight: 500; }
+
+    /* ── PAIN POINTS ── */
+    #pain { background: #F8FAFC; color: #111; }
+    #pain .s-badge { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.2); color: #EF4444; }
     #pain .s-h2 { color: #0F172A; }
     #pain .s-sub { color: #64748B; }
-    .pain-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 52px; }
+    .pain-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 52px; }
     .pain-card {
-      background: #F8FAFC; border: 1.5px solid #E8EEF6; border-radius: 18px; padding: 26px;
+      background: #fff; border: 1.5px solid #E8EEF6; border-radius: 18px; padding: 26px;
       transition: transform .3s, box-shadow .3s, border-color .3s;
     }
-    .pain-card:hover { transform: translateY(-5px); box-shadow: 0 18px 48px rgba(0,0,0,.08); border-color: #C7D2FE; }
-    .pain-ico { font-size: 30px; margin-bottom: 12px; }
-    .pain-ttl { font-weight: 700; font-size: 15px; color: #0F172A; margin-bottom: 7px; }
+    .pain-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,.07); border-color: #C7D2FE; }
+    .pain-ico { font-size: 32px; margin-bottom: 12px; }
+    .pain-ttl { font-weight: 700; font-size: 15px; color: #0F172A; margin-bottom: 8px; }
     .pain-txt { font-size: 13.5px; color: #64748B; line-height: 1.65; }
+    .pain-arrow {
+      display: flex; align-items: center; gap: 12px; margin-top: 20px; padding-top: 16px;
+      border-top: 1px solid #F1F5F9;
+    }
+    .pain-fix { font-size: 12.5px; font-weight: 700; color: #6366F1; }
 
-    /* ════════════════════════════════════════
-       FEATURES
-    ════════════════════════════════════════ */
+    /* ── FEATURES ── */
     #features { background: #0A0A1E; }
-    .feat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 54px; }
+    .feat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 56px; }
     .feat-card {
       background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
-      border-radius: 18px; padding: 28px; position: relative; overflow: hidden;
-      transition: transform .3s, border-color .3s;
+      border-radius: 18px; padding: 28px 26px; position: relative; overflow: hidden;
+      transition: transform .3s, border-color .3s, box-shadow .3s;
     }
-    .feat-card::after {
-      content:''; position:absolute; inset:0;
-      background: linear-gradient(135deg,rgba(99,102,241,.09) 0%,transparent 55%);
+    .feat-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background: linear-gradient(90deg,#6366F1,#8B5CF6,transparent);
       opacity:0; transition:opacity .3s;
     }
-    .feat-card:hover { transform: translateY(-5px); border-color: rgba(99,102,241,.35); }
-    .feat-card:hover::after { opacity: 1; }
-    .feat-ico { width: 48px; height: 48px; background: linear-gradient(135deg,rgba(99,102,241,.2),rgba(139,92,246,.2)); border: 1px solid rgba(99,102,241,.22); border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
-    .feat-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 16px; color: #F1F5F9; margin-bottom: 8px; }
-    .feat-txt { font-size: 13.5px; color: #64748B; line-height: 1.65; }
+    .feat-card:hover { transform: translateY(-4px); border-color: rgba(99,102,241,.32); box-shadow: 0 20px 48px rgba(0,0,0,.4); }
+    .feat-card:hover::before { opacity: 1; }
+    .feat-ico { width: 50px; height: 50px; background: linear-gradient(135deg,rgba(99,102,241,.18),rgba(139,92,246,.18)); border: 1px solid rgba(99,102,241,.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 18px; }
+    .feat-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 16px; color: #F1F5F9; margin-bottom: 9px; }
+    .feat-txt { font-size: 13.5px; color: #64748B; line-height: 1.7; margin-bottom: 16px; }
+    .feat-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .feat-tag { background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.18); border-radius: 20px; padding: 3px 9px; font-size: 11px; color: #818CF8; font-weight: 600; }
 
-    /* ════════════════════════════════════════
-       HOW IT WORKS
-    ════════════════════════════════════════ */
-    #how { background: #F8FAFC; color: #111; }
-    #how .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
-    #how .s-h2 { color: #0F172A; }
-    #how .s-sub { color: #64748B; }
-    .how-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; margin-top: 56px; }
-    .how-step { text-align: center; }
-    .how-num { width: 56px; height: 56px; background: linear-gradient(135deg,var(--primary),var(--p2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Syne',sans-serif; font-weight: 800; font-size: 22px; color: #fff; margin: 0 auto 18px; box-shadow: 0 8px 24px rgba(99,102,241,.35); }
-    .how-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 17px; color: #0F172A; margin-bottom: 8px; }
-    .how-txt { font-size: 14px; color: #64748B; line-height: 1.65; max-width: 260px; margin: 0 auto; }
+    /* ── COMPLETE OVERZICHT ── */
+    #all-features { background: #fff; color: #111; }
+    #all-features .s-badge { background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.22); color: #059669; }
+    #all-features .s-h2 { color: #0F172A; }
+    #all-features .s-sub { color: #64748B; }
+    .all-feat-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-top: 48px; }
+    .all-feat-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      background: #F8FAFC; border: 1.5px solid #E8EEF6; border-radius: 14px; padding: 18px 20px;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .all-feat-item:hover { background: #fff; border-color: #C7D2FE; box-shadow: 0 4px 18px rgba(99,102,241,.08); }
+    .all-feat-check { width: 30px; height: 30px; flex-shrink: 0; background: linear-gradient(135deg,#6366F1,#8B5CF6); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; margin-top: 1px; }
+    .all-feat-name { font-size: 14.5px; font-weight: 700; color: #0F172A; margin-bottom: 4px; }
+    .all-feat-desc { font-size: 13px; color: #64748B; line-height: 1.55; }
 
-    /* ════════════════════════════════════════
-       SECTORS
-    ════════════════════════════════════════ */
+    /* ── HOW ── */
+    #how { background: var(--dark); }
+    .how-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 36px; margin-top: 56px; }
+    .how-step { text-align: center; position: relative; }
+    .how-step:not(:last-child)::after {
+      content:'→'; position: absolute; top: 28px; right: -18px;
+      font-size: 20px; color: rgba(99,102,241,.4); font-weight: 900;
+    }
+    .how-num { width: 56px; height: 56px; background: linear-gradient(135deg,var(--primary),var(--p2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Syne',sans-serif; font-weight: 800; font-size: 22px; color: #fff; margin: 0 auto 20px; box-shadow: 0 8px 28px rgba(99,102,241,.35); }
+    .how-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 17px; color: #F1F5F9; margin-bottom: 10px; }
+    .how-txt { font-size: 14px; color: #64748B; line-height: 1.7; max-width: 250px; margin: 0 auto; }
+
+    /* ── SECTORS ── */
     #sectors { background: #07071B; }
-    .sect-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 48px; }
+    .sect-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 44px; }
     .sect-chip {
       display: flex; align-items: center; gap: 9px;
       background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
@@ -254,81 +248,109 @@
       font-size: 14px; font-weight: 600; color: #CBD5E1;
       cursor: default; transition: all .25s;
     }
-    .sect-chip:hover { background: rgba(99,102,241,.16); border-color: rgba(99,102,241,.4); color: #A5B4FC; transform: scale(1.05); }
-    .sect-chip .si { font-size: 20px; }
+    .sect-chip:hover { background: rgba(99,102,241,.16); border-color: rgba(99,102,241,.4); color: #A5B4FC; transform: scale(1.04); }
+    .sect-chip .si { font-size: 19px; }
 
-    /* ════════════════════════════════════════
-       PRICING
-    ════════════════════════════════════════ */
+    /* ── PRICING ── */
     #pricing { background: #F8FAFC; color: #111; }
     #pricing .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
     #pricing .s-h2 { color: #0F172A; }
     #pricing .s-sub { color: #64748B; }
-    .price-wrap { max-width: 460px; margin: 48px auto 0; }
+    .price-wrap { max-width: 520px; margin: 48px auto 0; }
     .price-card {
       background: #fff; border-radius: 24px; border: 2px solid #E8EEF6;
-      padding: 40px; box-shadow: 0 24px 64px rgba(0,0,0,.1); position: relative; overflow: hidden;
+      padding: 40px; box-shadow: 0 24px 64px rgba(0,0,0,.09); position: relative; overflow: hidden;
     }
     .price-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#6366F1,#8B5CF6,#A855F7); }
     .price-lbl  { display: inline-block; background: linear-gradient(135deg,#EEF2FF,#EDE9FE); color: #6366F1; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 20px; }
     .price-name { font-family: 'Syne',sans-serif; font-weight: 800; font-size: 22px; color: #0F172A; margin-bottom: 10px; }
     .price-row  { display: flex; align-items: baseline; gap: 4px; margin-bottom: 6px; }
-    .price-amt  { font-family: 'Syne',sans-serif; font-size: 54px; font-weight: 800; color: #0F172A; }
+    .price-amt  { font-family: 'Syne',sans-serif; font-size: 56px; font-weight: 800; color: #0F172A; }
     .price-per  { font-size: 17px; color: #64748B; }
-    .price-trial{ font-size: 13.5px; color: #6366F1; font-weight: 600; margin-bottom: 26px; }
+    .price-trial{ font-size: 13.5px; color: #059669; font-weight: 600; margin-bottom: 26px; }
     .price-div  { height: 1px; background: #F1F5F9; margin: 22px 0; }
-    .price-list { list-style: none; display: flex; flex-direction: column; gap: 11px; margin-bottom: 30px; }
-    .price-list li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #374151; }
+    .price-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; margin-bottom: 32px; }
+    .price-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .price-list li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: #374151; }
     .price-list li::before {
-      content:'✓'; width:20px; height:20px; flex-shrink:0;
+      content:'✓'; width:19px; height:19px; flex-shrink:0;
       background: linear-gradient(135deg,#6366F1,#8B5CF6);
       border-radius: 50%; display:flex; align-items:center; justify-content:center;
-      font-size: 11px; font-weight:800; color:#fff;
+      font-size: 10px; font-weight:800; color:#fff;
     }
-    .price-cta { display:block; width:100%; background:linear-gradient(135deg,#6366F1,#8B5CF6); color:#fff; border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; text-align:center; box-shadow:0 8px 24px rgba(99,102,241,.35); transition:transform .2s,box-shadow .2s; }
-    .price-cta:hover { transform:translateY(-2px); box-shadow:0 14px 36px rgba(99,102,241,.52); }
+    .price-cta { display:block; width:100%; background:linear-gradient(135deg,#6366F1,#8B5CF6); color:#fff; border:none; border-radius:14px; padding:17px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; text-align:center; box-shadow:0 8px 28px rgba(99,102,241,.35); transition:transform .2s,box-shadow .2s; }
+    .price-cta:hover { transform:translateY(-2px); box-shadow:0 14px 40px rgba(99,102,241,.52); }
     .price-note { text-align:center; font-size:12px; color:#94A3B8; margin-top:14px; }
 
-    /* ════════════════════════════════════════
-       CTA BANNER
-    ════════════════════════════════════════ */
-    #cta-end { background: linear-gradient(135deg,#07071B 0%,#12103A 50%,#07071B 100%); text-align:center; }
+    /* ── CTA EINDE ── */
+    #cta-end { background: linear-gradient(135deg,#07071B 0%,#120F38 50%,#07071B 100%); text-align:center; }
     #cta-end .s-h2 { color: #F1F5F9; }
     #cta-end .s-sub { color: var(--muted); }
     .cta-btns { display: flex; gap: 14px; justify-content: center; margin-top: 36px; flex-wrap: wrap; }
 
-    /* ════════════════════════════════════════
-       FOOTER
-    ════════════════════════════════════════ */
-    footer { background: #040410; padding: 36px 48px; border-top: 1px solid rgba(255,255,255,.05); }
-    .foot { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; }
-    .foot-logo { display:flex; align-items:center; gap:8px; }
-    .foot-ico   { width:28px; height:28px; background:linear-gradient(135deg,#6366F1,#8B5CF6); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; }
-    .foot-name  { font-family:'Syne',sans-serif; font-weight:800; font-size:16px; color:#fff; }
-    .foot-copy  { font-size:13px; color:#334155; }
-    .foot-links { display:flex; gap:20px; }
-    .foot-links a { font-size:13px; color:#475569; text-decoration:none; transition:color .2s; }
+    /* ── CONTACT ── */
+    #contact { background: #fff; color: #111; }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+    .contact-info { display: flex; flex-direction: column; gap: 16px; margin-top: 28px; }
+    .contact-item { display: flex; align-items: center; gap: 16px; padding: 18px 22px; background: #F8FAFC; border: 1.5px solid #E8EEF6; border-radius: 16px; text-decoration: none; transition: border-color .2s, box-shadow .2s; }
+    .contact-item:hover { border-color: #C7D2FE; box-shadow: 0 6px 24px rgba(99,102,241,.1); }
+    .contact-ico { width: 46px; height: 46px; background: linear-gradient(135deg,#EEF2FF,#EDE9FE); border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .contact-lbl { font-size: 11px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+    .contact-val { font-size: 16px; font-weight: 700; color: #0F172A; }
+    .cf-box { background: #F8FAFC; border: 1.5px solid #E8EEF6; border-radius: 22px; padding: 36px; }
+    .cf-title { font-family: 'Syne',sans-serif; font-weight: 800; font-size: 18px; color: #0F172A; margin-bottom: 6px; }
+    .cf-sub { font-size: 13.5px; color: #94A3B8; margin-bottom: 24px; }
+    .cf-group { display: flex; flex-direction: column; gap: 14px; }
+    .cf-label { display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px; }
+    .cf-input, .cf-textarea {
+      width: 100%; border: 1.5px solid #E2E8F0; border-radius: 10px;
+      padding: 11px 14px; font-size: 14px; font-family: 'DM Sans',sans-serif;
+      outline: none; background: #fff; color: #111;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .cf-input:focus, .cf-textarea:focus { border-color: #6366F1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+    .cf-textarea { resize: vertical; }
+    .cf-submit { width:100%; background:linear-gradient(135deg,#6366F1,#8B5CF6); color:#fff; border:none; border-radius:11px; padding:13px; font-size:15px; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; box-shadow:0 6px 20px rgba(99,102,241,.3); transition:transform .2s,box-shadow .2s; }
+    .cf-submit:hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(99,102,241,.48); }
+    #cf-success { display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:10px; padding:12px 16px; font-size:14px; font-weight:600; color:#15803D; text-align:center; }
+
+    /* ── FOOTER ── */
+    footer { background: #040410; padding: 40px 48px; border-top: 1px solid rgba(255,255,255,.05); }
+    .foot { max-width:1160px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+    .foot-logo { display:flex; align-items:center; gap:9px; }
+    .foot-ico  { width:30px; height:30px; background:linear-gradient(135deg,#6366F1,#8B5CF6); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:15px; }
+    .foot-name { font-family:'Syne',sans-serif; font-weight:800; font-size:17px; color:#fff; }
+    .foot-copy { font-size:13px; color:#334155; }
+    .foot-links { display:flex; gap:22px; }
+    .foot-links a { font-size:13px; color:#475569; transition:color .2s; }
     .foot-links a:hover { color:#A5B4FC; }
 
-    /* ════════════════════════════════════════
-       RESPONSIVE
-    ════════════════════════════════════════ */
+    /* ── RESPONSIVE ── */
     @media (max-width: 960px) {
       section { padding: 72px 24px; }
       #hero { padding: 100px 24px 72px; }
-      #nav  { padding: 14px 24px; }
+      #nav { padding: 14px 24px; }
+      .nav-links { display: none; }
       .hero-grid { grid-template-columns: 1fr; gap: 48px; }
       .hero-vis { order: -1; }
       .mock-card { max-width: 420px; }
       .pain-grid, .feat-grid { grid-template-columns: 1fr 1fr; }
-      .how-grid  { grid-template-columns: 1fr; gap: 36px; }
+      .how-grid { grid-template-columns: 1fr; gap: 40px; }
+      .how-step::after { display: none; }
+      .all-feat-grid { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; gap: 36px; }
+      .price-cols { grid-template-columns: 1fr; }
       footer { padding: 28px 24px; }
       .foot { flex-direction: column; text-align: center; }
       .foot-links { flex-wrap: wrap; justify-content: center; }
+      #stats { padding: 28px 24px; }
+      .stats-row { gap: 36px; }
     }
     @media (max-width: 600px) {
       .pain-grid, .feat-grid { grid-template-columns: 1fr; }
       .hero-btns { flex-direction: column; align-items: flex-start; }
+      .stats-row { gap: 24px; }
+      .stat-val { font-size: 28px; }
     }
   </style>
 </head>
@@ -340,7 +362,13 @@
     <div class="nav-icon">⚡</div>
     <span class="nav-name syne">WerkMate</span>
   </div>
-  <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="nav-cta syne">Start gratis →</a>
+  <div class="nav-links">
+    <a href="#features">Functies</a>
+    <a href="#pricing">Prijzen</a>
+    <a href="#sectors">Vakgebieden</a>
+    <a href="#contact">Contact</a>
+  </div>
+  <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="nav-cta syne">Gratis starten →</a>
 </nav>
 
 <!-- ══ HERO ══════════════════════════════════════════════════════ -->
@@ -351,17 +379,33 @@
   <div class="hero-grid">
 
     <div>
-      <div class="hero-badge"><span class="badge-dot"></span> Nu beschikbaar voor vakmensen in NL</div>
+      <div class="hero-badge"><span class="badge-dot"></span> Nu beschikbaar voor vakmensen in Nederland</div>
       <h1 class="hero-h1">
-        Jij bent goed<br>in je vak.<br>
-        <span class="grad-text">Wij regelen<br>de rest.</span>
+        Minder papierwerk.<br>
+        <span class="grad-text">Meer tijd voor<br>je echte werk.</span>
       </h1>
-      <p class="hero-sub">WerkMate is het complete bedrijfsplatform voor vakmensen. Van offerte tot factuur, van planning tot klantenbeheer — alles op één plek, aangedreven door AI.</p>
+      <p class="hero-sub">WerkMate regelt je offertes, facturen, planning, werkbonnen en rittenregistratie — alles op één plek, aangedreven door AI.</p>
       <div class="hero-btns">
         <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="btn-pri">🚀 Start 14 dagen gratis</a>
-        <a href="#features" class="btn-ghost">Bekijk features</a>
+        <a href="#features" class="btn-ghost">Bekijk alle functies</a>
       </div>
-      <p class="hero-note">Geen creditcard nodig &nbsp;·&nbsp; Opzegbaar per maand &nbsp;·&nbsp; Daarna €99/maand</p>
+      <div class="hero-note">
+        <span>Geen creditcard nodig</span>
+        <span style="color:#334155">·</span>
+        <span>Opzegbaar per maand</span>
+        <span style="color:#334155">·</span>
+        <span>Daarna €99/maand</span>
+      </div>
+      <div class="hero-pills">
+        <span class="hero-pill">🤖 AI offertes</span>
+        <span class="hero-pill">✍️ Digitaal ondertekenen</span>
+        <span class="hero-pill">📅 Planning</span>
+        <span class="hero-pill">🚗 Rittenregistratie</span>
+        <span class="hero-pill">⭐ Google reviews</span>
+        <span class="hero-pill">📋 Werkbonnen</span>
+        <span class="hero-pill">💶 Facturen</span>
+        <span class="hero-pill">📊 Boekhouding</span>
+      </div>
     </div>
 
     <div class="hero-vis">
@@ -399,13 +443,13 @@
               <div class="mock-mini" style="flex:1">
                 <div class="mock-ttl">Omzet / week</div>
                 <div class="mock-chart">
-                  <div class="mock-b" style="height:52%"></div>
-                  <div class="mock-b" style="height:68%"></div>
-                  <div class="mock-b" style="height:44%"></div>
-                  <div class="mock-b hi" style="height:92%"></div>
-                  <div class="mock-b" style="height:63%"></div>
-                  <div class="mock-b" style="height:78%"></div>
-                  <div class="mock-b" style="height:55%"></div>
+                  <div class="mock-b" style="height:50%"></div>
+                  <div class="mock-b" style="height:67%"></div>
+                  <div class="mock-b" style="height:42%"></div>
+                  <div class="mock-b hi" style="height:91%"></div>
+                  <div class="mock-b" style="height:61%"></div>
+                  <div class="mock-b" style="height:76%"></div>
+                  <div class="mock-b" style="height:53%"></div>
                 </div>
               </div>
             </div>
@@ -417,150 +461,338 @@
   </div>
 </section>
 
-<!-- ══ PAIN POINTS ════════════════════════════════════════════ -->
+<!-- ══ STATS ══════════════════════════════════════════════════════ -->
+<div id="stats">
+  <div class="stats-row">
+    <div class="stat-item fade-up">
+      <div class="stat-val">14+</div>
+      <div class="stat-lbl">Ingebouwde functies</div>
+    </div>
+    <div class="stat-item fade-up d1">
+      <div class="stat-val">30 sec</div>
+      <div class="stat-lbl">Van omschrijving naar offerte</div>
+    </div>
+    <div class="stat-item fade-up d2">
+      <div class="stat-val">€99</div>
+      <div class="stat-lbl">Per maand, alles inbegrepen</div>
+    </div>
+    <div class="stat-item fade-up d3">
+      <div class="stat-val">14 dgn</div>
+      <div class="stat-lbl">Gratis uitproberen</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAIN POINTS ════════════════════════════════════════════════ -->
 <section id="pain">
   <div class="section-inner">
     <div class="center">
       <div class="s-badge fade-up">😤 Herken jij dit?</div>
-      <h2 class="s-h2 syne fade-up d1">Stop met tijd verspillen<br>aan administratie</h2>
-      <p class="s-sub fade-up d2">Elke vakman kent de frustratie. Uren kwijt aan papierwerk in plaats van je echte werk doen.</p>
+      <h2 class="s-h2 syne fade-up d1">Administratie vreet je tijd.<br>WerkMate geeft die terug.</h2>
+      <p class="s-sub fade-up d2">Elke vakman kent het gevoel: uren kwijt aan paperassen terwijl er nog werk op je ligt te wachten.</p>
     </div>
     <div class="pain-grid">
       <div class="pain-card fade-up d1">
         <div class="pain-ico">📝</div>
-        <div class="pain-ttl">"Een offerte maken kost me uren"</div>
-        <div class="pain-txt">Word-documenten, rekenmachines, handmatig tellen. Terwijl de klant al wacht op je prijsopgave.</div>
+        <div class="pain-ttl">"Een offerte opstellen kost me de halve dag"</div>
+        <div class="pain-txt">Word-documenten openen, nummers invullen, layout rechtzetten. Terwijl de klant al belt wanneer die de offerte krijgt.</div>
+        <div class="pain-arrow"><div class="pain-fix">✓ WerkMate: AI-offerte in 30 seconden</div></div>
       </div>
       <div class="pain-card fade-up d2">
         <div class="pain-ico">💸</div>
         <div class="pain-ttl">"Klanten betalen altijd te laat"</div>
-        <div class="pain-txt">Facturen kwijt, herinneringen vergeten. Je werkt hard maar de kas blijft leeg.</div>
+        <div class="pain-txt">Facturen achtervolgen, herinneringen sturen, nummertje bellen. Je werkt hard maar de kas loopt leeg.</div>
+        <div class="pain-arrow"><div class="pain-fix">✓ WerkMate: automatische betalingsherinnering</div></div>
       </div>
       <div class="pain-card fade-up d3">
         <div class="pain-ico">📅</div>
-        <div class="pain-ttl">"Mijn planning is chaos"</div>
-        <div class="pain-txt">Afspraken in je hoofd, blaadjes kwijt, berichten van klanten door elkaar. Iets vergeten is een kwestie van tijd.</div>
+        <div class="pain-ttl">"Mijn planning is een chaos"</div>
+        <div class="pain-txt">Afspraken in je hoofd, blaadjes kwijt, berichten via WhatsApp door elkaar. Iets vergeten is een kwestie van tijd.</div>
+        <div class="pain-arrow"><div class="pain-fix">✓ WerkMate: agenda per 30 minuten voor heel je team</div></div>
       </div>
       <div class="pain-card fade-up d4">
         <div class="pain-ico">🌙</div>
-        <div class="pain-ttl">"Ik doe administratie in het weekend"</div>
-        <div class="pain-txt">Na een zware werkweek nog uren achter de laptop. Je gezin ziet je nauwelijks.</div>
+        <div class="pain-ttl">"In het weekend zit ik nog administratie bij te houden"</div>
+        <div class="pain-txt">Na een zware werkweek nog uren achter de laptop terwijl de rest geniet. Je gezin ziet je nauwelijks.</div>
+        <div class="pain-arrow"><div class="pain-fix">✓ WerkMate: alles geregeld terwijl jij aan het werk bent</div></div>
       </div>
       <div class="pain-card fade-up d5">
-        <div class="pain-ico">📱</div>
-        <div class="pain-ttl">"Geen tijd voor social media"</div>
-        <div class="pain-txt">Je weet dat reviews en posts klanten opleveren, maar het verzinnen kost uren die je gewoon niet hebt.</div>
+        <div class="pain-ico">🚗</div>
+        <div class="pain-ttl">"Mijn kilometers bijhouden is een drama"</div>
+        <div class="pain-txt">Rittenregistratie op papier, bonnetjes kwijt, en aan het eind van het jaar puzzelen voor de belastingdienst.</div>
+        <div class="pain-arrow"><div class="pain-fix">✓ WerkMate: automatische km-berekening per rit</div></div>
       </div>
       <div class="pain-card fade-up d6">
         <div class="pain-ico">👷</div>
-        <div class="pain-ttl">"Mijn team weet niet wat ze doen"</div>
-        <div class="pain-txt">Elke ochtend bellen, taken via WhatsApp, niemand weet exact wie waar naartoe gaat.</div>
+        <div class="pain-ttl">"Mijn monteurs weten 's ochtends niet wat ze moeten doen"</div>
+        <div class="pain-txt">Elke ochtend dezelfde telefoontjes. Taken via WhatsApp, niemand weet precies wie waar naartoe gaat.</div>
+        <div class="pain-arrow"><div class="pain-fix">✓ WerkMate: planning en werkbonnen per teamlid</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ══ FEATURES ═══════════════════════════════════════════════ -->
+<!-- ══ FEATURES ═══════════════════════════════════════════════════ -->
 <section id="features">
   <div class="section-inner">
     <div class="center">
-      <div class="s-badge fade-up">⚡ Features</div>
+      <div class="s-badge fade-up">⚡ Functies</div>
       <h2 class="s-h2 syne fade-up d1" style="color:#F1F5F9">Alles wat je nodig hebt,<br><span class="grad-text">niets wat je niet nodig hebt</span></h2>
       <p class="s-sub fade-up d2">De tools van een groot bedrijf, zonder de complexiteit. Simpel, snel, effectief.</p>
     </div>
     <div class="feat-grid">
+
       <div class="feat-card fade-up d1">
         <div class="feat-ico">🤖</div>
-        <div class="feat-ttl">AI Offerte in 30 seconden</div>
-        <div class="feat-txt">Beschrijf de klus en onze AI maakt een professionele offerte met de juiste prijs. Verstuur als PDF direct naar de klant.</div>
+        <div class="feat-ttl">AI-offerte in 30 seconden</div>
+        <div class="feat-txt">Omschrijf de klus en WerkMate schrijft een professionele offerte met de juiste regels en bedragen. Importeer je eigen prijslijst uit Excel voor je eigen tarieven.</div>
+        <div class="feat-tags"><span class="feat-tag">AI</span><span class="feat-tag">PDF</span><span class="feat-tag">Excel import</span></div>
       </div>
+
       <div class="feat-card fade-up d2">
-        <div class="feat-ico">💶</div>
-        <div class="feat-ttl">Facturen & Boekhouding</div>
-        <div class="feat-txt">Facturen aanmaken, BTW berekenen, herinneringen sturen. Altijd weten wat er open staat en wat er binnenkomt.</div>
+        <div class="feat-ico">✍️</div>
+        <div class="feat-ttl">Digitaal ondertekenen via klantportaal</div>
+        <div class="feat-txt">Klant krijgt een persoonlijke portaallink per WhatsApp of e-mail en ondertekent de offerte online. Bij acceptatie wordt de factuur direct aangemaakt.</div>
+        <div class="feat-tags"><span class="feat-tag">Klantportaal</span><span class="feat-tag">WhatsApp</span><span class="feat-tag">E-mail</span></div>
       </div>
+
       <div class="feat-card fade-up d3">
-        <div class="feat-ico">📅</div>
-        <div class="feat-ttl">Slimme Planning</div>
-        <div class="feat-txt">Maand- en weekoverzicht, terugkerende taken, feestdagen. Wijs opdrachten toe aan teamleden en navigeer direct naar de klant.</div>
+        <div class="feat-ico">💶</div>
+        <div class="feat-ttl">Facturen & automatische betalingsherinnering</div>
+        <div class="feat-txt">Facturen aanmaken en versturen met je IBAN en betalingsgegevens. Automatische herinnering zodat jij niet achter klanten aan hoeft te bellen.</div>
+        <div class="feat-tags"><span class="feat-tag">BTW</span><span class="feat-tag">IBAN</span><span class="feat-tag">Automatisch</span></div>
       </div>
+
       <div class="feat-card fade-up d4">
-        <div class="feat-ico">👥</div>
-        <div class="feat-ttl">CRM & Klantenbeheer</div>
-        <div class="feat-txt">Alle klantgegevens op één plek. Offertes, facturen en contacthistorie per klant netjes bijgehouden.</div>
+        <div class="feat-ico">📅</div>
+        <div class="feat-ttl">Planning per 30 minuten</div>
+        <div class="feat-txt">Dag-, week- en maandoverzicht met nauwkeurige tijdslots. Wijs opdrachten toe aan teamleden, stel terugkerende afspraken in en navigeer direct naar de klant.</div>
+        <div class="feat-tags"><span class="feat-tag">Agenda</span><span class="feat-tag">Team</span><span class="feat-tag">Terugkerend</span></div>
       </div>
+
       <div class="feat-card fade-up d5">
-        <div class="feat-ico">📸</div>
-        <div class="feat-ttl">AI Social Media Posts</div>
-        <div class="feat-txt">AI schrijft je Instagram en TikTok posts op basis van je project. Professionele uitstraling zonder dat het je tijd kost.</div>
+        <div class="feat-ico">📋</div>
+        <div class="feat-ttl">Werkbonnen met foto's en handtekening</div>
+        <div class="feat-txt">Registreer uren, gebruikte materialen en foto's van de klus. De klant tekent direct op jouw telefoon of tablet — alles digitaal vastgelegd op de bon.</div>
+        <div class="feat-tags"><span class="feat-tag">Foto's</span><span class="feat-tag">Materialen</span><span class="feat-tag">Handtekening</span></div>
       </div>
+
       <div class="feat-card fade-up d6">
-        <div class="feat-ico">👷</div>
-        <div class="feat-ttl">Teambeheer</div>
-        <div class="feat-txt">Nodig medewerkers uit, wijs rollen toe en zie wie wat doet. Iedereen werkt vanuit dezelfde planning, altijd up-to-date.</div>
+        <div class="feat-ico">👥</div>
+        <div class="feat-ttl">Klantenbeheer met zoekfunctie</div>
+        <div class="feat-txt">Alle klantgegevens op één plek: contactinfo, offertes, facturen en werkbonnen per klant netjes bijgehouden. Snel terugvinden via de zoekbalk.</div>
+        <div class="feat-tags"><span class="feat-tag">CRM</span><span class="feat-tag">Zoeken</span><span class="feat-tag">Historiek</span></div>
       </div>
+
+      <div class="feat-card fade-up d7">
+        <div class="feat-ico">🚗</div>
+        <div class="feat-ttl">Rittenregistratie met km-berekening</div>
+        <div class="feat-txt">Registreer zakelijke ritten en laat WerkMate de kilometervergoeding automatisch berekenen. Het overzicht voor je belastingaangifte is altijd bij de hand.</div>
+        <div class="feat-tags"><span class="feat-tag">Km-vergoeding</span><span class="feat-tag">Belasting</span><span class="feat-tag">Overzicht</span></div>
+      </div>
+
+      <div class="feat-card fade-up d8">
+        <div class="feat-ico">📊</div>
+        <div class="feat-ttl">Boekhouding en uitgaven bijhouden</div>
+        <div class="feat-txt">Leg zakelijke uitgaven vast per categorie met BTW-bedrag. Krijg direct inzicht in je omzet, kosten en openstaande facturen — klaar voor je boekhouder.</div>
+        <div class="feat-tags"><span class="feat-tag">BTW-overzicht</span><span class="feat-tag">Categorieën</span><span class="feat-tag">Kwartaal</span></div>
+      </div>
+
+      <div class="feat-card fade-up d9">
+        <div class="feat-ico">⭐</div>
+        <div class="feat-ttl">Google reviews & certificaten</div>
+        <div class="feat-txt">Automatisch reviewverzoek sturen zodra een werkbon op 'Afgerond' staat. Plus een certificatentracker die je waarschuwt als VCA of rijbewijzen verlopen.</div>
+        <div class="feat-tags"><span class="feat-tag">Google reviews</span><span class="feat-tag">Certificaten</span><span class="feat-tag">Automatisch</span></div>
+      </div>
+
     </div>
   </div>
 </section>
 
-<!-- ══ HOW IT WORKS ═══════════════════════════════════════════ -->
+<!-- ══ COMPLEET OVERZICHT ══════════════════════════════════════════ -->
+<section id="all-features">
+  <div class="section-inner">
+    <div class="center">
+      <div class="s-badge fade-up">✅ Compleet overzicht</div>
+      <h2 class="s-h2 syne fade-up d1">Alles inbegrepen.<br>Geen verborgen extra's.</h2>
+      <p class="s-sub fade-up d2">Eén abonnement geeft je toegang tot alle functies — geen losse modules, geen add-ons, geen verrassingen.</p>
+    </div>
+    <div class="all-feat-grid">
+
+      <div class="all-feat-item fade-up d1">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Slimme offerte generator met AI</div>
+          <div class="all-feat-desc">Omschrijf de klus in gewone taal — AI stelt de offerte op met regels, hoeveelheden en bedragen. Klaar in 30 seconden.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d2">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Digitaal ondertekenen via klantportaal</div>
+          <div class="all-feat-desc">Klant opent een persoonlijke link, bekijkt de offerte en ondertekent digitaal. Jij krijgt direct een bevestiging per e-mail.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d3">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">WhatsApp en e-mail versturen van offertes</div>
+          <div class="all-feat-desc">Deel offertes en facturen direct via WhatsApp of e-mail, met de PDF als bijlage. Één klik en de klant ontvangt alles netjes.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d4">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Facturen met automatische betalingsherinnering</div>
+          <div class="all-feat-desc">Stuur facturen met IBAN-betaalblok. WerkMate stuurt automatisch een herinnering als de betaaltermijn bijna verloopt.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d1">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Planning met agenda per 30 minuten</div>
+          <div class="all-feat-desc">Nauwkeurige tijdslots van 30 minuten in dag- en weekoverzicht. Wijs opdrachten toe aan teamleden en stel terugkerende taken in.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d2">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Klantenbeheer met zoekfunctie</div>
+          <div class="all-feat-desc">Volledig klantoverzicht met contact-, offerte- en factuurhistorie. Vind elke klant terug in seconden via de zoekbalk.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d3">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Werkbonnen met foto's, materialen en handtekening</div>
+          <div class="all-feat-desc">Maak digitale werkbonnen op locatie met uren, materialen en foto's. De klant tekent direct op je telefoon of tablet.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d4">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Rittenregistratie met automatische km-berekening</div>
+          <div class="all-feat-desc">Leg zakelijke ritten vast met vertrek- en aankomstpunt. WerkMate berekent de km-vergoeding automatisch op basis van jouw tarief.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d1">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Boekhouding en uitgaven bijhouden</div>
+          <div class="all-feat-desc">Registreer zakelijke uitgaven per categorie inclusief BTW. Kwartaaloverzicht altijd beschikbaar — handig voor je boekhouder of aangifte.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d2">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Certificaten tracker</div>
+          <div class="all-feat-desc">Houd VCA-certificaten, rijbewijzen en vakdiploma's bij. Automatische melding als een certificaat bijna verloopt — nooit meer gedoe met verlopen papieren.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d3">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Team uitnodigingen</div>
+          <div class="all-feat-desc">Nodig collega's en monteurs uit via e-mail. Ze zien direct de planning, kunnen werkbonnen invullen en hun ritten registreren.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d4">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">E-mail templates aanpasbaar</div>
+          <div class="all-feat-desc">Schrijf je eigen tekst voor offerte-, factuur-, herinnering- en reviewmails. Gebruik variabelen zoals {klantnaam} en {bedrijfsnaam} die automatisch worden ingevuld.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d1">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Prijslijst met Excel import</div>
+          <div class="all-feat-desc">Laad je eigen prijslijst vanuit Excel of voer tarieven handmatig in. AI gebruikt jouw tarieven automatisch bij het opstellen van offertes.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d2">
+        <div class="all-feat-check">✓</div>
+        <div>
+          <div class="all-feat-name">Google review verzoek na klus</div>
+          <div class="all-feat-desc">WerkMate stuurt automatisch een reviewverzoek zodra een werkbon op 'Afgerond' staat. Meer Google-recensies zonder er zelf aan te denken.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ HOW IT WORKS ════════════════════════════════════════════════ -->
 <section id="how">
   <div class="section-inner">
     <div class="center">
-      <div class="s-badge fade-up">🚀 Zo werkt het</div>
-      <h2 class="s-h2 syne fade-up d1">In 3 stappen<br>aan de slag</h2>
+      <div class="s-badge fade-up" style="background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.3);color:#818CF8">🚀 Zo werkt het</div>
+      <h2 class="s-h2 syne fade-up d1" style="color:#F1F5F9">In 3 stappen<br>aan de slag</h2>
       <p class="s-sub fade-up d2">Geen ingewikkelde installatie, geen handleidingen. Vandaag aanmelden, morgen al tijd besparen.</p>
     </div>
     <div class="how-grid">
       <div class="how-step fade-up d1">
         <div class="how-num">1</div>
-        <div class="how-ttl">Maak een account aan</div>
-        <div class="how-txt">Registreer gratis, vul je bedrijfsgegevens in en je bent direct klaar om te starten. Duurt minder dan 2 minuten.</div>
+        <div class="how-ttl">Account aanmaken</div>
+        <div class="how-txt">Registreer gratis, vul je bedrijfsnaam en logo in. Duurt minder dan 2 minuten — direct klaar om te starten.</div>
       </div>
       <div class="how-step fade-up d2">
         <div class="how-num">2</div>
-        <div class="how-ttl">Voeg je eerste klant toe</div>
-        <div class="how-txt">Importeer klantgegevens of voeg ze handmatig in. Maak direct je eerste AI-offerte en verstuur hem per e-mail.</div>
+        <div class="how-ttl">Eerste AI-offerte versturen</div>
+        <div class="how-txt">Voeg een klant toe, omschrijf de klus en laat AI de offerte schrijven. Verstuur direct via WhatsApp of e-mail — klant tekent online.</div>
       </div>
       <div class="how-step fade-up d3">
         <div class="how-num">3</div>
-        <div class="how-ttl">Bespaar uren per week</div>
-        <div class="how-txt">Planning, facturen, herinneringen — WerkMate regelt het voor je. Jij focust op je vak, wij op de rest.</div>
+        <div class="how-ttl">Uren per week besparen</div>
+        <div class="how-txt">Planning, facturen, werkbonnen, ritten en reviews — WerkMate regelt het automatisch. Jij focust op je vak.</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ══ SECTORS ════════════════════════════════════════════════ -->
+<!-- ══ SECTORS ════════════════════════════════════════════════════ -->
 <section id="sectors">
   <div class="section-inner center">
     <div class="s-badge fade-up" style="display:inline-flex">🏆 Voor elk vak</div>
     <h2 class="s-h2 syne fade-up d1" style="color:#F1F5F9">Speciaal gemaakt voor<br><span class="grad-text">de echte vakman</span></h2>
-    <p class="s-sub fade-up d2" style="margin:0 auto 48px">Of je nu bouwt, installeert, schoonmaakt of iets heel anders doet — WerkMate past zich aan jouw vak aan.</p>
+    <p class="s-sub fade-up d2" style="margin:0 auto 44px">Of je nu bouwt, installeert, schoonmaakt of iets heel anders doet — WerkMate past zich aan jouw vak aan.</p>
     <div class="sect-chips fade-up d3">
-      <div class="sect-chip"><span class="si">🔨</span> Bouw & Renovatie</div>
+      <div class="sect-chip"><span class="si">🔨</span> Bouw &amp; Renovatie</div>
       <div class="sect-chip"><span class="si">🔧</span> Loodgieter</div>
       <div class="sect-chip"><span class="si">⚡</span> Elektricien</div>
-      <div class="sect-chip"><span class="si">🌿</span> Tuinieren</div>
+      <div class="sect-chip"><span class="si">🌿</span> Hovenier</div>
       <div class="sect-chip"><span class="si">🧹</span> Schoonmaak</div>
-      <div class="sect-chip"><span class="si">❄️</span> Airco & Klimaat</div>
+      <div class="sect-chip"><span class="si">❄️</span> Airco &amp; Klimaat</div>
       <div class="sect-chip"><span class="si">🛡️</span> Beveiliging</div>
       <div class="sect-chip"><span class="si">🚚</span> Transport</div>
       <div class="sect-chip"><span class="si">🎨</span> Schilder</div>
-      <div class="sect-chip"><span class="si">🍽️</span> Catering</div>
       <div class="sect-chip"><span class="si">🪵</span> Timmerman</div>
       <div class="sect-chip"><span class="si">🏠</span> Dakdekker</div>
+      <div class="sect-chip"><span class="si">🔩</span> Installateur</div>
     </div>
   </div>
 </section>
 
-<!-- ══ PRICING ════════════════════════════════════════════════ -->
+<!-- ══ PRICING ════════════════════════════════════════════════════ -->
 <section id="pricing">
   <div class="section-inner">
     <div class="center">
       <div class="s-badge fade-up">💳 Prijzen</div>
       <h2 class="s-h2 syne fade-up d1">Één plan. Alles inbegrepen.<br>Geen verrassingen.</h2>
-      <p class="s-sub fade-up d2">Geen dure consultants, geen ingewikkelde pakketten. Gewoon alles wat je nodig hebt voor één vaste prijs.</p>
+      <p class="s-sub fade-up d2">Geen dure consultants, geen losse modules. Alle 14 functies voor één vaste prijs — inclusief updates en ondersteuning.</p>
     </div>
     <div class="price-wrap fade-up d3">
       <div class="price-card">
@@ -572,18 +804,26 @@
         </div>
         <div class="price-trial">✨ 14 dagen gratis uitproberen — geen creditcard nodig</div>
         <div class="price-div"></div>
-        <ul class="price-list">
-          <li>Onbeperkt offertes & facturen</li>
-          <li>AI offerte generator</li>
-          <li>Planning kalender (maand & week)</li>
-          <li>CRM & klantenbeheer</li>
-          <li>Werkbonnen digitaal</li>
-          <li>AI social media posts</li>
-          <li>Teambeheer & uitnodigingen</li>
-          <li>PDF export & e-mailen</li>
-          <li>BTW & boekhoudingoverzicht</li>
-          <li>Support via e-mail & chat</li>
-        </ul>
+        <div class="price-cols">
+          <ul class="price-list">
+            <li>AI offerte generator</li>
+            <li>Digitaal ondertekenen</li>
+            <li>WhatsApp &amp; e-mail versturen</li>
+            <li>Facturen &amp; herinneringen</li>
+            <li>Planning per 30 minuten</li>
+            <li>Klantenbeheer &amp; CRM</li>
+            <li>Werkbonnen met handtekening</li>
+          </ul>
+          <ul class="price-list">
+            <li>Rittenregistratie</li>
+            <li>Boekhouding &amp; uitgaven</li>
+            <li>Certificaten tracker</li>
+            <li>Team uitnodigingen</li>
+            <li>E-mail templates</li>
+            <li>Prijslijst Excel import</li>
+            <li>Google review verzoek</li>
+          </ul>
+        </div>
         <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="price-cta">🚀 Start 14 dagen gratis</a>
         <p class="price-note">Na 14 dagen €99/maand &nbsp;·&nbsp; Altijd opzegbaar &nbsp;·&nbsp; Geen verborgen kosten</p>
       </div>
@@ -591,83 +831,67 @@
   </div>
 </section>
 
-<!-- ══ CTA BOTTOM ══════════════════════════════════════════════ -->
+<!-- ══ CTA EINDE ══════════════════════════════════════════════════ -->
 <section id="cta-end">
   <div class="section-inner center">
     <div class="s-badge fade-up" style="display:inline-flex">🔥 Klaar om te starten?</div>
     <h2 class="s-h2 syne fade-up d1">Stop met papierwerk.<br><span class="grad-text">Begin vandaag gratis.</span></h2>
-    <p class="s-sub fade-up d2" style="margin:0 auto">Sluit je aan bij vakmensen die al uren per week besparen met WerkMate.</p>
+    <p class="s-sub fade-up d2" style="margin:0 auto">Sluit je aan bij vakmensen die al uren per week besparen met WerkMate. 14 dagen gratis — geen risico.</p>
     <div class="cta-btns fade-up d3">
-      <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="btn-pri" style="font-size:16px;padding:16px 34px">🚀 Start 14 dagen gratis</a>
+      <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="btn-pri" style="font-size:16px;padding:17px 36px">🚀 Start 14 dagen gratis</a>
+      <a href="#contact" class="btn-ghost" style="font-size:15px">Stel een vraag →</a>
     </div>
-    <p style="color:#334155;font-size:13px;margin-top:16px">Geen creditcard nodig &nbsp;·&nbsp; Direct aan de slag &nbsp;·&nbsp; Opzegbaar per maand</p>
+    <p style="color:#334155;font-size:13px;margin-top:18px">Geen creditcard nodig &nbsp;·&nbsp; Direct aan de slag &nbsp;·&nbsp; Opzegbaar per maand</p>
   </div>
 </section>
 
-<!-- ══ CONTACT ════════════════════════════════════════════════ -->
-<section id="contact" style="background:#fff;color:#111">
+<!-- ══ CONTACT ════════════════════════════════════════════════════ -->
+<section id="contact">
   <div class="section-inner">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start">
+    <div class="contact-grid">
 
       <div>
-        <div class="s-badge" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.18);color:#6366F1" class="fade-up">✉️ Contact</div>
-        <h2 class="s-h2 syne fade-up" style="color:#0F172A;margin-top:14px">Vragen? Wij<br>helpen je graag.</h2>
-        <p class="s-sub fade-up d1" style="color:#64748B;margin-bottom:36px">Neem gerust contact op. We reageren doorgaans binnen één werkdag.</p>
-
-        <div style="display:flex;flex-direction:column;gap:20px">
-          <a href="tel:0610362420" style="display:flex;align-items:center;gap:16px;padding:18px 22px;background:#F8FAFC;border:1.5px solid #E8EEF6;border-radius:16px;text-decoration:none;transition:border-color .2s,box-shadow .2s" onmouseover="this.style.borderColor='#C7D2FE';this.style.boxShadow='0 8px 24px rgba(99,102,241,.1)'" onmouseout="this.style.borderColor='#E8EEF6';this.style.boxShadow='none'">
-            <div style="width:46px;height:46px;background:linear-gradient(135deg,#EEF2FF,#EDE9FE);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📞</div>
+        <div class="s-badge" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.18);color:#6366F1">✉️ Contact</div>
+        <h2 class="s-h2 syne fade-up" style="color:#0F172A;margin-top:14px">Vragen?<br>Wij helpen graag.</h2>
+        <p class="s-sub fade-up d1" style="color:#64748B;margin-bottom:0">Neem gerust contact op. We reageren doorgaans binnen één werkdag.</p>
+        <div class="contact-info">
+          <a href="tel:0610362420" class="contact-item">
+            <div class="contact-ico">📞</div>
             <div>
-              <div style="font-size:11.5px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Bel ons</div>
-              <div style="font-size:16px;font-weight:700;color:#0F172A">06-10362420</div>
+              <div class="contact-lbl">Bel ons</div>
+              <div class="contact-val">06-10362420</div>
             </div>
           </a>
-          <a href="mailto:info@werkmate.tech" style="display:flex;align-items:center;gap:16px;padding:18px 22px;background:#F8FAFC;border:1.5px solid #E8EEF6;border-radius:16px;text-decoration:none;transition:border-color .2s,box-shadow .2s" onmouseover="this.style.borderColor='#C7D2FE';this.style.boxShadow='0 8px 24px rgba(99,102,241,.1)'" onmouseout="this.style.borderColor='#E8EEF6';this.style.boxShadow='none'">
-            <div style="width:46px;height:46px;background:linear-gradient(135deg,#EEF2FF,#EDE9FE);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📧</div>
+          <a href="mailto:info@werkmate.tech" class="contact-item">
+            <div class="contact-ico">📧</div>
             <div>
-              <div style="font-size:11.5px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Mail ons</div>
-              <div style="font-size:16px;font-weight:700;color:#0F172A">info@werkmate.tech</div>
+              <div class="contact-lbl">Mail ons</div>
+              <div class="contact-val">info@werkmate.tech</div>
             </div>
           </a>
         </div>
       </div>
 
       <div class="fade-up d2">
-        <div style="background:#F8FAFC;border:1.5px solid #E8EEF6;border-radius:22px;padding:36px">
-          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#0F172A;margin-bottom:6px">Stuur een bericht</div>
-          <div style="font-size:13.5px;color:#94A3B8;margin-bottom:24px">We reageren binnen één werkdag.</div>
+        <div class="cf-box">
+          <div class="cf-title">Stuur een bericht</div>
+          <div class="cf-sub">We reageren binnen één werkdag.</div>
           <form id="contact-form">
-            <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="cf-group">
               <div>
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Naam</label>
-                <input id="cf-naam" type="text" placeholder="Jan de Vries" required
-                  style="width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#111;transition:border-color .2s,box-shadow .2s"
-                  onfocus="this.style.borderColor='#6366F1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.12)'"
-                  onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'" />
+                <label class="cf-label" for="cf-naam">Naam</label>
+                <input class="cf-input" id="cf-naam" type="text" placeholder="Jan de Vries" required />
               </div>
               <div>
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">E-mailadres</label>
-                <input id="cf-email" type="email" placeholder="jan@bedrijf.nl" required
-                  style="width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#111;transition:border-color .2s,box-shadow .2s"
-                  onfocus="this.style.borderColor='#6366F1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.12)'"
-                  onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'" />
+                <label class="cf-label" for="cf-email">E-mailadres</label>
+                <input class="cf-input" id="cf-email" type="email" placeholder="jan@bedrijf.nl" required />
               </div>
               <div>
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Bericht</label>
-                <textarea id="cf-bericht" placeholder="Vertel ons hoe we je kunnen helpen…" required rows="4"
-                  style="width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:11px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#111;resize:vertical;transition:border-color .2s,box-shadow .2s"
-                  onfocus="this.style.borderColor='#6366F1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.12)'"
-                  onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'"></textarea>
+                <label class="cf-label" for="cf-bericht">Bericht</label>
+                <textarea class="cf-textarea" id="cf-bericht" placeholder="Vertel ons hoe we je kunnen helpen…" required rows="4"></textarea>
               </div>
-              <button type="submit" id="cf-btn"
-                style="width:100%;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:11px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:0 6px 20px rgba(99,102,241,.32);transition:transform .2s,box-shadow .2s"
-                onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 28px rgba(99,102,241,.48)'"
-                onmouseout="this.style.transform='';this.style.boxShadow='0 6px 20px rgba(99,102,241,.32)'">
-                Verstuur bericht →
-              </button>
-              <div id="cf-success" style="display:none;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 16px;font-size:14px;font-weight:600;color:#15803D;text-align:center">
-                ✓ Bericht verstuurd! We nemen snel contact op.
-              </div>
+              <button type="submit" class="cf-submit">Verstuur bericht →</button>
+              <div id="cf-success">✓ Bericht verstuurd! We nemen snel contact op.</div>
             </div>
           </form>
         </div>
@@ -677,16 +901,17 @@
   </div>
 </section>
 
-<!-- ══ FOOTER ══════════════════════════════════════════════════ -->
+<!-- ══ FOOTER ══════════════════════════════════════════════════════ -->
 <footer>
   <div class="foot">
     <div class="foot-logo">
       <div class="foot-ico">⚡</div>
       <span class="foot-name">WerkMate</span>
     </div>
-    <div class="foot-copy">© 2025 WerkMate · Gemaakt voor de Nederlandse vakman</div>
+    <div class="foot-copy">© 2026 WerkMate · Gemaakt voor de Nederlandse vakman</div>
     <div class="foot-links">
       <a href="https://app.werkmate.tech" target="_blank">App</a>
+      <a href="#pricing">Prijzen</a>
       <a href="mailto:info@werkmate.tech">Contact</a>
       <a href="/legal">Juridisch</a>
     </div>
@@ -694,22 +919,19 @@
 </footer>
 
 <script>
-// ── Particle canvas ────────────────────────────────────────────
+// Particle canvas
 const canvas = document.getElementById('hero-canvas');
 const ctx    = canvas.getContext('2d');
 let W, H, pts = [];
 
-function resize() {
-  W = canvas.width  = canvas.offsetWidth;
-  H = canvas.height = canvas.offsetHeight;
-}
+function resize() { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; }
 function initPts() {
-  pts = Array.from({ length: 90 }, () => ({
-    x: Math.random() * W, y: Math.random() * H,
-    r: Math.random() * 1.4 + 0.3,
-    vx: (Math.random() - .5) * .35,
-    vy: (Math.random() - .5) * .35,
-    o: Math.random() * .45 + .1
+  pts = Array.from({ length: 85 }, () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    r: Math.random()*1.3+0.3,
+    vx: (Math.random()-.5)*.33,
+    vy: (Math.random()-.5)*.33,
+    o: Math.random()*.4+.1
   }));
 }
 function draw() {
@@ -719,19 +941,19 @@ function draw() {
     if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
     if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
     ctx.fillStyle = `rgba(165,180,252,${p.o})`;
     ctx.fill();
   });
   for (let i = 0; i < pts.length; i++) {
-    for (let j = i + 1; j < pts.length; j++) {
-      const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-      const d  = Math.sqrt(dx * dx + dy * dy);
-      if (d < 110) {
+    for (let j = i+1; j < pts.length; j++) {
+      const dx = pts[i].x-pts[j].x, dy = pts[i].y-pts[j].y;
+      const d  = Math.sqrt(dx*dx+dy*dy);
+      if (d < 105) {
         ctx.beginPath();
         ctx.moveTo(pts[i].x, pts[i].y);
         ctx.lineTo(pts[j].x, pts[j].y);
-        ctx.strokeStyle = `rgba(99,102,241,${.13 * (1 - d / 110)})`;
+        ctx.strokeStyle = `rgba(99,102,241,${.12*(1-d/105)})`;
         ctx.lineWidth = .5;
         ctx.stroke();
       }
@@ -742,63 +964,67 @@ function draw() {
 window.addEventListener('resize', () => { resize(); initPts(); });
 resize(); initPts(); draw();
 
-// ── Scroll fade-in ─────────────────────────────────────────────
+// Scroll fade-in
 const obs = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
 }, { threshold: 0.1 });
 document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
 
-// ── Nav scroll effect ─────────────────────────────────────────
+// Nav scroll
 window.addEventListener('scroll', () => {
   const nav = document.getElementById('nav');
   if (window.scrollY > 40) {
-    nav.style.background    = 'rgba(7,7,27,.97)';
-    nav.style.boxShadow     = '0 4px 28px rgba(0,0,0,.5)';
+    nav.style.background = 'rgba(7,7,27,.98)';
+    nav.style.boxShadow  = '0 4px 28px rgba(0,0,0,.5)';
   } else {
-    nav.style.background    = 'rgba(7,7,27,.82)';
-    nav.style.boxShadow     = 'none';
+    nav.style.background = 'rgba(7,7,27,.85)';
+    nav.style.boxShadow  = 'none';
   }
 });
 
-// ── Mockup mouse parallax ─────────────────────────────────────
+// Mockup parallax
 const mc = document.getElementById('mockCard');
-let animating = true;
 document.addEventListener('mousemove', e => {
   if (!mc) return;
-  const cx = window.innerWidth  / 2;
-  const cy = window.innerHeight / 2;
-  const dx = (e.clientX - cx) / cx;
-  const dy = (e.clientY - cy) / cy;
-  mc.style.animation  = 'none';
-  mc.style.transform  = `rotateX(${7 - dy * 6}deg) rotateY(${-13 + dx * 8}deg)`;
+  const cx = window.innerWidth/2, cy = window.innerHeight/2;
+  const dx = (e.clientX-cx)/cx, dy = (e.clientY-cy)/cy;
+  mc.style.animation = 'none';
+  mc.style.transform = `rotateX(${7-dy*6}deg) rotateY(${-12+dx*8}deg)`;
 });
 document.addEventListener('mouseleave', () => {
   if (mc) { mc.style.animation = 'float3d 7s ease-in-out infinite'; mc.style.transform = ''; }
 });
 
-// ── Contact form ───────────────────────────────────────────────
-document.getElementById('contact-form').addEventListener('submit', function(e) {
+// Contact form
+document.getElementById('contact-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const naam    = document.getElementById('cf-naam').value.trim();
   const email   = document.getElementById('cf-email').value.trim();
   const bericht = document.getElementById('cf-bericht').value.trim();
-  const subject = encodeURIComponent(`WerkMate contact van ${naam}`);
-  const body    = encodeURIComponent(`Naam: ${naam}\nE-mail: ${email}\n\nBericht:\n${bericht}`);
-  window.location.href = `mailto:info@werkmate.tech?subject=${subject}&body=${body}`;
-  document.getElementById('cf-success').style.display = 'block';
-  document.getElementById('cf-btn').textContent = '✓ Verstuurd!';
-  document.getElementById('cf-btn').style.opacity = '.7';
-  document.getElementById('cf-btn').disabled = true;
-});
+  const btn     = document.querySelector('.cf-submit');
+  const success = document.getElementById('cf-success');
 
-// ── Contact section responsive ─────────────────────────────────
-function contactResponsive() {
-  const grid = document.querySelector('#contact .section-inner > div');
-  if (!grid) return;
-  grid.style.gridTemplateColumns = window.innerWidth < 820 ? '1fr' : '1fr 1fr';
-}
-window.addEventListener('resize', contactResponsive);
-contactResponsive();
+  btn.disabled = true;
+  btn.textContent = 'Versturen…';
+
+  try {
+    const res = await fetch('https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'send-contact-form', naam, email, bericht }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.error || 'Versturen mislukt');
+    success.style.display = 'block';
+    this.reset();
+  } catch (err) {
+    alert('Er ging iets mis: ' + err.message + '\n\nProbeer het opnieuw of mail ons op info@werkmate.tech.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Verstuur bericht →';
+  }
+});
 </script>
+
 </body>
 </html>
