@@ -77,6 +77,30 @@ async function fetchProfiel(userId: string): Promise<Profiel | null> {
   return data ?? null;
 }
 
+// ── Resend helper — logs result and surfaces real error ───────
+async function sendViaResend(resendKey: string, payload: Record<string, unknown>): Promise<{ ok: boolean; id?: string; error?: string }> {
+  let res: Response;
+  try {
+    res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+      body: JSON.stringify(payload),
+    });
+  } catch (networkErr) {
+    console.error("[sendViaResend] network error:", networkErr);
+    return { ok: false, error: "Netwerk fout bij verbinden met e-mailservice" };
+  }
+  const text = await res.text();
+  console.log(`[sendViaResend] to=${payload.to} status=${res.status} body=${text.slice(0, 300)}`);
+  if (!res.ok) {
+    let msg = `Resend fout ${res.status}`;
+    try { const b = JSON.parse(text); msg = b.message || b.name || b.error || msg; } catch { /* ignore */ }
+    return { ok: false, error: msg };
+  }
+  try { const b = JSON.parse(text); return { ok: true, id: b.id }; }
+  catch { return { ok: true }; }
+}
+
 // ── Shared email outer wrapper ────────────────────────────────
 function emailWrapper(headerTitle: string, contentRows: string, signatureRow: string): string {
   return `<!DOCTYPE html>
@@ -219,13 +243,11 @@ serve(async (req: Request) => {
 <p style="margin:0 0 16px;font-size:14px;color:#9ca3af;">Of kopieer deze link: <a href="${safeUrl}" style="color:#6366F1;">${safeUrl}</a></p>`,
       sig);
 
-    const res2 = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-      body: JSON.stringify({ from: `${cn} <info@werkmate.tech>`, to: customer_email, subject: `Offerte van ${cn} — bekijk en onderteken`, html }),
-    });
-    if (!res2.ok) return json({ error: "E-mail versturen mislukt" }, res2.status);
-    return json({ success: true });
+    const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
+    const finalSubject = customSubject || `Offerte van ${cn} — bekijk en onderteken`;
+    const r2 = await sendViaResend(resendKey, { from: `${cn} <info@werkmate.tech>`, to: customer_email, subject: finalSubject, html });
+    if (!r2.ok) return json({ error: r2.error, message: r2.error }, 422);
+    return json({ success: true, id: r2.id, html });
   }
 
   // ── Authentication ─────────────────────────────────────────
@@ -284,15 +306,9 @@ serve(async (req: Request) => {
         ...(replyTo ? { reply_to: replyTo } : {}),
       };
 
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-        body: JSON.stringify(payload),
-      });
-      const text = await res.text();
-      if (!res.ok) return json({ error: "E-mail versturen mislukt" }, res.status);
-      try { return json(JSON.parse(text)); }
-      catch { return json({ error: "Onverwacht antwoord van e-mailservice" }, 500); }
+      const r = await sendViaResend(resendKey, payload);
+      if (!r.ok) return json({ error: r.error, message: r.error }, 422);
+      return json({ success: true, id: r.id });
     }
 
     // ── Send offer email ──────────────────────────────────────
@@ -320,30 +336,28 @@ serve(async (req: Request) => {
   <a href="${safePortal}" style="display:inline-block;background:#F8FAFC;color:#374151;padding:9px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;border:1px solid #E2E8F0;">Bekijk offerte online →</a>
 </p>` : "";
 
-      const html = emailWrapper(companyName,
-        `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u uw offerte in de bijlage.${safePortal ? "" : ""}</p>${portalBlock}`,
-        sig);
+      const customBody = typeof body.custom_body === "string" && body.custom_body.trim() ? body.custom_body.trim() : null;
+      const mainContent = customBody
+        ? `<p style="margin:0 0 16px;font-size:15px;color:#4b5563;white-space:pre-line;">${esc(customBody).replace(/\n/g, "<br>")}</p>${portalBlock}`
+        : `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u uw offerte in de bijlage.</p>${portalBlock}`;
 
+      const html = emailWrapper(companyName, mainContent, sig);
+
+      const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const payload: Record<string, unknown> = {
         from: `${companyName} <info@werkmate.tech>`,
         to: customer_email,
-        subject: `Offerte van ${companyName} voor ${safeCustomer}`,
+        subject: customSubject || `Offerte van ${companyName} voor ${safeCustomer}`,
         html,
         ...(replyTo ? { reply_to: replyTo } : {}),
       };
       if (body.attachments) payload.attachments = body.attachments;
 
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-        body: JSON.stringify(payload),
-      });
-      const text = await res.text();
-      if (!res.ok) return json({ error: "E-mail versturen mislukt" }, res.status);
-      try { return json(JSON.parse(text)); }
-      catch { return json({ error: "Onverwacht antwoord van e-mailservice" }, 500); }
+      const r = await sendViaResend(resendKey, payload);
+      if (!r.ok) return json({ error: r.error, message: r.error }, 422);
+      return json({ success: true, id: r.id, html });
     }
 
     // ── Send review request email ─────────────────────────────
@@ -369,33 +383,31 @@ serve(async (req: Request) => {
 <p style="margin:0 0 16px;font-size:12px;color:#9ca3af;text-align:center;">Duurt minder dan 1 minuut</p>`
         : `<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Uw feedback helpt ons om continu beter te worden. Alvast bedankt!</p>`;
 
-      const html = emailWrapper(companyName,
-        `<p style="margin:0 0 16px;font-size:16px;">Hallo,</p>
+      const customBody = typeof body.custom_body === "string" && body.custom_body.trim() ? body.custom_body.trim() : null;
+      const mainContent = customBody
+        ? `<p style="margin:0 0 16px;font-size:15px;color:#4b5563;white-space:pre-line;">${esc(customBody).replace(/\n/g, "<br>")}</p>${reviewBtn}`
+        : `<p style="margin:0 0 16px;font-size:16px;">Hallo,</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bedankt voor het vertrouwen in ${companyName}! We hopen dat u tevreden bent over ${serviceText}.</p>
 <p style="margin:0 0 4px;font-size:15px;color:#4b5563;">Zou u even 1 minuut nemen om een review achter te laten? Dat helpt ons enorm.</p>
-${reviewBtn}`,
-        sig);
+${reviewBtn}`;
 
+      const html = emailWrapper(companyName, mainContent, sig);
+
+      const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const reviewLinkText = safeReviewUrl ? `\n\nLaat een review achter: ${safeReviewUrl}` : "";
       const payload: Record<string, unknown> = {
         from: `${companyName} <info@werkmate.tech>`,
         to: customer_email,
-        subject: `Hoe was uw ervaring met ${companyName}?`,
+        subject: customSubject || `Hoe was uw ervaring met ${companyName}?`,
         text: `Hallo,\n\nBedankt voor het vertrouwen in ${companyName}! We hopen dat u tevreden bent over ${service_description || "de service"}.\n\nZou u een review willen achterlaten? Dat helpt ons enorm.${reviewLinkText}\n\nMet vriendelijke groet,\n${companyName}`,
         html,
         ...(replyTo ? { reply_to: replyTo } : {}),
       };
 
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-        body: JSON.stringify(payload),
-      });
-      const text = await res.text();
-      if (!res.ok) return json({ error: "E-mail versturen mislukt" }, res.status);
-      try { return json(JSON.parse(text)); }
-      catch { return json({ error: "Onverwacht antwoord van e-mailservice" }, 500); }
+      const r = await sendViaResend(resendKey, payload);
+      if (!r.ok) return json({ error: r.error, message: r.error }, 422);
+      return json({ success: true, id: r.id, html });
     }
 
     // ── Send compose email (handmatig vanuit Mail tab) ────────
@@ -416,21 +428,15 @@ ${reviewBtn}`,
         `<div style="font-size:15px;color:#374151;line-height:1.7;white-space:pre-line;">${safeMsg}</div>`,
         sig);
 
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-        body: JSON.stringify({
-          from: `${companyName} <info@werkmate.tech>`,
-          to: to_email,
-          subject: esc(subject),
-          text: `${message}\n\nMet vriendelijke groet,\n${companyName}`,
-          html,
-        }),
+      const r = await sendViaResend(resendKey, {
+        from: `${companyName} <info@werkmate.tech>`,
+        to: to_email,
+        subject: esc(subject),
+        text: `${message}\n\nMet vriendelijke groet,\n${companyName}`,
+        html,
       });
-      const text = await res.text();
-      if (!res.ok) return json({ error: "E-mail versturen mislukt" }, res.status);
-      try { return json(JSON.parse(text)); }
-      catch { return json({ error: "Onverwacht antwoord van e-mailservice" }, 500); }
+      if (!r.ok) return json({ error: r.error, message: r.error }, 422);
+      return json({ success: true, id: r.id, html });
     }
 
     // ── Send invoice email ────────────────────────────────────
@@ -450,29 +456,31 @@ ${reviewBtn}`,
       const safeNummer   = esc(factuur_nummer || "");
       const sig          = buildSignature(profiel);
 
-      const html = emailWrapper(companyName,
-        `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
+      const customBody = typeof body.custom_body === "string" && body.custom_body.trim() ? body.custom_body.trim() : null;
+      const bodyContent = customBody
+        ? `<p style="margin:0 0 16px;font-size:15px;color:#4b5563;white-space:pre-line;">${esc(customBody).replace(/\n/g, "<br>")}</p>`
+        : `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u factuur <strong>${safeNummer}</strong> in de bijlage.</p>
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bij vragen kunt u altijd contact met ons opnemen.</p>`,
-        sig);
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bij vragen kunt u altijd contact met ons opnemen.</p>`;
 
+      const html = emailWrapper(companyName, bodyContent, sig);
+
+      const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
+      const textInv = customBody
+        ? `${customBody}\n\nMet vriendelijke groet,\n${companyName}`
+        : `Geachte ${safeCustomer},\n\nHierbij ontvangt u factuur ${safeNummer} in de bijlage.\n\nBij vragen kunt u altijd contact met ons opnemen.\n\nMet vriendelijke groet,\n${companyName}`;
       const payload: Record<string, unknown> = {
         from: `${companyName} <info@werkmate.tech>`,
         to: customer_email,
-        subject: `Factuur ${safeNummer} van ${companyName}`,
+        subject: customSubject || `Factuur ${safeNummer} van ${companyName}`,
+        text: textInv,
         html,
       };
       if (body.attachments) payload.attachments = body.attachments;
 
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-        body: JSON.stringify(payload),
-      });
-      const text = await res.text();
-      if (!res.ok) return json({ error: "E-mail versturen mislukt" }, res.status);
-      try { return json(JSON.parse(text)); }
-      catch { return json({ error: "Onverwacht antwoord van e-mailservice" }, 500); }
+      const r = await sendViaResend(resendKey, payload);
+      if (!r.ok) return json({ error: r.error, message: r.error }, 422);
+      return json({ success: true, id: r.id, html });
     }
 
     // ── Send reminder email ───────────────────────────────────
@@ -495,29 +503,33 @@ ${reviewBtn}`,
         : "";
       const sig = buildSignature(profiel);
 
-      const html = emailWrapper(companyName,
-        `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
+      const customBody = typeof body.custom_body === "string" && body.custom_body.trim() ? body.custom_body.trim() : null;
+      const bodyContent = customBody
+        ? `<p style="margin:0 0 16px;font-size:15px;color:#4b5563;white-space:pre-line;">${esc(customBody).replace(/\n/g, "<br>")}</p>`
+        : `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Wij willen u vriendelijk herinneren aan openstaande factuur <strong>${safeNummer}</strong>${totaalFmt ? ` van <strong>${esc(totaalFmt)}</strong>` : ""}.</p>
-<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Gelieve het bedrag zo spoedig mogelijk over te maken.</p>`,
-        sig);
+<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Gelieve het bedrag zo spoedig mogelijk over te maken.</p>`;
 
+      const html = emailWrapper(companyName, bodyContent, sig);
+
+      const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
+      // Avoid spam-trigger words ("betalingsherinnering") and Unicode em-dashes in subject
+      const defaultSubjectRem = `Factuur ${safeNummer} - nog openstaand (${companyName})`;
+      const textRem = customBody
+        ? `${customBody}\n\nMet vriendelijke groet,\n${companyName}`
+        : `Geachte ${safeCustomer},\n\nWij willen u vriendelijk herinneren aan openstaande factuur ${safeNummer}${totaalFmt ? ` van ${totaalFmt}` : ""}.\n\nGelieve het bedrag zo spoedig mogelijk over te maken.\n\nMet vriendelijke groet,\n${companyName}`;
       const payload: Record<string, unknown> = {
         from: `${companyName} <info@werkmate.tech>`,
         to: customer_email,
-        subject: `Betalingsherinnering factuur ${safeNummer} — ${companyName}`,
+        subject: customSubject || defaultSubjectRem,
+        text: textRem,
         html,
       };
       if (body.attachments) payload.attachments = body.attachments;
 
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-        body: JSON.stringify(payload),
-      });
-      const text = await res.text();
-      if (!res.ok) return json({ error: "E-mail versturen mislukt" }, res.status);
-      try { return json(JSON.parse(text)); }
-      catch { return json({ error: "Onverwacht antwoord van e-mailservice" }, 500); }
+      const r = await sendViaResend(resendKey, payload);
+      if (!r.ok) return json({ error: r.error, message: r.error }, 422);
+      return json({ success: true, id: r.id, html });
     }
 
     // ── Claude AI call ────────────────────────────────────────

@@ -27,11 +27,23 @@ async function acceptInviteToken(token, userId) {
   storageRemove(inviteEmailStorageKey);
 }
 
-async function logEmail(userId, to, subject, type, body, status) {
+async function logEmail(userId, to, subject, type, body, status, htmlBody = null) {
   try {
-    await supabase.from("emails_log").insert({ user_id: userId, to_email: to, subject, type, body: body || "", status, sent_at: new Date().toISOString() });
+    const row = { user_id: userId, to_email: to, subject, type, body: body || "", status, sent_at: new Date().toISOString() };
+    if (htmlBody) row.html_body = htmlBody;
+    await supabase.from("emails_log").insert(row);
   } catch(e) { console.warn("logEmail failed:", e); }
 }
+
+const fillVars = (text, vars) =>
+  text.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? `{${k}}`);
+
+const TEMPLATE_DEFAULTS = {
+  offerte:    { subject: "Offerte van {bedrijfsnaam}", body: "Geachte {klantnaam},\n\nHierbij ontvangt u de offerte in de bijlage.\n\nBij vragen kunt u altijd contact met ons opnemen." },
+  factuur:    { subject: "Factuur {nummer} van {bedrijfsnaam}", body: "Geachte {klantnaam},\n\nHierbij ontvangt u factuur {nummer} in de bijlage.\n\nBij vragen kunt u altijd contact met ons opnemen." },
+  herinnering:{ subject: "Factuur {nummer} - nog openstaand ({bedrijfsnaam})", body: "Geachte {klantnaam},\n\nWij willen u vriendelijk herinneren aan openstaande factuur {nummer} van {bedrag}.\n\nGelieve het bedrag zo spoedig mogelijk over te maken." },
+  review:     { subject: "Hoe was uw ervaring met {bedrijfsnaam}?", body: "Hallo {klantnaam},\n\nBedankt voor het vertrouwen in {bedrijfsnaam}! We hopen dat u tevreden bent over {dienst}.\n\nZou u een review willen achterlaten? Dat helpt ons enorm." },
+};
 
 // ── Login scherm ──────────────────────────────────────────────
 function Auth({ onLogin }) {
@@ -1268,6 +1280,8 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
 
   const sendOfferEmail = async (email, name, dienst, regels, subtotaal, btw, totaal, portalToken) => {
     const portal_url = portalToken ? `https://app.werkmate.tech/portal/${portalToken}` : undefined;
+    const tpl = emailTemplates?.offerte;
+    const vars = { klantnaam: name, bedrijfsnaam: bedrijf?.bedrijfsnaam || "WerkMate", nummer: "" };
     const payload = {
       action: "send-offer-email",
       customer_email: email,
@@ -1279,6 +1293,8 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
       btw,
       totaal,
       portal_url,
+      ...(tpl?.subject ? { custom_subject: fillVars(tpl.subject, vars) } : {}),
+      ...(tpl?.body    ? { custom_body:    fillVars(tpl.body,    vars) } : {}),
       attachments: [
         {
           type: "application/pdf",
@@ -1295,7 +1311,8 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf }) {
       body: JSON.stringify(payload),
     });
     const data = await response.json().catch(() => null);
-    await logEmail(userId, email, `Offerte voor ${name}`, "offerte", `Offerte — ${dienst}`, response.ok ? "verzonden" : "mislukt");
+    const subjectLogged = tpl?.subject ? fillVars(tpl.subject, vars) : `Offerte voor ${name}`;
+    await logEmail(userId, email, subjectLogged, "offerte", `Offerte — ${dienst}`, response.ok ? "verzonden" : "mislukt", response.ok ? data?.html : null);
     return data;
   };
 
@@ -1442,7 +1459,7 @@ function waOfferte(o, klanten, bedrijf) {
   window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
-function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf }) {
+function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, emailTemplates = {} }) {
   const mob = useMobile();
   const [showAI,setShowAI]=useState(false);
   const [mobDetail,setMobDetail]=useState(null);
@@ -2122,7 +2139,7 @@ function CRMTab({ userId, klanten, refresh }) {
   </div>);
 }
 
-function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSettings }) {
+function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSettings, emailTemplates = {} }) {
   const mob = useMobile();
   const [mobDetail,setMobDetail]=useState(null);
   const [showAdd,setShowAdd]=useState(false);
@@ -2221,12 +2238,16 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       console.warn("sendReviewRequestEmail: no client email available");
       return null;
     }
+    const tpl = emailTemplates?.review;
+    const vars = { klantnaam: "", bedrijfsnaam: bedrijf?.bedrijfsnaam || "WerkMate", dienst: serviceDescription || "jouw opdracht" };
     const payload = {
       action: "send-review-request-email",
       customer_email: clientEmail,
       company_name: bedrijf?.bedrijfsnaam || "WerkMate",
       service_description: serviceDescription || "jouw opdracht",
       google_review_url: bedrijf?.google_review_url || null,
+      ...(tpl?.subject ? { custom_subject: fillVars(tpl.subject, vars) } : {}),
+      ...(tpl?.body    ? { custom_body:    fillVars(tpl.body,    vars) } : {}),
       ...(bedrijf?.email ? { reply_to: bedrijf.email } : {}),
     };
     const { data: { session: reviewSess } } = await supabase.auth.getSession();
@@ -2237,7 +2258,8 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
       body: JSON.stringify(payload),
     });
     const data = await response.json().catch(() => null);
-    await logEmail(userId, clientEmail, `Review verzoek — ${serviceDescription || "opdracht"}`, "review", `Review verzoek voor ${serviceDescription || "opdracht"}`, response.ok ? "verzonden" : "mislukt");
+    const subjectLogged = tpl?.subject ? fillVars(tpl.subject, vars) : `Review verzoek — ${serviceDescription || "opdracht"}`;
+    await logEmail(userId, clientEmail, subjectLogged, "review", `Review verzoek voor ${serviceDescription || "opdracht"}`, response.ok ? "verzonden" : "mislukt", response.ok ? data?.html : null);
     return { status: response.status, data };
   };
 
@@ -2383,7 +2405,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
 }
 
 // ── Financiën ─────────────────────────────────────────────────
-function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, bedrijf, emailSettings }) {
+function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, bedrijf, emailSettings, emailTemplates = {} }) {
   const mob = useMobile();
   const [mobDetail,setMobDetail]=useState(null);
   const getTotal = (f) => f.totaal != null ? Number(f.totaal) : parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."))||0;
@@ -2427,14 +2449,34 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     });
     if (!candidates.length) return;
     (async () => {
+      const {data:{session:autoSess}} = await supabase.auth.getSession();
+      const autoToken = autoSess?.access_token || import.meta.env.VITE_SUPABASE_KEY;
+      const tplRem = emailTemplates?.herinnering;
       let sent = 0;
       for (const f of candidates) {
         try {
-          await supabase.functions.invoke("ai-proxy", { body: { action:"send-reminder-email", customer_email:f.klant_email, customer_name:f.klant, factuur_nummer:f.nummer, totaal:f.totaal, company_name:bedrijf?.bedrijfsnaam } });
+          const totF = f.totaal != null ? `€ ${Number(f.totaal).toLocaleString("nl-NL",{minimumFractionDigits:2})}` : "";
+          const vars = { klantnaam:f.klant, bedrijfsnaam:bedrijf?.bedrijfsnaam||"WerkMate", nummer:f.nummer||"", bedrag:totF };
+          const autoRes = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
+            method:"POST",
+            headers:{"Content-Type":"application/json","Authorization":`Bearer ${autoToken}`},
+            body:JSON.stringify({action:"send-reminder-email",customer_email:f.klant_email,customer_name:f.klant,factuur_nummer:f.nummer,totaal:f.totaal,company_name:bedrijf?.bedrijfsnaam,...(tplRem?.subject?{custom_subject:fillVars(tplRem.subject,vars)}:{}),...(tplRem?.body?{custom_body:fillVars(tplRem.body,vars)}:{})}),
+          });
+          const autoData = await autoRes.json().catch(()=>null);
+          if (!autoRes.ok) {
+            const msg = autoData?.message||autoData?.error||`HTTP ${autoRes.status}`;
+            console.warn("[auto reminder] mislukt voor", f.nummer, msg);
+            await logEmail(userId, f.klant_email, `Herinnering factuur ${f.nummer||""}`, "herinnering", msg, "mislukt");
+            continue;
+          }
           await supabase.from("facturen").update({ status:"Herinnering" }).eq("id", f.id);
-          await logEmail(userId, f.klant_email, `Herinnering factuur ${f.nummer||""}`, "herinnering", `Automatische herinnering factuur ${f.nummer||""} voor ${f.klant}`, "verzonden");
+          const subjectA = tplRem?.subject ? fillVars(tplRem.subject, vars) : `Herinnering factuur ${f.nummer||""}`;
+          await logEmail(userId, f.klant_email, subjectA, "herinnering", `Automatische herinnering factuur ${f.nummer||""} voor ${f.klant}`, "verzonden", autoData?.html||null);
           sent++;
-        } catch(e) { console.warn("Auto reminder failed", f.nummer, e); }
+        } catch(e) {
+          console.warn("[auto reminder] fout voor", f.nummer, e);
+          await logEmail(userId, f.klant_email, `Herinnering factuur ${f.nummer||""}`, "herinnering", e.message, "mislukt").catch(()=>{});
+        }
       }
       if (sent > 0) { setAutoReminderCount(sent); refresh(); }
     })();
@@ -2510,12 +2552,17 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     setEmailSending(true); setEmailMsg("");
     try {
       const pdfB64=createFactuurPdfBase64(showEmail, bedrijf);
-      const {data:iData, error:iErr}=await supabase.functions.invoke("ai-proxy",{body:{action:"send-invoice-email",customer_email:emailAddr,customer_name:showEmail.klant,factuur_nummer:showEmail.nummer,company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Factuur-${showEmail.nummer||"factuur"}.pdf`,content:pdfB64}]}});
-      console.log("[sendInvoiceEmail] invoke result:", {iData, iErr});
-      if(iErr) throw new Error(iErr.message||"Versturen mislukt");
-      if(iData?.error) throw new Error(iData.error);
+      const tpl=emailTemplates?.factuur;
+      const vars={klantnaam:showEmail.klant,bedrijfsnaam:bedrijf?.bedrijfsnaam||"WerkMate",nummer:showEmail.nummer||""};
+      const {data:{session:invSess}}=await supabase.auth.getSession();
+      const invToken=invSess?.access_token||import.meta.env.VITE_SUPABASE_KEY;
+      const invRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${invToken}`},body:JSON.stringify({action:"send-invoice-email",customer_email:emailAddr,customer_name:showEmail.klant,factuur_nummer:showEmail.nummer,company_name:bedrijf?.bedrijfsnaam,...(tpl?.subject?{custom_subject:fillVars(tpl.subject,vars)}:{}),...(tpl?.body?{custom_body:fillVars(tpl.body,vars)}:{}),attachments:[{filename:`Factuur-${showEmail.nummer||"factuur"}.pdf`,content:pdfB64}]})});
+      const invData=await invRes.json().catch(()=>null);
+      console.log("[sendInvoiceEmail] result:", invRes.status, invData);
+      if(!invRes.ok) throw new Error(invData?.message||invData?.error||`Versturen mislukt (${invRes.status})`);
       await supabase.from("facturen").update({status:"Verstuurd"}).eq("id",showEmail.id);
-      await logEmail(userId, emailAddr, `Factuur ${showEmail.nummer||""}`, "factuur", `Factuur ${showEmail.nummer||""} voor ${showEmail.klant}`, "verzonden");
+      const subjectLogged=tpl?.subject?fillVars(tpl.subject,vars):`Factuur ${showEmail.nummer||""}`;
+      await logEmail(userId, emailAddr, subjectLogged, "factuur", `Factuur ${showEmail.nummer||""} voor ${showEmail.klant}`, "verzonden", invData?.html||null);
       setEmailMsg(`Email verstuurd naar ${emailAddr}`); refresh();
       setTimeout(()=>{setShowEmail(null);setEmailMsg("");setEmailAddr("");},2200);
     } catch(e){
@@ -2530,12 +2577,18 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     setEmailSending(true); setEmailMsg("");
     try {
       const pdfB64=createFactuurPdfBase64(showReminder, bedrijf);
-      const {data:rData, error:rErr}=await supabase.functions.invoke("ai-proxy",{body:{action:"send-reminder-email",customer_email:emailAddr,customer_name:showReminder.klant,factuur_nummer:showReminder.nummer,totaal:getTotal(showReminder),company_name:bedrijf?.bedrijfsnaam,attachments:[{filename:`Herinnering-${showReminder.nummer||"factuur"}.pdf`,content:pdfB64}]}});
-      console.log("[sendReminder] invoke result:", {rData, rErr});
-      if(rErr) throw new Error(rErr.message||"Versturen mislukt");
-      if(rData?.error) throw new Error(rData.error);
+      const tpl=emailTemplates?.herinnering;
+      const totF=`€ ${Number(getTotal(showReminder)).toLocaleString("nl-NL",{minimumFractionDigits:2})}`;
+      const vars={klantnaam:showReminder.klant,bedrijfsnaam:bedrijf?.bedrijfsnaam||"WerkMate",nummer:showReminder.nummer||"",bedrag:totF};
+      const {data:{session:remSess}}=await supabase.auth.getSession();
+      const remToken=remSess?.access_token||import.meta.env.VITE_SUPABASE_KEY;
+      const remRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${remToken}`},body:JSON.stringify({action:"send-reminder-email",customer_email:emailAddr,customer_name:showReminder.klant,factuur_nummer:showReminder.nummer,totaal:getTotal(showReminder),company_name:bedrijf?.bedrijfsnaam,...(tpl?.subject?{custom_subject:fillVars(tpl.subject,vars)}:{}),...(tpl?.body?{custom_body:fillVars(tpl.body,vars)}:{}),attachments:[{filename:`Herinnering-${showReminder.nummer||"factuur"}.pdf`,content:pdfB64}]})});
+      const remData=await remRes.json().catch(()=>null);
+      console.log("[sendReminder] result:", remRes.status, remData);
+      if(!remRes.ok) throw new Error(remData?.message||remData?.error||`Versturen mislukt (${remRes.status})`);
       await supabase.from("facturen").update({status:"Herinnering"}).eq("id",showReminder.id);
-      await logEmail(userId, emailAddr, `Herinnering factuur ${showReminder.nummer||""}`, "herinnering", `Betalingsherinnering factuur ${showReminder.nummer||""} voor ${showReminder.klant}`, "verzonden");
+      const subjectLogged=tpl?.subject?fillVars(tpl.subject,vars):`Herinnering factuur ${showReminder.nummer||""}`;
+      await logEmail(userId, emailAddr, subjectLogged, "herinnering", `Betalingsherinnering factuur ${showReminder.nummer||""} voor ${showReminder.klant}`, "verzonden", remData?.html||null);
       setEmailMsg(`Herinnering verstuurd naar ${emailAddr}`); refresh();
       setTimeout(()=>{setShowReminder(null);setEmailMsg("");setEmailAddr("");},2200);
     } catch(e){
@@ -2648,7 +2701,8 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                   <td><Badge status={st}/></td>
                   <td><div style={{display:"flex",gap:5,alignItems:"center"}}>
                     <button className="btn btn-ghost btn-sm" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}>PDF</button>
-                    {st!=="Betaald"&&st!=="Concept"&&<button className="btn btn-ghost btn-sm" title="Herinnering" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔</button>}
+                    {st==="Verstuurd"&&<button className="btn btn-ghost btn-sm" style={{color:"#D97706",borderColor:"#FDE68A"}} onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔 Herinnering</button>}
+                    {st!=="Verstuurd"&&st!=="Betaald"&&st!=="Concept"&&<button className="btn btn-ghost btn-sm" title="Herinnering" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔</button>}
                     <button className="btn btn-ghost btn-sm" title="E-mailen" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>📧</button>
                     <select value={f.status||"Concept"} onChange={e=>updateStatus(f.id,e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
                       {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
@@ -2972,8 +3026,9 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ action: "send-compose-email", to_email: compose.to, subject: compose.subject, message: compose.body }),
       });
-      if (!res.ok) throw new Error("Versturen mislukt");
-      await logEmail(userId, compose.to, compose.subject, "handmatig", compose.body, "verzonden");
+      const composeData = await res.json().catch(()=>null);
+      if (!res.ok) throw new Error(composeData?.message||composeData?.error||"Versturen mislukt");
+      await logEmail(userId, compose.to, compose.subject, "handmatig", compose.body, "verzonden", composeData?.html||null);
       setComposeSent(true);
       setTimeout(() => { setShowCompose(false); setComposeSent(false); setCompose({ klantId:"", to:"", subject:"", body:"" }); refresh(); }, 2200);
     } catch(e) { setComposeErr(e.message || "Versturen mislukt"); }
@@ -3046,12 +3101,25 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
               <div style={{fontSize:12,color:"#94A3B8",marginBottom:2}}>Datum</div>
               <div style={{fontSize:13.5,color:"#374151"}}>{fmtDate(detail.sent_at)}</div>
             </div>
-            {detail.body && (
-              <div style={{background:"#F8FAFC",borderRadius:10,padding:"12px 14px",marginBottom:18}}>
-                <div style={{fontSize:12,color:"#94A3B8",marginBottom:6}}>Inhoud</div>
-                <div style={{fontSize:13.5,color:"#374151",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{detail.body}</div>
-              </div>
-            )}
+            {detail.html_body
+              ? <div style={{marginBottom:18}}>
+                  <div style={{fontSize:12,color:"#94A3B8",marginBottom:6}}>E-mail preview</div>
+                  <div style={{borderRadius:10,overflow:"hidden",border:"1px solid #E5E7EB"}}>
+                    <iframe
+                      srcDoc={detail.html_body}
+                      sandbox="allow-same-origin"
+                      style={{width:"100%",height:420,border:"none",display:"block"}}
+                      title="E-mail preview"
+                    />
+                  </div>
+                </div>
+              : detail.body && (
+                  <div style={{background:"#F8FAFC",borderRadius:10,padding:"12px 14px",marginBottom:18}}>
+                    <div style={{fontSize:12,color:"#94A3B8",marginBottom:6}}>Inhoud</div>
+                    <div style={{fontSize:13.5,color:"#374151",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{detail.body}</div>
+                  </div>
+                )
+            }
             <button className="btn btn-ghost btn-full" onClick={()=>setDetail(null)}>Sluiten</button>
           </div>
         </div>
@@ -3227,8 +3295,111 @@ function Toggle({ label, desc, value, onChange }) {
   );
 }
 
+// ── Email templates section ────────────────────────────────────
+const TEMPLATE_TYPES = [
+  { key:"offerte",     label:"Offerte",             vars:"{klantnaam}, {bedrijfsnaam}, {nummer}" },
+  { key:"factuur",     label:"Factuur",             vars:"{klantnaam}, {bedrijfsnaam}, {nummer}" },
+  { key:"herinnering", label:"Betalingsherinnering", vars:"{klantnaam}, {bedrijfsnaam}, {nummer}, {bedrag}" },
+  { key:"review",      label:"Review verzoek",       vars:"{klantnaam}, {bedrijfsnaam}, {dienst}" },
+];
+
+function EmailTemplatesSection({ userId, bedrijf, emailTemplates, onTemplatesUpdate }) {
+  const sampleVars = {
+    klantnaam: "Jan Jansen",
+    bedrijfsnaam: bedrijf?.bedrijfsnaam || "Uw bedrijf",
+    nummer: "2024-001",
+    bedrag: "€ 1.250,00",
+    dienst: "de dakbedekking",
+  };
+
+  const [drafts, setDrafts] = useState(() => {
+    const d = {};
+    TEMPLATE_TYPES.forEach(t => {
+      d[t.key] = {
+        subject: emailTemplates?.[t.key]?.subject || TEMPLATE_DEFAULTS[t.key].subject,
+        body:    emailTemplates?.[t.key]?.body    || TEMPLATE_DEFAULTS[t.key].body,
+      };
+    });
+    return d;
+  });
+  const [saving, setSaving] = useState({});
+  const [msgs, setMsgs] = useState({});
+  const [openKey, setOpenKey] = useState("offerte");
+  const [showPreview, setShowPreview] = useState(false);
+
+  const saveTemplate = async (typeKey) => {
+    setSaving(s => ({...s, [typeKey]:true}));
+    setMsgs(m => ({...m, [typeKey]:""}));
+    const { error } = await supabase.from("email_templates").upsert(
+      { user_id: userId, type: typeKey, subject: drafts[typeKey].subject, body: drafts[typeKey].body, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,type" }
+    );
+    setSaving(s => ({...s, [typeKey]:false}));
+    if (error) { setMsgs(m => ({...m, [typeKey]:`Opslaan mislukt: ${error.message}`})); return; }
+    setMsgs(m => ({...m, [typeKey]:"Opgeslagen ✓"}));
+    setTimeout(() => setMsgs(m => ({...m, [typeKey]:""})), 2500);
+    onTemplatesUpdate && onTemplatesUpdate(prev => ({...prev, [typeKey]: { subject: drafts[typeKey].subject, body: drafts[typeKey].body }}));
+  };
+
+  const resetTemplate = (typeKey) => {
+    setDrafts(d => ({...d, [typeKey]: { subject: TEMPLATE_DEFAULTS[typeKey].subject, body: TEMPLATE_DEFAULTS[typeKey].body }}));
+  };
+
+  const currentDraft = drafts[openKey];
+  const previewSubject = fillVars(currentDraft?.subject || "", sampleVars);
+  const previewBody = fillVars(currentDraft?.body || "", sampleVars);
+
+  return (
+    <div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+        {TEMPLATE_TYPES.map(t => (
+          <button key={t.key} onClick={()=>{setOpenKey(t.key);setShowPreview(false);}} style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:openKey===t.key?"#0F0F14":"#fff",color:openKey===t.key?"#fff":"#555",borderColor:openKey===t.key?"#0F0F14":"#E5E7EB"}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {TEMPLATE_TYPES.filter(t => t.key === openKey).map(t => (
+        <div key={t.key} className="card cp" style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{fontSize:12,color:"#94A3B8",background:"#F8FAFC",borderRadius:8,padding:"8px 12px"}}>
+            Beschikbare variabelen: <span style={{fontFamily:"monospace",color:"#6366F1",fontWeight:600}}>{t.vars}</span>
+          </div>
+          <div className="ig" style={{marginBottom:0}}>
+            <label className="ilbl">Onderwerp</label>
+            <input className="inp" value={drafts[t.key].subject} onChange={e=>setDrafts(d=>({...d,[t.key]:{...d[t.key],subject:e.target.value}}))} placeholder={TEMPLATE_DEFAULTS[t.key].subject}/>
+          </div>
+          <div className="ig" style={{marginBottom:0}}>
+            <label className="ilbl">Bericht</label>
+            <textarea className="inp" rows={5} value={drafts[t.key].body} onChange={e=>setDrafts(d=>({...d,[t.key]:{...d[t.key],body:e.target.value}}))} placeholder={TEMPLATE_DEFAULTS[t.key].body} style={{resize:"vertical",lineHeight:1.6}}/>
+          </div>
+
+          <div>
+            <button onClick={()=>setShowPreview(p=>!p)} style={{background:"none",border:"none",padding:0,fontSize:13,color:"#6366F1",fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+              {showPreview ? "▲ Verberg preview" : "▼ Preview (met voorbeeldgegevens)"}
+            </button>
+            {showPreview && (
+              <div style={{marginTop:10,background:"#F8FAFC",borderRadius:10,padding:"14px 16px",border:"1px solid #E5E7EB"}}>
+                <div style={{fontSize:11,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",letterSpacing:".5px",marginBottom:6}}>Onderwerp</div>
+                <div style={{fontSize:14,fontWeight:600,color:"#111",marginBottom:12}}>{previewSubject}</div>
+                <div style={{fontSize:11,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",letterSpacing:".5px",marginBottom:6}}>Bericht</div>
+                <div style={{fontSize:13.5,color:"#374151",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{previewBody}</div>
+              </div>
+            )}
+          </div>
+
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            <button className="btn btn-dark" onClick={()=>saveTemplate(t.key)} disabled={saving[t.key]}>{saving[t.key]?"Opslaan…":"Opslaan"}</button>
+            <button className="btn btn-ghost btn-sm" onClick={()=>resetTemplate(t.key)}>Standaard herstellen</button>
+            {msgs[t.key] && <span style={{fontSize:13,fontWeight:600,color:msgs[t.key].startsWith("Opgeslagen")?"#15803D":"#B91C1C"}}>{msgs[t.key]}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Instellingen ───────────────────────────────────────────────
-function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpdate, openTab }) {
+function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpdate, openTab, emailTemplates = {}, onTemplatesUpdate }) {
   const [settings, setSettings] = useState({
     auto_review_email: true,
     auto_reminder_email: true,
@@ -3298,7 +3469,7 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
 
   return (
     <div>
-      <div className="ph"><div><div className="pg-title">Instellingen</div><div className="pg-sub">Automatisering, reiskosten en abonnement</div></div></div>
+      <div className="ph"><div><div className="pg-title">Instellingen</div><div className="pg-sub">Automatisering, e-mail templates, reiskosten en abonnement</div></div></div>
 
       <div className="sec-ttl" style={{marginBottom:12}}>📧 E-mail automatisering</div>
       <div className="card cp" style={{display:"flex",flexDirection:"column",gap:20}}>
@@ -3324,6 +3495,11 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
       <div style={{display:"flex",justifyContent:"flex-end",marginTop:16,marginBottom:28}}>
         <button className="btn btn-dark" onClick={save} disabled={saving}>{saving?"Opslaan…":"Opslaan"}</button>
       </div>
+
+      <div className="sec-ttl" style={{marginBottom:12}}>✉️ E-mail templates</div>
+      <EmailTemplatesSection userId={userId} bedrijf={bedrijf} emailTemplates={emailTemplates} onTemplatesUpdate={onTemplatesUpdate}/>
+
+      <div style={{marginBottom:28}}/>
 
       <div className="sec-ttl" style={{marginBottom:12}}>🚗 Reiskosten</div>
       <div className="card cp">
@@ -3401,6 +3577,7 @@ function WerkMateApp({ user, onLogout }) {
   const [ritten, setRitten] = useState([]);
   const [uitgaven, setUitgaven] = useState([]);
   const [certificaten, setCertificaten] = useState([]);
+  const [emailTemplates, setEmailTemplates] = useState({});
 
   useEffect(() => {
     const initOrg = async () => {
@@ -3479,6 +3656,12 @@ function WerkMateApp({ user, onLogout }) {
       setCertificaten(ce.data || []);
       const { data: esData } = await supabase.from("email_settings").select("*").eq("user_id", ownerId).maybeSingle();
       if (esData) setEmailSettings(esData);
+      const { data: etData } = await supabase.from("email_templates").select("*").eq("user_id", ownerId);
+      if (etData) {
+        const map = {};
+        etData.forEach(t => { map[t.type] = { subject: t.subject, body: t.body }; });
+        setEmailTemplates(map);
+      }
     };
 
   const onDone = async (data) => {
@@ -3499,18 +3682,18 @@ function WerkMateApp({ user, onLogout }) {
   const render = () => {
     switch(tab) {
       case "dashboard":  return <DashboardTab openTab={setTab} bedrijf={bedrijf} offertes={offertes} planning={planning} facturen={facturen} klanten={klanten}/>;
-      case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={orgOwnerId} offertes={offertes} klanten={klanten} refresh={refreshAlles} bedrijf={bedrijf}/>;
+      case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={orgOwnerId} offertes={offertes} klanten={klanten} refresh={refreshAlles} bedrijf={bedrijf} emailTemplates={emailTemplates}/>;
       case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst}/>;
       case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
       case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} refresh={refreshAlles}/>;
       case "profiel":     return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} certificaten={certificaten} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} />;
-      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf} emailSettings={emailSettings}/>;
+      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf} emailSettings={emailSettings} emailTemplates={emailTemplates}/>;
       case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
-      case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings}/>;
+      case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings} emailTemplates={emailTemplates}/>;
       case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
       case "social":     return <SocialTab/>;
       case "ritten":     return <RittenTab userId={orgOwnerId} ritten={ritten} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
-      case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles} bedrijf={bedrijf} subscription={subscription} onBedrijfUpdate={(b)=>setBedrijf(b)} openTab={setTab}/>;
+      case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles} bedrijf={bedrijf} subscription={subscription} onBedrijfUpdate={(b)=>setBedrijf(b)} openTab={setTab} emailTemplates={emailTemplates} onTemplatesUpdate={setEmailTemplates}/>;
       default: return PH[tab]?<Placeholder {...PH[tab]}/>:null;
     }
   };

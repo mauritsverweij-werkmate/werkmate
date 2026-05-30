@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WerkMate — Jij bent goed in je vak. Wij regelen de rest.</title>
-  <meta name="description" content="WerkMate is het complete bedrijfsplatform voor vakmensen. Offertes, facturen, planning en meer — beheer je bedrijf in minuten per dag." />
+  <meta name="description" content="WerkMate is het complete bedrijfsplatform voor vakmensen. AI offertes, digitaal ondertekenen, facturen, planning, werkbonnen, rittenregistratie en meer — alles op één plek." />
   <meta property="og:title" content="WerkMate — Jij bent goed in je vak. Wij regelen de rest." />
-  <meta property="og:description" content="Van offerte tot factuur, van planning tot klantenbeheer. Alles op één plek, met AI." />
+  <meta property="og:description" content="Van AI-offerte tot digitale handtekening, van automatische herinneringen tot rittenregistratie. Alles op één plek, aangedreven door AI." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
@@ -37,6 +37,7 @@
     .fade-up.in { opacity: 1; transform: none; }
     .d1 { transition-delay: .08s; } .d2 { transition-delay: .16s; } .d3 { transition-delay: .24s; }
     .d4 { transition-delay: .32s; } .d5 { transition-delay: .40s; } .d6 { transition-delay: .48s; }
+    .d7 { transition-delay: .56s; } .d8 { transition-delay: .64s; } .d9 { transition-delay: .72s; }
 
     /* ── Buttons ── */
     .btn-pri {
@@ -118,6 +119,10 @@
     .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
     .hero-note { font-size: 12px; color: #475569; margin-top: 14px; }
 
+    /* Hero feature pills */
+    .hero-pills { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 24px; }
+    .hero-pill { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 4px 11px; font-size: 12px; color: #94A3B8; font-weight: 500; }
+
     /* 3-D mockup */
     .hero-vis { display: flex; justify-content: center; align-items: center; }
     .mock-scene { perspective: 1100px; }
@@ -189,18 +194,36 @@
     .feat-ico { width: 48px; height: 48px; background: linear-gradient(135deg,rgba(99,102,241,.2),rgba(139,92,246,.2)); border: 1px solid rgba(99,102,241,.22); border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
     .feat-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 16px; color: #F1F5F9; margin-bottom: 8px; }
     .feat-txt { font-size: 13.5px; color: #64748B; line-height: 1.65; }
+    .feat-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+    .feat-tag { background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.2); border-radius: 20px; padding: 3px 9px; font-size: 11px; color: #818CF8; font-weight: 600; }
+
+    /* ════════════════════════════════════════
+       COMPLETE FEATURES LIST
+    ════════════════════════════════════════ */
+    #all-features { background: #F8FAFC; color: #111; }
+    #all-features .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
+    #all-features .s-h2 { color: #0F172A; }
+    #all-features .s-sub { color: #64748B; }
+    .all-feat-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-top: 48px; }
+    .all-feat-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      background: #fff; border: 1.5px solid #E8EEF6; border-radius: 14px; padding: 18px 20px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .all-feat-item:hover { border-color: #C7D2FE; box-shadow: 0 6px 20px rgba(99,102,241,.08); }
+    .all-feat-check { width: 28px; height: 28px; flex-shrink: 0; background: linear-gradient(135deg,#6366F1,#8B5CF6); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; margin-top: 1px; }
+    .all-feat-body {}
+    .all-feat-name { font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 3px; }
+    .all-feat-desc { font-size: 13px; color: #64748B; line-height: 1.55; }
 
     /* ════════════════════════════════════════
        HOW IT WORKS
     ════════════════════════════════════════ */
-    #how { background: #F8FAFC; color: #111; }
-    #how .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
-    #how .s-h2 { color: #0F172A; }
-    #how .s-sub { color: #64748B; }
+    #how { background: var(--dark); color: #fff; }
     .how-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; margin-top: 56px; }
     .how-step { text-align: center; }
     .how-num { width: 56px; height: 56px; background: linear-gradient(135deg,var(--primary),var(--p2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Syne',sans-serif; font-weight: 800; font-size: 22px; color: #fff; margin: 0 auto 18px; box-shadow: 0 8px 24px rgba(99,102,241,.35); }
-    .how-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 17px; color: #0F172A; margin-bottom: 8px; }
+    .how-ttl { font-family: 'Syne',sans-serif; font-weight: 700; font-size: 17px; color: #F1F5F9; margin-bottom: 8px; }
     .how-txt { font-size: 14px; color: #64748B; line-height: 1.65; max-width: 260px; margin: 0 auto; }
 
     /* ════════════════════════════════════════
@@ -225,7 +248,7 @@
     #pricing .s-badge { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.18); color: #6366F1; }
     #pricing .s-h2 { color: #0F172A; }
     #pricing .s-sub { color: #64748B; }
-    .price-wrap { max-width: 460px; margin: 48px auto 0; }
+    .price-wrap { max-width: 500px; margin: 48px auto 0; }
     .price-card {
       background: #fff; border-radius: 24px; border: 2px solid #E8EEF6;
       padding: 40px; box-shadow: 0 24px 64px rgba(0,0,0,.1); position: relative; overflow: hidden;
@@ -238,13 +261,14 @@
     .price-per  { font-size: 17px; color: #64748B; }
     .price-trial{ font-size: 13.5px; color: #6366F1; font-weight: 600; margin-bottom: 26px; }
     .price-div  { height: 1px; background: #F1F5F9; margin: 22px 0; }
-    .price-list { list-style: none; display: flex; flex-direction: column; gap: 11px; margin-bottom: 30px; }
-    .price-list li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #374151; }
+    .price-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; margin-bottom: 30px; }
+    .price-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+    .price-list li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: #374151; }
     .price-list li::before {
-      content:'✓'; width:20px; height:20px; flex-shrink:0;
+      content:'✓'; width:18px; height:18px; flex-shrink:0;
       background: linear-gradient(135deg,#6366F1,#8B5CF6);
       border-radius: 50%; display:flex; align-items:center; justify-content:center;
-      font-size: 11px; font-weight:800; color:#fff;
+      font-size: 10px; font-weight:800; color:#fff;
     }
     .price-cta { display:block; width:100%; background:linear-gradient(135deg,#6366F1,#8B5CF6); color:#fff; border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; text-align:center; box-shadow:0 8px 24px rgba(99,102,241,.35); transition:transform .2s,box-shadow .2s; }
     .price-cta:hover { transform:translateY(-2px); box-shadow:0 14px 36px rgba(99,102,241,.52); }
@@ -283,9 +307,11 @@
       .mock-card { max-width: 420px; }
       .pain-grid, .feat-grid { grid-template-columns: 1fr 1fr; }
       .how-grid  { grid-template-columns: 1fr; gap: 36px; }
+      .all-feat-grid { grid-template-columns: 1fr; }
       footer { padding: 28px 24px; }
       .foot { flex-direction: column; text-align: center; }
       .foot-links { flex-wrap: wrap; justify-content: center; }
+      .price-cols { grid-template-columns: 1fr; }
     }
     @media (max-width: 600px) {
       .pain-grid, .feat-grid { grid-template-columns: 1fr; }
@@ -317,12 +343,20 @@
         Jij bent goed<br>in je vak.<br>
         <span class="grad-text">Wij regelen<br>de rest.</span>
       </h1>
-      <p class="hero-sub">WerkMate is het complete bedrijfsplatform voor vakmensen. Van offerte tot factuur, van planning tot klantenbeheer — alles op één plek, aangedreven door AI.</p>
+      <p class="hero-sub">WerkMate is het complete bedrijfsplatform voor vakmensen. Van AI-offerte tot digitale handtekening, van automatische herinneringen tot rittenregistratie — alles op één plek.</p>
       <div class="hero-btns">
         <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="btn-pri">🚀 Start 14 dagen gratis</a>
         <a href="#features" class="btn-ghost">Bekijk features</a>
       </div>
       <p class="hero-note">Geen creditcard nodig &nbsp;·&nbsp; Opzegbaar per maand &nbsp;·&nbsp; Daarna €99/maand</p>
+      <div class="hero-pills">
+        <span class="hero-pill">🤖 AI Offertes</span>
+        <span class="hero-pill">✍️ Digitaal ondertekenen</span>
+        <span class="hero-pill">📅 Planning</span>
+        <span class="hero-pill">🚗 Rittenregistratie</span>
+        <span class="hero-pill">⭐ Google reviews</span>
+        <span class="hero-pill">📋 Werkbonnen</span>
+      </div>
     </div>
 
     <div class="hero-vis">
@@ -408,9 +442,9 @@
         <div class="pain-txt">Na een zware werkweek nog uren achter de laptop. Je gezin ziet je nauwelijks.</div>
       </div>
       <div class="pain-card fade-up d5">
-        <div class="pain-ico">📱</div>
-        <div class="pain-ttl">"Geen tijd voor social media"</div>
-        <div class="pain-txt">Je weet dat reviews en posts klanten opleveren, maar het verzinnen kost uren die je gewoon niet hebt.</div>
+        <div class="pain-ico">🚗</div>
+        <div class="pain-ttl">"Mijn km's bijhouden is een drama"</div>
+        <div class="pain-txt">Rittenregistratie op papier, bonnetjes kwijt, en aan het eind van het jaar puzzelen voor de belasting.</div>
       </div>
       <div class="pain-card fade-up d6">
         <div class="pain-ico">👷</div>
@@ -430,36 +464,196 @@
       <p class="s-sub fade-up d2">De tools van een groot bedrijf, zonder de complexiteit. Simpel, snel, effectief.</p>
     </div>
     <div class="feat-grid">
+
       <div class="feat-card fade-up d1">
         <div class="feat-ico">🤖</div>
         <div class="feat-ttl">AI Offerte in 30 seconden</div>
-        <div class="feat-txt">Beschrijf de klus en onze AI maakt een professionele offerte met de juiste prijs. Verstuur als PDF direct naar de klant.</div>
+        <div class="feat-txt">Beschrijf de klus en onze AI maakt een professionele offerte met de juiste prijs. Importeer je eigen prijslijst uit Excel en verstuur als PDF.</div>
+        <div class="feat-tags"><span class="feat-tag">AI</span><span class="feat-tag">PDF</span><span class="feat-tag">Excel import</span></div>
       </div>
+
       <div class="feat-card fade-up d2">
-        <div class="feat-ico">💶</div>
-        <div class="feat-ttl">Facturen & Boekhouding</div>
-        <div class="feat-txt">Facturen aanmaken, BTW berekenen, herinneringen sturen. Altijd weten wat er open staat en wat er binnenkomt.</div>
+        <div class="feat-ico">✍️</div>
+        <div class="feat-ttl">Digitaal ondertekenen</div>
+        <div class="feat-txt">Klant krijgt een persoonlijke portaallink en ondertekent de offerte online. Bij acceptatie wordt de factuur automatisch aangemaakt.</div>
+        <div class="feat-tags"><span class="feat-tag">Klantportaal</span><span class="feat-tag">WhatsApp</span><span class="feat-tag">E-mail</span></div>
       </div>
+
       <div class="feat-card fade-up d3">
-        <div class="feat-ico">📅</div>
-        <div class="feat-ttl">Slimme Planning</div>
-        <div class="feat-txt">Maand- en weekoverzicht, terugkerende taken, feestdagen. Wijs opdrachten toe aan teamleden en navigeer direct naar de klant.</div>
+        <div class="feat-ico">💶</div>
+        <div class="feat-ttl">Facturen & automatische herinneringen</div>
+        <div class="feat-txt">Facturen aanmaken en versturen met IBAN-betaalblok. Automatische betalingsherinnering zodat jij niet hoeft te achtervolgen.</div>
+        <div class="feat-tags"><span class="feat-tag">BTW</span><span class="feat-tag">IBAN</span><span class="feat-tag">Automatisch</span></div>
       </div>
+
       <div class="feat-card fade-up d4">
-        <div class="feat-ico">👥</div>
-        <div class="feat-ttl">CRM & Klantenbeheer</div>
-        <div class="feat-txt">Alle klantgegevens op één plek. Offertes, facturen en contacthistorie per klant netjes bijgehouden.</div>
+        <div class="feat-ico">📅</div>
+        <div class="feat-ttl">Planning per 30 minuten</div>
+        <div class="feat-txt">Dag-, week- en maandoverzicht met tijdslots van 30 minuten. Terugkerende taken, teamleden toewijzen en direct navigeren naar de klant.</div>
+        <div class="feat-tags"><span class="feat-tag">Agenda</span><span class="feat-tag">Team</span><span class="feat-tag">Terugkerend</span></div>
       </div>
+
       <div class="feat-card fade-up d5">
-        <div class="feat-ico">📸</div>
-        <div class="feat-ttl">AI Social Media Posts</div>
-        <div class="feat-txt">AI schrijft je Instagram en TikTok posts op basis van je project. Professionele uitstraling zonder dat het je tijd kost.</div>
+        <div class="feat-ico">📋</div>
+        <div class="feat-ttl">Werkbonnen met handtekening</div>
+        <div class="feat-txt">Registreer uren, gebruikte materialen en foto's van de klus. Klant tekent direct op de bon — alles digitaal vastgelegd.</div>
+        <div class="feat-tags"><span class="feat-tag">Foto's</span><span class="feat-tag">Materialen</span><span class="feat-tag">Handtekening</span></div>
       </div>
+
       <div class="feat-card fade-up d6">
-        <div class="feat-ico">👷</div>
-        <div class="feat-ttl">Teambeheer</div>
-        <div class="feat-txt">Nodig medewerkers uit, wijs rollen toe en zie wie wat doet. Iedereen werkt vanuit dezelfde planning, altijd up-to-date.</div>
+        <div class="feat-ico">👥</div>
+        <div class="feat-ttl">Klantenbeheer & CRM</div>
+        <div class="feat-txt">Alle klantgegevens op één plek met zoekfunctie. Offertes, facturen en werkbonnen per klant netjes bijgehouden. Stuur direct een email vanuit het profiel.</div>
+        <div class="feat-tags"><span class="feat-tag">CRM</span><span class="feat-tag">Zoeken</span><span class="feat-tag">Historiek</span></div>
       </div>
+
+      <div class="feat-card fade-up d7">
+        <div class="feat-ico">🚗</div>
+        <div class="feat-ttl">Rittenregistratie</div>
+        <div class="feat-txt">Registreer zakelijke ritten met automatische km-berekening op basis van vergoeding per kilometer. Overzicht voor belastingaangifte altijd bij de hand.</div>
+        <div class="feat-tags"><span class="feat-tag">km-vergoeding</span><span class="feat-tag">Belasting</span></div>
+      </div>
+
+      <div class="feat-card fade-up d8">
+        <div class="feat-ico">⭐</div>
+        <div class="feat-ttl">Google reviews & e-mail templates</div>
+        <div class="feat-txt">Automatisch review-verzoek na een afgeronde klus. Stel je eigen e-mail templates in per type met variabelen zoals {klantnaam} en {bedrijfsnaam}.</div>
+        <div class="feat-tags"><span class="feat-tag">Google review</span><span class="feat-tag">Templates</span><span class="feat-tag">Automatisch</span></div>
+      </div>
+
+      <div class="feat-card fade-up d9">
+        <div class="feat-ico">💼</div>
+        <div class="feat-ttl">Boekhouding, certificaten & team</div>
+        <div class="feat-txt">Uitgaven bijhouden met BTW-overzicht. Certificatentracker met vervaldatum-alerts. Nodig teamleden uit en beheer rollen in je organisatie.</div>
+        <div class="feat-tags"><span class="feat-tag">Boekhouding</span><span class="feat-tag">Certificaten</span><span class="feat-tag">Team</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ ALL FEATURES LIST ══════════════════════════════════════ -->
+<section id="all-features">
+  <div class="section-inner">
+    <div class="center">
+      <div class="s-badge fade-up">✅ Compleet overzicht</div>
+      <h2 class="s-h2 syne fade-up d1">Alles inbegrepen.<br>Geen verborgen extra's.</h2>
+      <p class="s-sub fade-up d2">Eén abonnement geeft je toegang tot alle functies — geen losse modules, geen add-ons.</p>
+    </div>
+    <div class="all-feat-grid">
+
+      <div class="all-feat-item fade-up d1">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Slimme offerte generator met AI</div>
+          <div class="all-feat-desc">Beschrijf de klus, AI stelt de offerte op met regels en bedragen. Klaar in 30 seconden.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d2">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Digitaal ondertekenen via klantportaal</div>
+          <div class="all-feat-desc">Klant opent persoonlijke link, bekijkt de offerte en tekent digitaal. Jij krijgt direct een bevestiging.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d3">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Versturen via WhatsApp en e-mail</div>
+          <div class="all-feat-desc">Deel offertes en facturen direct via WhatsApp of email, met PDF als bijlage.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d4">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Facturen met automatische betalingsherinnering</div>
+          <div class="all-feat-desc">Factuur met IBAN-betaalblok. Stel in hoeveel dagen voor de vervaldatum een herinnering verstuurd wordt.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d1">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Planning met agenda per 30 minuten</div>
+          <div class="all-feat-desc">Nauwkeurige tijdsindeling in dag- en weekoverzicht. Wijs opdrachten toe aan teamleden.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d2">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Klantenbeheer met zoekfunctie</div>
+          <div class="all-feat-desc">Volledig klantoverzicht met contact-, offerte- en factuurhistorie. Snel terugvinden via zoekbalk.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d3">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Werkbonnen met foto's, materialen en handtekening</div>
+          <div class="all-feat-desc">Maak digitale werkbonnen op locatie. Klant tekent direct op je telefoon of tablet.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d4">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Rittenregistratie met km-berekening</div>
+          <div class="all-feat-desc">Leg zakelijke ritten vast met automatische kostenberekening op basis van je km-vergoeding.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d1">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Boekhouding en uitgaven bijhouden</div>
+          <div class="all-feat-desc">Registreer zakelijke uitgaven per categorie. BTW-overzicht per kwartaal altijd beschikbaar.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d2">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Certificaten tracker</div>
+          <div class="all-feat-desc">Houd VCA, rijbewijzen en vakdiploma's bij met automatische melding voor verlopen certificaten.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d3">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Team uitnodigingen</div>
+          <div class="all-feat-desc">Nodig medewerkers uit via e-mail. Ze zien meteen de planning en kunnen werkbonnen invullen.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d4">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">E-mail templates aanpasbaar</div>
+          <div class="all-feat-desc">Schrijf je eigen tekst voor offerte-, factuur-, herinnering- en review-mails met variabelen zoals {klantnaam}.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d1">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Prijslijst met Excel import</div>
+          <div class="all-feat-desc">Laad je eigen prijslijst vanuit Excel of bouw hem op in de app. AI gebruikt jouw tarieven bij het maken van offertes.</div>
+        </div>
+      </div>
+
+      <div class="all-feat-item fade-up d2">
+        <div class="all-feat-check">✓</div>
+        <div class="all-feat-body">
+          <div class="all-feat-name">Google review verzoek na klus</div>
+          <div class="all-feat-desc">Stuur automatisch een reviewverzoek zodra een werkbon op 'Afgerond' wordt gezet. Direct meer Google-reviews.</div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -468,25 +662,25 @@
 <section id="how">
   <div class="section-inner">
     <div class="center">
-      <div class="s-badge fade-up">🚀 Zo werkt het</div>
-      <h2 class="s-h2 syne fade-up d1">In 3 stappen<br>aan de slag</h2>
+      <div class="s-badge fade-up" style="background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.3);color:#818CF8">🚀 Zo werkt het</div>
+      <h2 class="s-h2 syne fade-up d1" style="color:#F1F5F9">In 3 stappen<br>aan de slag</h2>
       <p class="s-sub fade-up d2">Geen ingewikkelde installatie, geen handleidingen. Vandaag aanmelden, morgen al tijd besparen.</p>
     </div>
     <div class="how-grid">
       <div class="how-step fade-up d1">
         <div class="how-num">1</div>
         <div class="how-ttl">Maak een account aan</div>
-        <div class="how-txt">Registreer gratis, vul je bedrijfsgegevens in en je bent direct klaar om te starten. Duurt minder dan 2 minuten.</div>
+        <div class="how-txt">Registreer gratis, vul je bedrijfsgegevens en logo in. Duurt minder dan 2 minuten en je bent direct klaar om te starten.</div>
       </div>
       <div class="how-step fade-up d2">
         <div class="how-num">2</div>
-        <div class="how-ttl">Voeg je eerste klant toe</div>
-        <div class="how-txt">Importeer klantgegevens of voeg ze handmatig in. Maak direct je eerste AI-offerte en verstuur hem per e-mail.</div>
+        <div class="how-ttl">Maak je eerste AI-offerte</div>
+        <div class="how-txt">Voeg een klant toe en laat AI een offerte voor je schrijven. Verstuur het direct via e-mail of WhatsApp — klant ondertekent online.</div>
       </div>
       <div class="how-step fade-up d3">
         <div class="how-num">3</div>
         <div class="how-ttl">Bespaar uren per week</div>
-        <div class="how-txt">Planning, facturen, herinneringen — WerkMate regelt het voor je. Jij focust op je vak, wij op de rest.</div>
+        <div class="how-txt">Planning, facturen, werkbonnen, ritten, reviews — WerkMate regelt het automatisch. Jij focust op je vak.</div>
       </div>
     </div>
   </div>
@@ -521,7 +715,7 @@
     <div class="center">
       <div class="s-badge fade-up">💳 Prijzen</div>
       <h2 class="s-h2 syne fade-up d1">Één plan. Alles inbegrepen.<br>Geen verrassingen.</h2>
-      <p class="s-sub fade-up d2">Geen dure consultants, geen ingewikkelde pakketten. Gewoon alles wat je nodig hebt voor één vaste prijs.</p>
+      <p class="s-sub fade-up d2">Geen dure consultants, geen losse modules. Gewoon alle 14+ functies voor één vaste prijs.</p>
     </div>
     <div class="price-wrap fade-up d3">
       <div class="price-card">
@@ -533,18 +727,26 @@
         </div>
         <div class="price-trial">✨ 14 dagen gratis uitproberen — geen creditcard nodig</div>
         <div class="price-div"></div>
-        <ul class="price-list">
-          <li>Onbeperkt offertes & facturen</li>
-          <li>AI offerte generator</li>
-          <li>Planning kalender (maand & week)</li>
-          <li>CRM & klantenbeheer</li>
-          <li>Werkbonnen digitaal</li>
-          <li>AI social media posts</li>
-          <li>Teambeheer & uitnodigingen</li>
-          <li>PDF export & e-mailen</li>
-          <li>BTW & boekhoudingoverzicht</li>
-          <li>Support via e-mail & chat</li>
-        </ul>
+        <div class="price-cols">
+          <ul class="price-list">
+            <li>AI offerte generator</li>
+            <li>Digitaal ondertekenen</li>
+            <li>WhatsApp & e-mail versturen</li>
+            <li>Facturen & automatische herinneringen</li>
+            <li>Planning per 30 minuten</li>
+            <li>Klantenbeheer & CRM</li>
+            <li>Werkbonnen met handtekening</li>
+          </ul>
+          <ul class="price-list">
+            <li>Rittenregistratie</li>
+            <li>Boekhouding & uitgaven</li>
+            <li>Certificaten tracker</li>
+            <li>Team uitnodigingen</li>
+            <li>E-mail templates aanpasbaar</li>
+            <li>Prijslijst met Excel import</li>
+            <li>Google review verzoek</li>
+          </ul>
+        </div>
         <a href="https://buy.stripe.com/9B6cN56LE9590dG1YL2kw00" target="_blank" class="price-cta">🚀 Start 14 dagen gratis</a>
         <p class="price-note">Na 14 dagen €99/maand &nbsp;·&nbsp; Altijd opzegbaar &nbsp;·&nbsp; Geen verborgen kosten</p>
       </div>
@@ -571,7 +773,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start">
 
       <div>
-        <div class="s-badge" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.18);color:#6366F1" class="fade-up">✉️ Contact</div>
+        <div class="s-badge" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.18);color:#6366F1">✉️ Contact</div>
         <h2 class="s-h2 syne fade-up" style="color:#0F172A;margin-top:14px">Vragen? Wij<br>helpen je graag.</h2>
         <p class="s-sub fade-up d1" style="color:#64748B;margin-bottom:36px">Neem gerust contact op. We reageren doorgaans binnen één werkdag.</p>
 
@@ -645,7 +847,7 @@
       <div class="foot-ico">⚡</div>
       <span class="foot-name">WerkMate</span>
     </div>
-    <div class="foot-copy">© 2025 WerkMate · Gemaakt voor de Nederlandse vakman</div>
+    <div class="foot-copy">© 2026 WerkMate · Gemaakt voor de Nederlandse vakman</div>
     <div class="foot-links">
       <a href="https://app.werkmate.tech" target="_blank">App</a>
       <a href="mailto:info@werkmate.tech">Contact</a>
@@ -723,7 +925,6 @@ window.addEventListener('scroll', () => {
 
 // ── Mockup mouse parallax ─────────────────────────────────────
 const mc = document.getElementById('mockCard');
-let animating = true;
 document.addEventListener('mousemove', e => {
   if (!mc) return;
   const cx = window.innerWidth  / 2;
