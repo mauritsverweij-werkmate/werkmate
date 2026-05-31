@@ -2790,6 +2790,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   const [filterStatus, setFilterStatus] = useState("Alle");
   const [btwJaar, setBtwJaar] = useState(new Date().getFullYear());
   const [btwQ, setBtwQ] = useState(Math.floor(new Date().getMonth()/3));
+  const [btwStap, setBtwStap] = useState(0);
   const [winstJaar, setWinstJaar] = useState(new Date().getFullYear());
   const [winstPeriode, setWinstPeriode] = useState("maand");
   const [showCreate, setShowCreate] = useState(false);
@@ -3192,7 +3193,6 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         return d.getFullYear()===btwJaar&&d.getMonth()>=q.start&&d.getMonth()<=q.end;
       });
 
-      // Rubrieken berekening
       let omzet1a=0,btw1a=0,omzet1b=0,btw1b=0;
       fInQ.forEach(f => {
         const rr=Array.isArray(f.regels)?f.regels:[];
@@ -3201,72 +3201,231 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
             const pct=Number(r.btw_pct??21),bedrag=(Number(r.aantal)||0)*(Number(r.prijs)||0);
             if(pct===21){omzet1a+=bedrag;btw1a+=bedrag*0.21;}
             else if(pct===9){omzet1b+=bedrag;btw1b+=bedrag*0.09;}
-            else{omzet1a+=bedrag;} // 0% BTW, count as omzet 21% category but no BTW
+            else{omzet1a+=bedrag;}
           });
         } else {
-          // oud record zonder regels
           const tot=getTotal(f),sub=tot/1.21,btwAmt=tot-sub;
           omzet1a+=sub;btw1a+=btwAmt;
         }
       });
-      const voorbelasting5b=uInQ.reduce((s,u)=>{const p=Number(u.btw_percentage||0);return p>0?s+Number(u.bedrag||0)*p/100/(1+p/100):s;},0);
-      const totaalTeBetalen=btw1a+btw1b-voorbelasting5b;
+      const btw5a=btw1a+btw1b;
+      const vb5b=uInQ.reduce((s,u)=>{const p=Number(u.btw_percentage||0);return p>0?s+Number(u.bedrag||0)*p/100/(1+p/100):s;},0);
+      const res5g=btw5a-vb5b;
+      const teBetalen=res5g>0;
+
+      const Tip = ({txt}) => (
+        <span title={txt} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:"50%",background:"#E0E7FF",color:"#6366F1",fontSize:10,fontWeight:700,cursor:"help",marginLeft:5,flexShrink:0}}>?</span>
+      );
+
+      const RubriekRow = ({lbl,tip,left,right,highlight}) => (
+        <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #F3F4F6"}}>
+          <div style={{fontSize:13,color:"#374151",display:"flex",alignItems:"center"}}>{lbl}<Tip txt={tip}/></div>
+          <div style={{fontSize:13,fontWeight:600,textAlign:"right",color:"#111"}}>{left!=null?fE(left):"—"}</div>
+          <div style={{fontSize:13,fontWeight:highlight?"800":"600",textAlign:"right",color:highlight?highlight:"#6366F1"}}>{right!=null?fE(right):"—"}</div>
+        </div>
+      );
+
+      const exportBtwPdf = () => {
+        const doc = new jsPDF({unit:"mm",format:"a4"});
+        const naam = bedrijf?.bedrijfsnaam||"Mijn bedrijf";
+        doc.setFillColor(17,24,39); doc.rect(0,0,210,32,"F");
+        doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(255,255,255);
+        doc.text(naam,20,20);
+        doc.setFontSize(10); doc.setFont("helvetica","normal");
+        doc.text(`BTW aangifte — ${q.naam} ${btwJaar}`,20,27);
+        doc.setTextColor(50,50,50); let y=44;
+        const row=(lbl,l,r,bold)=>{
+          if(bold){doc.setFont("helvetica","bold");}else{doc.setFont("helvetica","normal");}
+          doc.setFontSize(9.5);
+          doc.text(lbl,20,y);
+          if(l!=null)doc.text(fE(l),140,y,{align:"right"});
+          if(r!=null)doc.text(fE(r),190,y,{align:"right"});
+          y+=8;
+        };
+        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(100,100,100);
+        doc.text("Rubriek",20,y); doc.text("Omzet excl. BTW",140,y,{align:"right"}); doc.text("Te betalen BTW",190,y,{align:"right"}); y+=5;
+        doc.setDrawColor(200); doc.line(20,y,190,y); y+=5; doc.setTextColor(50,50,50);
+        row("1a  Omzet belast met 21% BTW",omzet1a,btw1a);
+        row("1b  Omzet belast met 9% BTW",omzet1b,btw1b);
+        doc.setDrawColor(220); doc.line(20,y,190,y); y+=5;
+        row("5a  Totaal verschuldigde BTW",null,btw5a,true);
+        row("5b  Voorbelasting (inkopen/kosten)",null,-vb5b,true);
+        doc.line(20,y,190,y); y+=5;
+        doc.setFont("helvetica","bold"); doc.setFontSize(11);
+        doc.setTextColor(...(teBetalen?[220,38,38]:[5,150,105]));
+        doc.text(`5g  ${teBetalen?"Te betalen":"Terug te ontvangen"}`,20,y);
+        doc.text(fE(Math.abs(res5g)),190,y,{align:"right"}); y+=14;
+        doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(140,140,140);
+        doc.text(`Gegenereerd via WerkMate op ${new Date().toLocaleDateString("nl-NL")}`,20,y);
+        if(ingediend){doc.setTextColor(5,150,105);doc.text("✓ Ingediend bij Belastingdienst",20,y+6);}
+        doc.save(`BTW_aangifte_${q.label}_${btwJaar}.pdf`);
+      };
+
+      const stappen = ["Binnenland","Voorbelasting","Overzicht"];
 
       return (
         <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-              <div style={{fontWeight:700,fontSize:16,color:"#111"}}>BTW aangifte</div>
-              <select value={btwJaar} onChange={e=>setBtwJaar(Number(e.target.value))} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer"}}>
-                {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
-              </select>
-              <div style={{display:"flex",gap:4}}>
+          {/* Header met kwartaal/jaar selector */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12,marginBottom:20}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
+                <div style={{fontWeight:800,fontSize:17,color:"#0F0F14",fontFamily:"'Syne',sans-serif"}}>BTW aangifte</div>
+                {ingediend&&<span style={{fontSize:11.5,fontWeight:700,color:"#059669",background:"#ECFDF5",border:"1px solid #A7F3D0",borderRadius:20,padding:"3px 10px"}}>✓ Ingediend</span>}
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                <select value={btwJaar} onChange={e=>{setBtwJaar(Number(e.target.value));setBtwStap(0);}} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer"}}>
+                  {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
+                </select>
                 {quarters.map((qq,qi)=>(
-                  <button key={qq.label} onClick={()=>setBtwQ(qi)} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:btwQ===qi?"#0F0F14":"#fff",color:btwQ===qi?"#fff":"#555",borderColor:btwQ===qi?"#0F0F14":"#E5E7EB"}}>{qq.label}</button>
+                  <button key={qq.label} onClick={()=>{setBtwQ(qi);setBtwStap(0);}} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:btwQ===qi?"#0F0F14":"#fff",color:btwQ===qi?"#fff":"#555",borderColor:btwQ===qi?"#0F0F14":"#E5E7EB"}}>{qq.label}</button>
                 ))}
               </div>
             </div>
-            <div style={{display:"flex",gap:8,alignItems:"center"}}>
-              {ingediend&&<span style={{fontSize:12,fontWeight:700,color:"#059669",background:"#ECFDF5",border:"1px solid #A7F3D0",borderRadius:20,padding:"4px 12px"}}>✓ Ingediend</span>}
-              <a href="https://mijn.belastingdienst.nl" target="_blank" rel="noopener noreferrer" style={{padding:"7px 14px",background:"#1C4CC3",color:"#fff",borderRadius:8,fontSize:13,fontWeight:700,textDecoration:"none",fontFamily:"'DM Sans',sans-serif"}}>Ga naar Belastingdienst ↗</a>
+            <div style={{fontSize:12.5,color:"#94A3B8",textAlign:"right",lineHeight:1.6}}>
+              <div>{fInQ.length} betaalde factuur{fInQ.length!==1?"en":""} · {uInQ.length} uitgave{uInQ.length!==1?"n":""}</div>
+              <div>{q.naam} {btwJaar}</div>
             </div>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
-            <div className="card cp" style={{borderLeft:"4px solid #6366F1"}}>
-              <div style={{fontWeight:700,fontSize:13,color:"#6366F1",marginBottom:8,textTransform:"uppercase",letterSpacing:".5px",fontSize:11}}>Rubriek 1a — Omzet 21% BTW</div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}><span style={{color:"#64748B"}}>Omzet (excl. BTW)</span><span style={{fontWeight:700}}>{fE(omzet1a)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,borderTop:"1px solid #E5E7EB",paddingTop:8,marginTop:4}}><span style={{color:"#64748B"}}>Te betalen BTW 21%</span><span style={{fontWeight:700,color:"#6366F1"}}>{fE(btw1a)}</span></div>
-            </div>
-            <div className="card cp" style={{borderLeft:"4px solid #F59E0B"}}>
-              <div style={{fontWeight:700,textTransform:"uppercase",letterSpacing:".5px",fontSize:11,color:"#D97706",marginBottom:8}}>Rubriek 1b — Omzet 9% BTW</div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}><span style={{color:"#64748B"}}>Omzet (excl. BTW)</span><span style={{fontWeight:700}}>{fE(omzet1b)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,borderTop:"1px solid #E5E7EB",paddingTop:8,marginTop:4}}><span style={{color:"#64748B"}}>Te betalen BTW 9%</span><span style={{fontWeight:700,color:"#D97706"}}>{fE(btw1b)}</span></div>
-            </div>
-            <div className="card cp" style={{borderLeft:"4px solid #10B981"}}>
-              <div style={{fontWeight:700,textTransform:"uppercase",letterSpacing:".5px",fontSize:11,color:"#059669",marginBottom:8}}>Rubriek 5b — Voorbelasting</div>
-              <div style={{fontSize:13,color:"#64748B",marginBottom:5}}>BTW betaald op inkopen/kosten</div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:14,borderTop:"1px solid #E5E7EB",paddingTop:8,marginTop:4}}><span style={{color:"#64748B"}}>Aftrekbare voorbelasting</span><span style={{fontWeight:700,color:"#10B981"}}>{fE(voorbelasting5b)}</span></div>
-            </div>
-            <div className="card cp" style={{borderLeft:`4px solid ${totaalTeBetalen>0?"#EF4444":"#10B981"}`}}>
-              <div style={{fontWeight:700,textTransform:"uppercase",letterSpacing:".5px",fontSize:11,color:totaalTeBetalen>0?"#DC2626":"#059669",marginBottom:8}}>Rubriek 5g — Totaalberekening</div>
-              {[{lbl:"BTW 21% (1a)",v:btw1a},{lbl:"BTW 9% (1b)",v:btw1b},{lbl:"Voorbelasting (5b)",v:-voorbelasting5b}].map(x=>(
-                <div key={x.lbl} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,marginBottom:4}}><span style={{color:"#64748B"}}>{x.lbl}</span><span style={{color:x.v<0?"#10B981":"#111",fontWeight:600}}>{x.v<0?`- ${fE(-x.v)}`:fE(x.v)}</span></div>
-              ))}
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:15,fontWeight:800,borderTop:"2px solid #E5E7EB",paddingTop:8,marginTop:4}}>
-                <span>{totaalTeBetalen>0?"Te betalen":"Terug te ontvangen"}</span>
-                <span style={{color:totaalTeBetalen>0?"#EF4444":"#10B981"}}>{fE(Math.abs(totaalTeBetalen))}</span>
+          {/* Stap-indicator */}
+          <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:24,overflowX:"auto"}}>
+            {stappen.map((s,i)=>(
+              <React.Fragment key={s}>
+                <button onClick={()=>setBtwStap(i)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:20,border:`1.5px solid ${btwStap===i?"#6366F1":"#E5E7EB"}`,background:btwStap===i?"#EEF2FF":"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:12.5,fontWeight:600,color:btwStap===i?"#4338CA":"#64748B",whiteSpace:"nowrap"}}>
+                  <span style={{width:20,height:20,borderRadius:"50%",background:btwStap===i?"#6366F1":btwStap>i?"#10B981":"#E5E7EB",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{btwStap>i?"✓":i+1}</span>
+                  {s}
+                </button>
+                {i<stappen.length-1&&<div style={{width:24,height:2,background:"#E5E7EB",flexShrink:0}}/>}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* STAP 0 — Binnenland */}
+          {btwStap===0&&(
+            <div>
+              <div style={{background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:13,color:"#4338CA"}}>
+                💡 Hier vul je in wat je hebt gefactureerd aan BTW. WerkMate heeft dit automatisch uit je facturen gehaald.
+              </div>
+              <div className="card" style={{overflow:"hidden",marginBottom:12}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",background:"#F8FAFC",borderBottom:"2px solid #E5E7EB"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".5px"}}>Rubriek</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>Omzet excl. BTW</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>BTW bedrag</div>
+                </div>
+                <RubriekRow
+                  lbl="1a — Leveringen/diensten belast met 21%"
+                  tip="Alle omzet waarover je 21% BTW hebt berekend. Dit is het bedrag excl. BTW dat je hebt gefactureerd."
+                  left={omzet1a} right={btw1a}
+                />
+                <RubriekRow
+                  lbl="1b — Leveringen/diensten belast met 9%"
+                  tip="Alle omzet waarover je 9% BTW hebt berekend (bijv. voedsel, boeken, reparaties aan woningen)."
+                  left={omzet1b} right={btw1b}
+                />
+                {omzet1a===0&&omzet1b===0&&<div style={{padding:"16px 14px",fontSize:13,color:"#94A3B8",textAlign:"center"}}>Geen betaalde facturen in {q.naam} {btwJaar}</div>}
+              </div>
+              <div style={{display:"flex",justifyContent:"flex-end"}}>
+                <button onClick={()=>setBtwStap(1)} className="btn btn-dark" style={{minWidth:140}}>Volgende stap →</button>
               </div>
             </div>
-          </div>
+          )}
 
-          {!ingediend&&<div style={{background:"#FFF7ED",border:"1.5px solid #FED7AA",borderRadius:12,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+          {/* STAP 1 — Voorbelasting */}
+          {btwStap===1&&(
             <div>
-              <div style={{fontWeight:700,fontSize:14,color:"#92400E"}}>Aangifte gedaan?</div>
-              <div style={{fontSize:13,color:"#78350F",marginTop:2}}>Markeer {q.naam} als ingediend bij de belastingdienst.</div>
+              <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:13,color:"#15803D"}}>
+                💡 Voorbelasting is de BTW die jij zelf hebt betaald op inkopen en kosten. Dit mag je aftrekken van wat je moet afdragen.
+              </div>
+              <div className="card" style={{overflow:"hidden",marginBottom:12}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",background:"#F8FAFC",borderBottom:"2px solid #E5E7EB"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".5px"}}>Rubriek</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>Omzet excl. BTW</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>BTW bedrag</div>
+                </div>
+                <RubriekRow
+                  lbl="5a — Totaal verschuldigde BTW (1a + 1b)"
+                  tip="Dit is het totaal aan BTW dat je aan klanten hebt berekend. Automatisch berekend uit rubriek 1a en 1b."
+                  left={null} right={btw5a} highlight="#6366F1"
+                />
+                <RubriekRow
+                  lbl="5b — Voorbelasting (BTW op inkopen)"
+                  tip="De BTW die jij hebt betaald op zakelijke inkopen en kosten. Komt uit jouw uitgaventabel."
+                  left={null} right={vb5b} highlight="#10B981"
+                />
+                {uInQ.length===0&&<div style={{padding:"16px 14px",fontSize:13,color:"#94A3B8",textAlign:"center"}}>Geen uitgaven in {q.naam} {btwJaar} — voeg uitgaven toe via het Uitgaven tabblad</div>}
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                <button onClick={()=>setBtwStap(0)} className="btn btn-ghost">← Vorige</button>
+                <button onClick={()=>setBtwStap(2)} className="btn btn-dark" style={{minWidth:140}}>Naar overzicht →</button>
+              </div>
             </div>
-            <button onClick={()=>{localStorage.setItem(ingKey,"1");setBtwQ(btwQ);}} style={{padding:"8px 18px",background:"#D97706",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>✓ Markeer als ingediend</button>
-          </div>}
+          )}
+
+          {/* STAP 2 — Overzicht */}
+          {btwStap===2&&(
+            <div>
+              {/* Grote uitkomstkaart */}
+              <div style={{background:teBetalen?"#FEF2F2":"#F0FDF4",border:`2px solid ${teBetalen?"#FECACA":"#BBF7D0"}`,borderRadius:16,padding:"24px 28px",marginBottom:20,textAlign:"center"}}>
+                <div style={{fontSize:14,color:teBetalen?"#991B1B":"#15803D",fontWeight:600,marginBottom:6}}>{teBetalen?"Te betalen aan Belastingdienst":"Je krijgt terug van Belastingdienst"}</div>
+                <div style={{fontSize:40,fontWeight:900,color:teBetalen?"#DC2626":"#059669",fontFamily:"'Syne',sans-serif",lineHeight:1}}>{fE(Math.abs(res5g))}</div>
+                <div style={{fontSize:13,color:"#64748B",marginTop:8}}>{q.naam} {btwJaar}</div>
+              </div>
+
+              {/* Volledige specificatie */}
+              <div className="card" style={{overflow:"hidden",marginBottom:16}}>
+                <div style={{padding:"10px 14px",background:"#F8FAFC",borderBottom:"2px solid #E5E7EB",fontWeight:700,fontSize:13,color:"#0F0F14"}}>Specificatie</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",borderBottom:"1px solid #F8FAFC"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".5px"}}></div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>Omzet excl. BTW</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>BTW</div>
+                </div>
+                <RubriekRow lbl="1a — Omzet 21%" tip="Gefactureerde omzet belast met 21% BTW" left={omzet1a} right={btw1a}/>
+                <RubriekRow lbl="1b — Omzet 9%" tip="Gefactureerde omzet belast met 9% BTW" left={omzet1b} right={btw1b}/>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"10px 14px",borderBottom:"1px solid #F3F4F6",background:"#F8FAFC"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#374151"}}>5a — Totaal verschuldigd</div>
+                  <div/>
+                  <div style={{fontSize:13,fontWeight:700,textAlign:"right",color:"#6366F1"}}>{fE(btw5a)}</div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"10px 14px",borderBottom:"1px solid #F3F4F6"}}>
+                  <div style={{fontSize:13,color:"#374151",display:"flex",alignItems:"center"}}>5b — Voorbelasting<Tip txt="BTW die je zelf hebt betaald op zakelijke inkopen. Dit trekt de Belastingdienst af van wat je moet afdragen."/></div>
+                  <div/>
+                  <div style={{fontSize:13,fontWeight:700,textAlign:"right",color:"#10B981"}}>- {fE(vb5b)}</div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"12px 14px",background:teBetalen?"#FEF2F2":"#F0FDF4"}}>
+                  <div style={{fontSize:14,fontWeight:800,color:teBetalen?"#DC2626":"#059669"}}>5g — {teBetalen?"Te betalen":"Terug te ontvangen"}</div>
+                  <div/>
+                  <div style={{fontSize:14,fontWeight:900,textAlign:"right",color:teBetalen?"#DC2626":"#059669"}}>{fE(Math.abs(res5g))}</div>
+                </div>
+              </div>
+
+              {/* Acties */}
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
+                <button onClick={exportBtwPdf} className="btn btn-outline">⬇ Sla op als PDF</button>
+                <a href="https://mijn.belastingdienst.nl" target="_blank" rel="noopener noreferrer" style={{padding:"8px 18px",background:"#1C4CC3",color:"#fff",borderRadius:9,fontSize:13,fontWeight:700,textDecoration:"none",fontFamily:"'DM Sans',sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>Ga naar Belastingdienst ↗</a>
+              </div>
+
+              {ingediend
+                ? <div style={{background:"#ECFDF5",border:"1.5px solid #A7F3D0",borderRadius:12,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:22}}>✅</span>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:14,color:"#065F46"}}>{q.naam} {btwJaar} is ingediend</div>
+                      <button onClick={()=>{localStorage.removeItem(ingKey);setBtwStap(2);}} style={{background:"none",border:"none",color:"#6B7280",fontSize:12,cursor:"pointer",padding:0,marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>Ongedaan maken</button>
+                    </div>
+                  </div>
+                : <div style={{background:"#FFF7ED",border:"1.5px solid #FED7AA",borderRadius:12,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:14,color:"#92400E"}}>Aangifte gedaan?</div>
+                      <div style={{fontSize:13,color:"#78350F",marginTop:2}}>Bevestig dat je {q.naam} {btwJaar} hebt ingediend bij de Belastingdienst.</div>
+                    </div>
+                    <button onClick={()=>{localStorage.setItem(ingKey,"1");setBtwStap(2);}} style={{padding:"9px 20px",background:"#D97706",color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>✓ Markeer als ingediend</button>
+                  </div>
+              }
+
+              <div style={{display:"flex",justifyContent:"flex-start",marginTop:12}}>
+                <button onClick={()=>setBtwStap(1)} className="btn btn-ghost">← Vorige stap</button>
+              </div>
+            </div>
+          )}
         </div>
       );
     })()}
