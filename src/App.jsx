@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Component } from "react";
+import { useState, useEffect, useRef, Component, Fragment } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { jsPDF } from "jspdf";
 import * as XLSX from "xlsx";
@@ -3290,13 +3290,13 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           {/* Stap-indicator */}
           <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:24,overflowX:"auto"}}>
             {stappen.map((s,i)=>(
-              <React.Fragment key={s}>
+              <Fragment key={s}>
                 <button onClick={()=>setBtwStap(i)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:20,border:`1.5px solid ${btwStap===i?"#6366F1":"#E5E7EB"}`,background:btwStap===i?"#EEF2FF":"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:12.5,fontWeight:600,color:btwStap===i?"#4338CA":"#64748B",whiteSpace:"nowrap"}}>
                   <span style={{width:20,height:20,borderRadius:"50%",background:btwStap===i?"#6366F1":btwStap>i?"#10B981":"#E5E7EB",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{btwStap>i?"✓":i+1}</span>
                   {s}
                 </button>
                 {i<stappen.length-1&&<div style={{width:24,height:2,background:"#E5E7EB",flexShrink:0}}/>}
-              </React.Fragment>
+              </Fragment>
             ))}
           </div>
 
