@@ -1640,7 +1640,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
 }
 
 // ── Dashboard ─────────────────────────────────────────────────
-function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten }) {
+function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten, certificaten = [], userId, userEmail }) {
   const hr=new Date().getHours();
   const gr=hr<12?"Goedemorgen":hr<18?"Goedemiddag":"Goedenavond";
   const openOffertes = offertes.filter(o=>o.status==="In afwachting").length;
@@ -1649,7 +1649,61 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten 
   const openFacturen = facturen.filter(f=>f.status==="Openstaand"||f.status==="Herinnering"||f.status==="Verstuurd");
   const openBedrag = openFacturen.reduce((sum,f)=>{const t=f.totaal!=null?Number(f.totaal):parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."))||0;return sum+t;},0);
 
+  const now = new Date(); now.setHours(0,0,0,0);
+  const expiringCerts = certificaten.filter(c => {
+    if (!c.vervaldatum) return false;
+    const d = new Date(c.vervaldatum); d.setHours(0,0,0,0);
+    const days = (d - now) / 86400000;
+    return days >= 0 && days <= 30;
+  }).map(c => {
+    const d = new Date(c.vervaldatum); d.setHours(0,0,0,0);
+    return { ...c, daysLeft: Math.round((d - now) / 86400000) };
+  });
+
+  useEffect(() => {
+    if (!expiringCerts.length) return;
+    const toEmail = bedrijf?.email || userEmail;
+    if (!toEmail) return;
+    (async () => {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const token = s?.access_token || import.meta.env.VITE_SUPABASE_KEY;
+      for (const c of expiringCerts) {
+        const key = `cert_notif_${userId}_${c.id}_${todayStr}`;
+        if (localStorage.getItem(key)) continue;
+        const datumStr = new Date(c.vervaldatum).toLocaleDateString("nl-NL", { day:"numeric", month:"long", year:"numeric" });
+        const subject = `Certificaat verloopt binnenkort: ${c.naam}`;
+        const message = `Goedendag,\n\nJe certificaat "${c.naam}" verloopt op ${datumStr} (nog ${c.daysLeft} dag${c.daysLeft !== 1 ? "en" : ""}).\n\nZorg dat je het op tijd verlengt zodat je werk niet stil komt te liggen.\n\nBekijk je certificaten via: https://app.werkmate.tech\n\nMet vriendelijke groet,\nHet WerkMate team`;
+        try {
+          const res = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ action: "send-compose-email", to_email: toEmail, subject, message }),
+          });
+          if (res.ok) {
+            localStorage.setItem(key, "1");
+            await logEmail(userId, toEmail, subject, "certificaat", message, "verzonden");
+          }
+        } catch(e) { /* silent — non-critical */ }
+      }
+    })();
+  }, []);
+
   return(<div>
+    {expiringCerts.length > 0 && (
+      <div style={{marginBottom:16,background:"#FFFBEB",border:"1.5px solid #FDE68A",borderRadius:12,padding:"14px 18px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
+          <div>
+            <div style={{fontWeight:700,fontSize:14,color:"#92400E",marginBottom:6}}>⚠️ Certificaten verlopen binnenkort</div>
+            {expiringCerts.map(c=>(
+              <div key={c.id} style={{fontSize:13,color:"#78350F",marginBottom:3}}>
+                <strong>{c.naam}</strong> — verloopt op {new Date(c.vervaldatum).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"})} ({c.daysLeft === 0 ? "vandaag!" : `nog ${c.daysLeft} dag${c.daysLeft !== 1 ? "en" : ""}`})
+              </div>
+            ))}
+          </div>
+          <button onClick={()=>openTab("profiel")} style={{whiteSpace:"nowrap",padding:"6px 14px",borderRadius:8,border:"1.5px solid #F59E0B",background:"#FEF3C7",color:"#92400E",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>Bekijk certificaten</button>
+        </div>
+      </div>
+    )}
     <div className="dash-banner">
       <div className="db-hi">{gr}</div>
       <div className="db-name">{bedrijf?.bedrijfsnaam||"daar"} 👋</div>
@@ -3380,7 +3434,7 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
           onChange={e=>setSearch(e.target.value)}
         />
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {["Alle","Offerte","Factuur","Herinnering","Review","Team","Handmatig"].map(t=>(
+          {["Alle","Offerte","Factuur","Herinnering","Review","Certificaat","Team","Handmatig"].map(t=>(
             <button key={t} onClick={()=>setFilterType(t)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterType===t?"#0F0F14":"#fff",color:filterType===t?"#fff":"#555",borderColor:filterType===t?"#0F0F14":"#E5E7EB"}}>{t}</button>
           ))}
         </div>
@@ -4026,7 +4080,7 @@ function WerkMateApp({ user, onLogout }) {
 
   const render = () => {
     switch(tab) {
-      case "dashboard":  return <DashboardTab openTab={setTab} bedrijf={bedrijf} offertes={offertes} planning={planning} facturen={facturen} klanten={klanten}/>;
+      case "dashboard":  return <DashboardTab openTab={setTab} bedrijf={bedrijf} offertes={offertes} planning={planning} facturen={facturen} klanten={klanten} certificaten={certificaten} userId={orgOwnerId} userEmail={user.email}/>;
       case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={orgOwnerId} offertes={offertes} klanten={klanten} refresh={refreshAlles} bedrijf={bedrijf} emailTemplates={emailTemplates}/>;
       case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst}/>;
       case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
