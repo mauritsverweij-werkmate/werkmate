@@ -2768,6 +2768,9 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
 
   const [subTab, setSubTab] = useState("facturen");
   const [filterStatus, setFilterStatus] = useState("Alle");
+  const [btwJaar, setBtwJaar] = useState(new Date().getFullYear());
+  const [winstJaar, setWinstJaar] = useState(new Date().getFullYear());
+  const [winstPeriode, setWinstPeriode] = useState("maand");
   const [showCreate, setShowCreate] = useState(false);
   const [showEmail, setShowEmail] = useState(null);
   const [showReminder, setShowReminder] = useState(null);
@@ -3023,7 +3026,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     </div>
 
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      {[["facturen","📄 Facturen"],["uitgaven","🧾 Uitgaven"],["ai","✨ Assistent"]].map(([id,lbl])=>(
+      {[["facturen","📄 Facturen"],["uitgaven","🧾 Uitgaven"],["btw","🧾 BTW aangifte"],["winst","📊 Winst & verlies"],["ai","✨ Assistent"]].map(([id,lbl])=>(
         <button key={id} onClick={()=>setSubTab(id)} style={{padding:"7px 18px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB"}}>{lbl}</button>
       ))}
     </div>
@@ -3116,8 +3119,16 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           </div>
         </div>
         <div className="ig"><label className="ilbl">Bonnetje (foto)</label>
-          <input className="inp" type="file" accept="image/*" capture="environment" onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{setNieuweUitgave(prev=>({...prev,foto:r.result}));setUitgaveFotoPreview(r.result)};r.readAsDataURL(f);}}/>
-          {uitgaveFotoPreview&&<img src={uitgaveFotoPreview} alt="Bon" style={{marginTop:10,width:120,height:90,objectFit:"cover",borderRadius:10}}/>}
+          {uitgaveFotoPreview
+            ? <div style={{marginTop:6,position:"relative",display:"inline-block"}}>
+                <img src={uitgaveFotoPreview} alt="Bon" style={{width:220,height:160,objectFit:"contain",borderRadius:10,border:"1px solid #E5E7EB",background:"#F8FAFC",display:"block"}}/>
+                <button type="button" onClick={()=>{setNieuweUitgave(prev=>({...prev,foto:""}));setUitgaveFotoPreview("");}} style={{position:"absolute",top:-8,right:-8,width:24,height:24,borderRadius:"50%",background:"#EF4444",border:"none",color:"#fff",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
+              </div>
+            : <label style={{display:"inline-flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:8,background:"#F8FAFC",border:"1px dashed #CBD5E1",cursor:"pointer",fontSize:13,color:"#475569",fontWeight:500}}>
+                📷 Foto toevoegen
+                <input type="file" accept="image/*" capture="environment" style={{display:"none"}} onClick={e=>e.target.value=""} onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{setNieuweUitgave(prev=>({...prev,foto:r.result}));setUitgaveFotoPreview(r.result);};r.readAsDataURL(f);}}/>
+              </label>
+          }
         </div>
         {uitgaveErr&&<div style={{color:"#B91C1C",fontSize:13,marginBottom:12}}>{uitgaveErr}</div>}
         <div style={{display:"flex",gap:9}}>
@@ -3133,6 +3144,251 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         </div>
       </div></div></div>}
     </>)}
+
+    {subTab==="btw"&&(()=>{
+      const fmtEurBtw = n => `€ ${Number(n).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      const kwartalen = [
+        {label:"Q1 (jan–mrt)", start:0, end:2},
+        {label:"Q2 (apr–jun)", start:3, end:5},
+        {label:"Q3 (jul–sep)", start:6, end:8},
+        {label:"Q4 (okt–dec)", start:9, end:11},
+      ].map(q => {
+        const fInQ = facturen.filter(f => {
+          if (f.status !== "Betaald" || !f.datum) return false;
+          const d = new Date(f.datum);
+          return d.getFullYear() === btwJaar && d.getMonth() >= q.start && d.getMonth() <= q.end;
+        });
+        const uInQ = (uitgaven||[]).filter(u => {
+          if (!u.datum) return false;
+          const d = new Date(u.datum);
+          return d.getFullYear() === btwJaar && d.getMonth() >= q.start && d.getMonth() <= q.end;
+        });
+        const omzet = fInQ.reduce((s,f) => s + getTotal(f), 0);
+        const btwOntvangen = fInQ.reduce((s,f) => s + (f.btw != null ? Number(f.btw) : getTotal(f) / 1.21 * 0.21), 0);
+        const omzetExcl = omzet - btwOntvangen;
+        const btwBetaald = uInQ.reduce((s,u) => {
+          const pct = Number(u.btw_percentage || 0);
+          return s + (pct > 0 ? Number(u.bedrag||0) * pct / 100 / (1 + pct / 100) : 0);
+        }, 0);
+        const teBetalen = btwOntvangen - btwBetaald;
+        return { ...q, fInQ, omzet, omzetExcl, btwOntvangen, btwBetaald, teBetalen };
+      });
+
+      const exportBtwXlsx = () => {
+        const rows = [
+          ["BTW aangifte", btwJaar],
+          [],
+          ["Kwartaal","Omzet (incl. BTW)","Omzet (excl. BTW)","BTW ontvangen","BTW betaald op uitgaven","Te betalen"],
+        ];
+        kwartalen.forEach(q => rows.push([q.label, q.omzet.toFixed(2), q.omzetExcl.toFixed(2), q.btwOntvangen.toFixed(2), q.btwBetaald.toFixed(2), q.teBetalen.toFixed(2)]));
+        const totOmzet = kwartalen.reduce((s,q)=>s+q.omzet,0);
+        const totBtwO = kwartalen.reduce((s,q)=>s+q.btwOntvangen,0);
+        const totBtwB = kwartalen.reduce((s,q)=>s+q.btwBetaald,0);
+        rows.push(["TOTAAL", totOmzet.toFixed(2), (totOmzet-totBtwO).toFixed(2), totBtwO.toFixed(2), totBtwB.toFixed(2), (totBtwO-totBtwB).toFixed(2)]);
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws["!cols"] = [{wch:20},{wch:16},{wch:16},{wch:16},{wch:24},{wch:14}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "BTW aangifte");
+        XLSX.writeFile(wb, `BTW_aangifte_${btwJaar}.xlsx`);
+      };
+
+      const exportBtwPdf = () => {
+        const doc = new jsPDF({ unit:"mm", format:"a4" });
+        doc.setFont("helvetica","bold"); doc.setFontSize(18);
+        doc.text(`BTW aangifte ${btwJaar}`, 20, 22);
+        doc.setFont("helvetica","normal"); doc.setFontSize(10);
+        doc.text(`Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}`, 20, 30);
+        doc.setDrawColor(220); doc.line(20, 34, 190, 34);
+        const cols = [20, 62, 95, 128, 160]; const colW = [42,33,33,32,30];
+        const headers = ["Kwartaal","Omzet excl.BTW","BTW ontvangen","BTW betaald","Te betalen"];
+        let y = 42;
+        doc.setFont("helvetica","bold"); doc.setFontSize(9);
+        headers.forEach((h,i) => doc.text(h, cols[i], y));
+        doc.setDrawColor(200); doc.line(20, y+2, 190, y+2);
+        y += 8; doc.setFont("helvetica","normal");
+        kwartalen.forEach(q => {
+          const rowColor = q.teBetalen < 0 ? [5,150,105] : [220,38,38];
+          doc.setTextColor(0); [q.label, fmtEurBtw(q.omzetExcl), fmtEurBtw(q.btwOntvangen), fmtEurBtw(q.btwBetaald)].forEach((v,i) => doc.text(v, cols[i], y));
+          doc.setTextColor(...rowColor); doc.text(fmtEurBtw(q.teBetalen), cols[4], y);
+          doc.setTextColor(0); y += 7;
+        });
+        doc.setDrawColor(200); doc.line(20, y, 190, y); y += 5;
+        const totO = kwartalen.reduce((s,q)=>s+q.btwOntvangen,0), totB = kwartalen.reduce((s,q)=>s+q.btwBetaald,0), totT = totO-totB;
+        const totExcl = kwartalen.reduce((s,q)=>s+q.omzetExcl,0);
+        doc.setFont("helvetica","bold");
+        ["Totaal", fmtEurBtw(totExcl), fmtEurBtw(totO), fmtEurBtw(totB)].forEach((v,i)=>doc.text(v,cols[i],y));
+        doc.setTextColor(...(totT<0?[5,150,105]:[220,38,38])); doc.text(fmtEurBtw(totT), cols[4], y);
+        doc.save(`BTW_aangifte_${btwJaar}.pdf`);
+      };
+
+      const totBtwO = kwartalen.reduce((s,q)=>s+q.btwOntvangen,0);
+      const totBtwB = kwartalen.reduce((s,q)=>s+q.btwBetaald,0);
+      const totTeBetalen = totBtwO - totBtwB;
+
+      return (
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontWeight:700,fontSize:16,color:"#111"}}>BTW aangifte</div>
+              <select value={btwJaar} onChange={e=>setBtwJaar(Number(e.target.value))} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer"}}>
+                {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-outline" onClick={exportBtwXlsx}>⬇ Excel</button>
+              <button className="btn btn-outline" onClick={exportBtwPdf}>⬇ PDF</button>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14,marginBottom:20}}>
+            {kwartalen.map(q=>(
+              <div key={q.label} className="card cp" style={{borderLeft:`4px solid ${q.teBetalen<0?"#10B981":"#6366F1"}`}}>
+                <div style={{fontWeight:700,fontSize:14,color:"#0F0F14",marginBottom:12}}>{q.label}</div>
+                {[
+                  {lbl:"Omzet (excl. BTW)",val:fmtEurBtw(q.omzetExcl),color:"#111"},
+                  {lbl:"BTW ontvangen van klanten",val:fmtEurBtw(q.btwOntvangen),color:"#6366F1"},
+                  {lbl:"BTW betaald op uitgaven",val:fmtEurBtw(q.btwBetaald),color:"#10B981"},
+                ].map(r=>(
+                  <div key={r.lbl} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:7,color:r.color}}>
+                    <span style={{color:"#64748B"}}>{r.lbl}</span><span style={{fontWeight:700}}>{r.val}</span>
+                  </div>
+                ))}
+                <div style={{borderTop:"1.5px solid #E5E7EB",marginTop:4,paddingTop:8,display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:14}}>
+                  <span style={{color:"#111"}}>Te betalen</span>
+                  <span style={{color:q.teBetalen>0?"#EF4444":"#10B981"}}>{fmtEurBtw(q.teBetalen)}</span>
+                </div>
+                {q.fInQ.length===0&&<div style={{marginTop:8,fontSize:12,color:"#94A3B8"}}>Geen betaalde facturen dit kwartaal</div>}
+              </div>
+            ))}
+          </div>
+          <div className="card cp" style={{borderLeft:"4px solid #0F0F14"}}>
+            <div style={{fontWeight:700,fontSize:14,color:"#0F0F14",marginBottom:12}}>Totaal {btwJaar}</div>
+            {[
+              {lbl:"Totale BTW ontvangen",val:fmtEurBtw(totBtwO),color:"#6366F1"},
+              {lbl:"Totale BTW betaald op uitgaven",val:fmtEurBtw(totBtwB),color:"#10B981"},
+            ].map(r=>(
+              <div key={r.lbl} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:7}}>
+                <span style={{color:"#64748B"}}>{r.lbl}</span><span style={{fontWeight:700,color:r.color}}>{r.val}</span>
+              </div>
+            ))}
+            <div style={{borderTop:"1.5px solid #E5E7EB",marginTop:4,paddingTop:8,display:"flex",justifyContent:"space-between",fontWeight:800,fontSize:16}}>
+              <span style={{color:"#111"}}>Totaal te betalen aan belastingdienst</span>
+              <span style={{color:totTeBetalen>0?"#EF4444":"#10B981"}}>{fmtEurBtw(totTeBetalen)}</span>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+
+    {subTab==="winst"&&(()=>{
+      const fmtEurW = n => `€ ${Number(n).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      const maanden = ["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
+
+      const monthData = maanden.map((m, mi) => {
+        const ink = facturen.filter(f => f.status==="Betaald" && f.datum && new Date(f.datum).getFullYear()===winstJaar && new Date(f.datum).getMonth()===mi).reduce((s,f)=>s+getTotal(f),0);
+        const uit = (uitgaven||[]).filter(u => u.datum && new Date(u.datum).getFullYear()===winstJaar && new Date(u.datum).getMonth()===mi).reduce((s,u)=>s+Number(u.bedrag||0),0);
+        return { label:m, inkomsten:ink, uitgaven:uit, netto:ink-uit };
+      });
+
+      const allYears = Array.from(new Set([
+        ...facturen.filter(f=>f.datum).map(f=>new Date(f.datum).getFullYear()),
+        ...(uitgaven||[]).filter(u=>u.datum).map(u=>new Date(u.datum).getFullYear()),
+        new Date().getFullYear(),
+      ])).sort((a,b)=>b-a);
+
+      const yearData = allYears.map(y => {
+        const ink = facturen.filter(f => f.status==="Betaald" && f.datum && new Date(f.datum).getFullYear()===y).reduce((s,f)=>s+getTotal(f),0);
+        const uit = (uitgaven||[]).filter(u => u.datum && new Date(u.datum).getFullYear()===y).reduce((s,u)=>s+Number(u.bedrag||0),0);
+        return { label:String(y), inkomsten:ink, uitgaven:uit, netto:ink-uit };
+      });
+
+      const rows = winstPeriode==="maand" ? monthData : yearData;
+      const totInk = rows.reduce((s,r)=>s+r.inkomsten,0);
+      const totUit = rows.reduce((s,r)=>s+r.uitgaven,0);
+      const totNetto = totInk - totUit;
+
+      const exportWinstXlsx = () => {
+        const data = [
+          ["Winst & verlies", winstPeriode==="maand" ? winstJaar : "Alle jaren"],
+          [],
+          ["Periode","Inkomsten","Uitgaven","Netto winst"],
+          ...rows.map(r=>[r.label, r.inkomsten.toFixed(2), r.uitgaven.toFixed(2), r.netto.toFixed(2)]),
+          ["TOTAAL", totInk.toFixed(2), totUit.toFixed(2), totNetto.toFixed(2)],
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws["!cols"] = [{wch:12},{wch:14},{wch:14},{wch:14}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Winst verlies");
+        XLSX.writeFile(wb, `Winst_verlies_${winstPeriode==="maand"?winstJaar:"alle"}.xlsx`);
+      };
+
+      const exportWinstPdf = () => {
+        const doc = new jsPDF({ unit:"mm", format:"a4" });
+        doc.setFont("helvetica","bold"); doc.setFontSize(18);
+        doc.text(`Winst & verlies ${winstPeriode==="maand"?winstJaar:""}`, 20, 22);
+        doc.setFont("helvetica","normal"); doc.setFontSize(10);
+        doc.text(`Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}`, 20, 30);
+        doc.setDrawColor(220); doc.line(20, 34, 190, 34);
+        const cx = [20, 80, 130, 165]; let y = 42;
+        doc.setFont("helvetica","bold"); doc.setFontSize(9);
+        ["Periode","Inkomsten","Uitgaven","Netto winst"].forEach((h,i)=>doc.text(h,cx[i],y));
+        doc.line(20, y+2, 190, y+2); y+=8;
+        doc.setFont("helvetica","normal");
+        rows.forEach(r => {
+          doc.setTextColor(0); [r.label, fmtEurW(r.inkomsten), fmtEurW(r.uitgaven)].forEach((v,i)=>doc.text(v,cx[i],y));
+          doc.setTextColor(...(r.netto>=0?[5,150,105]:[220,38,38])); doc.text(fmtEurW(r.netto),cx[3],y);
+          doc.setTextColor(0); y+=7;
+          if (y > 270) { doc.addPage(); y=20; }
+        });
+        doc.setDrawColor(200); doc.line(20,y,190,y); y+=5;
+        doc.setFont("helvetica","bold");
+        [" Totaal", fmtEurW(totInk), fmtEurW(totUit)].forEach((v,i)=>doc.text(v,cx[i],y));
+        doc.setTextColor(...(totNetto>=0?[5,150,105]:[220,38,38])); doc.text(fmtEurW(totNetto),cx[3],y);
+        doc.save(`Winst_verlies_${winstPeriode==="maand"?winstJaar:"alle"}.pdf`);
+      };
+
+      return (
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <div style={{fontWeight:700,fontSize:16,color:"#111"}}>Winst & verlies</div>
+              {["maand","jaar"].map(p=>(
+                <button key={p} onClick={()=>setWinstPeriode(p)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:winstPeriode===p?"#0F0F14":"#fff",color:winstPeriode===p?"#fff":"#555",borderColor:winstPeriode===p?"#0F0F14":"#E5E7EB"}}>{p.charAt(0).toUpperCase()+p.slice(1)}</button>
+              ))}
+              {winstPeriode==="maand"&&<select value={winstJaar} onChange={e=>setWinstJaar(Number(e.target.value))} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer"}}>
+                {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
+              </select>}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-outline" onClick={exportWinstXlsx}>⬇ Excel</button>
+              <button className="btn btn-outline" onClick={exportWinstPdf}>⬇ PDF</button>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
+            {[
+              {lbl:"Totale inkomsten",val:fmtEurW(totInk),color:"#10B981",bg:"#F0FDF4",border:"#BBF7D0"},
+              {lbl:"Totale uitgaven",val:fmtEurW(totUit),color:"#EF4444",bg:"#FEF2F2",border:"#FECACA"},
+              {lbl:"Netto winst",val:fmtEurW(totNetto),color:totNetto>=0?"#0F0F14":"#EF4444",bg:totNetto>=0?"#F8FAFC":"#FEF2F2",border:totNetto>=0?"#E2E8F0":"#FECACA"},
+            ].map(s=>(
+              <div key={s.lbl} style={{background:s.bg,border:`1.5px solid ${s.border}`,borderRadius:12,padding:"16px 18px"}}>
+                <div style={{fontSize:12,color:"#64748B",marginBottom:4}}>{s.lbl}</div>
+                <div style={{fontSize:22,fontWeight:800,color:s.color,fontFamily:"'Syne',sans-serif"}}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card"><div className="tw"><table>
+            <thead><tr>{["Periode","Inkomsten","Uitgaven","Netto winst"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+            <tbody>{rows.map(r=>(
+              <tr key={r.label} style={{opacity:r.inkomsten===0&&r.uitgaven===0?0.4:1}}>
+                <td style={{fontWeight:600,color:"#111"}}>{r.label}</td>
+                <td style={{fontWeight:700,color:"#10B981"}}>{fmtEurW(r.inkomsten)}</td>
+                <td style={{fontWeight:700,color:"#EF4444"}}>{fmtEurW(r.uitgaven)}</td>
+                <td style={{fontWeight:800,color:r.netto>=0?"#0F0F14":"#EF4444"}}>{fmtEurW(r.netto)}</td>
+              </tr>
+            ))}</tbody>
+          </table></div></div>
+        </div>
+      );
+    })()}
 
     {subTab==="ai"&&(
       <div className="card cp" style={{maxWidth:620}}>
