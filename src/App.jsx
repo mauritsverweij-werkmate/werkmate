@@ -609,6 +609,10 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .leeg-sub{font-size:12.5px}
 @keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
 .dot{display:inline-block;animation:blink 1s infinite}
+@keyframes voicePulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}70%{box-shadow:0 0 0 8px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+.voice-btn-idle{width:34px;height:34px;border-radius:50%;background:#F1F5F9;border:1.5px solid #E2E8F0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:background .15s}
+.voice-btn-idle:hover{background:#E0E7FF;border-color:#A5B4FC}
+.voice-btn-rec{width:34px;height:34px;border-radius:50%;background:#EF4444;border:2px solid #EF4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;animation:voicePulse 1.2s infinite;color:#fff}
 .tip-row{font-size:12px;color:#6366F1;cursor:pointer;padding:3px 0}
 .tip-row:hover{text-decoration:underline}
 .cal-wrap{background:#fff;border-radius:13px;border:1px solid #EAECF0;overflow:hidden;margin-bottom:20px}
@@ -1448,6 +1452,30 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
 // ── AI Offerte ─────────────────────────────────────────────────
 function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, emailTemplates = {} }) {
   const [step,setStep]=useState(0);const [vraag,setVraag]=useState("");const [loading,setLoading]=useState(false);const [off,setOff]=useState(null);const [selectedKlantId,setSelectedKlantId]=useState("");const [newKlantEmail,setNewKlantEmail]=useState("");
+  const [isRecording,setIsRecording]=useState(false);
+  const recognitionRef=useRef(null);
+
+  const startVoice=()=>{
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){alert("Spraakherkenning is niet beschikbaar in jouw browser. Gebruik Chrome, Edge of Safari.");return;}
+    if(isRecording){recognitionRef.current?.stop();return;}
+    const rec=new SR();
+    rec.lang="nl-NL";rec.continuous=false;rec.interimResults=true;rec.maxAlternatives=1;
+    let final="";
+    rec.onstart=()=>setIsRecording(true);
+    rec.onresult=e=>{
+      let interim="";
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const t=e.results[i][0].transcript;
+        if(e.results[i].isFinal)final+=t; else interim=t;
+      }
+      setVraag(final+interim);
+    };
+    rec.onend=()=>{setIsRecording(false);if(final)setVraag(final);};
+    rec.onerror=e=>{setIsRecording(false);if(e.error!=="no-speech"&&e.error!=="aborted")alert("Spraakherkenning mislukt: "+e.error);};
+    recognitionRef.current=rec;
+    rec.start();
+  };
   const selectedKlant = klanten?.find(k=>k.id?.toString()===selectedKlantId);
   useEffect(()=>{if(!selectedKlantId && klanten?.length){setSelectedKlantId(klanten[0].id?.toString()||"");} },[klanten, selectedKlantId]);
   const px=prijslijst.map(p=>`${p.dienst}: €${p.prijs} per ${p.eenheid}`).join(", ");
@@ -1567,7 +1595,18 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
         </select></div>
         {!selectedKlant && <div className="ig"><label className="ilbl">Klant e-mail</label><input className="inp" value={newKlantEmail} onChange={e=>setNewKlantEmail(e.target.value)} placeholder="klant@email.nl"/></div>}
         {selectedKlant && selectedKlant.email && <div className="ig"><label className="ilbl">Klant e-mail</label><input className="inp" value={selectedKlant.email} disabled /></div>}
-        <div className="ig"><label className="ilbl">Beschrijf de klantvraag</label><textarea className="inp" value={vraag} onChange={e=>setVraag(e.target.value)} placeholder="Bijv: CV ketel onderhoud Utrecht, klant Jan Vermeer"/></div><div className="modal-act"><button className="btn btn-ai btn-full" onClick={gen} disabled={!vraag.trim()} style={{opacity:vraag.trim()?1:.5}}>✨ Maak offerte</button></div></>}
+        <div className="ig">
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+            <label className="ilbl" style={{marginBottom:0}}>Beschrijf de klantvraag</label>
+            {isRecording&&<span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#EF4444",fontWeight:600}}><span style={{width:7,height:7,borderRadius:"50%",background:"#EF4444",display:"inline-block",animation:"blink .8s infinite"}}/> Luistert…</span>}
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+            <textarea className="inp" style={{flex:1,minHeight:72,resize:"vertical"}} value={vraag} onChange={e=>setVraag(e.target.value)} placeholder="Bijv: CV ketel onderhoud Utrecht, klant Jan Vermeer"/>
+            <button type="button" className={isRecording?"voice-btn-rec":"voice-btn-idle"} onClick={startVoice} title={isRecording?"Stop opname":"Spreek in (nl)"}>
+              {isRecording?"⏹":"🎤"}
+            </button>
+          </div>
+        </div><div className="modal-act"><button className="btn btn-ai btn-full" onClick={gen} disabled={!vraag.trim()} style={{opacity:vraag.trim()?1:.5}}>✨ Maak offerte</button></div></>}
       {step===1&&<div style={{textAlign:"center",padding:"44px 0"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:16}}>Bezig<span className="dot">…</span></div></div>}
       {step===2&&off&&<><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
           <div className="ig"><label className="ilbl">Dienst</label><input className="inp" value={off.dienst} onChange={e=>updateOff({dienst:e.target.value})} /></div>
