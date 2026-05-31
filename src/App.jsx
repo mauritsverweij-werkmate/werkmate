@@ -3263,8 +3263,38 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
 
       const stappen = ["Binnenland","Voorbelasting","Overzicht"];
 
+      // Deadline per kwartaal: Q1→30 apr, Q2→31 jul, Q3→31 okt, Q4→31 jan (volgend jaar)
+      const deadlines = [
+        {dag:30,maand:3,label:"30 april"},
+        {dag:31,maand:6,label:"31 juli"},
+        {dag:31,maand:9,label:"31 oktober"},
+        {dag:31,maand:0,label:"31 januari",jaarOffset:1},
+      ];
+      const dl = deadlines[btwQ];
+      const dlJaar = btwJaar + (dl.jaarOffset||0) + 1;
+      const dlDate = new Date(dlJaar, dl.maand, dl.dag);
+      const daysLeft = Math.ceil((dlDate - new Date()) / 86400000);
+      const dlUrgent = daysLeft >= 0 && daysLeft <= 14;
+      const dlVerstreken = daysLeft < 0;
+
       return (
         <div>
+          {/* KOR-notitie */}
+          <div style={{fontSize:12.5,color:"#64748B",background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:8,padding:"8px 12px",marginBottom:14,display:"flex",alignItems:"center",gap:6}}>
+            <span>ℹ️</span>
+            <span>Heb je een <strong>KOR-vrijstelling</strong>? Dan hoef je geen BTW-aangifte te doen via WerkMate.</span>
+          </div>
+
+          {/* Deadline banner */}
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",borderRadius:9,marginBottom:18,background:dlVerstreken?"#FEF2F2":dlUrgent?"#FFF7ED":"#F0FDF4",border:`1px solid ${dlVerstreken?"#FECACA":dlUrgent?"#FED7AA":"#BBF7D0"}`}}>
+            <span style={{fontSize:16}}>{dlVerstreken?"🔴":dlUrgent?"⚠️":"🟢"}</span>
+            <div style={{fontSize:13,fontWeight:600,color:dlVerstreken?"#991B1B":dlUrgent?"#92400E":"#15803D"}}>
+              Deadline {q.naam}: <strong>{dl.label} {dlJaar}</strong>
+              {dlVerstreken&&<span style={{fontWeight:400,marginLeft:6}}>— termijn verstreken</span>}
+              {!dlVerstreken&&daysLeft<=30&&<span style={{fontWeight:400,marginLeft:6}}>— nog {daysLeft} dag{daysLeft!==1?"en":""}</span>}
+            </div>
+          </div>
+
           {/* Header met kwartaal/jaar selector */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12,marginBottom:20}}>
             <div>
