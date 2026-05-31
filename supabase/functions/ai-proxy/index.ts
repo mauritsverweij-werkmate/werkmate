@@ -601,6 +601,34 @@ ${reviewBtn}`;
       return json({ success: true, id: r.id, html });
     }
 
+    // ── Scan bonnetje ────────────────────────────────────────
+    if (body.action === "scan-bonnetje") {
+      const { image_base64, media_type } = body as { image_base64?: string; media_type?: string };
+      if (!image_base64) return json({ error: "image_base64 is verplicht" }, 400);
+      const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!anthropicKey) return json({ error: "AI-service niet geconfigureerd" }, 500);
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-5",
+          max_tokens: 500,
+          messages: [{ role: "user", content: [
+            { type: "image", source: { type: "base64", media_type: media_type || "image/jpeg", data: image_base64 } },
+            { type: "text", text: 'Dit is een bonnetje of factuur. Extraheer de volgende gegevens en geef ALLEEN geldige JSON terug zonder uitleg of code-blocks: {"datum":"YYYY-MM-DD","omschrijving":"korte omschrijving","bedrag":0.00,"btw_percentage":21}. Datum in ISO formaat (als onduidelijk, gebruik vandaag). Bedrag is het totaalbedrag inclusief BTW als getal. BTW percentage is 0, 9 of 21. Als iets niet leesbaar is, gebruik lege string of 0.' },
+          ]}],
+        }),
+      });
+      const data = await res.json();
+      const text: string = data?.content?.[0]?.text || "{}";
+      try {
+        const cleaned = text.replace(/```json|```/g, "").trim();
+        return json(JSON.parse(cleaned));
+      } catch {
+        return json({ error: "Kon bonnetje niet lezen" }, 422);
+      }
+    }
+
     // ── Claude AI call ────────────────────────────────────────
     const { prompt } = body;
     if (!prompt) return json({ error: "prompt is verplicht" }, 400);

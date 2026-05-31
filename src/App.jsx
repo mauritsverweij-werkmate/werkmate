@@ -2809,6 +2809,8 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   const [showAddUitgave, setShowAddUitgave] = useState(false);
   const [nieuweUitgave, setNieuweUitgave] = useState({datum:localToday(),categorie:"",omschrijving:"",bedrag:"",btw_percentage:21,foto:""});
   const [savingUitgave, setSavingUitgave] = useState(false);
+  const [scanningBon, setScanningBon] = useState(false);
+  const scanInputRef = useRef(null);
   const [uitgaveErr, setUitgaveErr] = useState("");
   const [uitgaveFotoPreview, setUitgaveFotoPreview] = useState("");
   const autoReminderSentRef = useRef(false);
@@ -3110,7 +3112,31 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           <div style={{fontWeight:700,fontSize:15,color:"#111"}}>Totaal uitgaven: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0),0))}</div>
           <div style={{fontSize:13,color:"#64748B"}}>BTW terugvragen: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0)*Number(u.btw_percentage||0)/100/(1+Number(u.btw_percentage||0)/100),0))}</div>
         </div>
-        <button className="btn btn-dark" onClick={()=>{setNieuweUitgave({datum:localToday(),categorie:"",omschrijving:"",bedrag:"",btw_percentage:21,foto:""});setUitgaveFotoPreview("");setUitgaveErr("");setShowAddUitgave(true);}}>+ Uitgave</button>
+        <div style={{display:"flex",gap:8}}>
+          <button className="btn btn-ghost" disabled={scanningBon} onClick={()=>scanInputRef.current?.click()} style={{display:"flex",alignItems:"center",gap:6}}>
+            {scanningBon?<><span style={{width:14,height:14,border:"2px solid #94A3B8",borderTopColor:"#475569",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite"}}/>Scannen…</>:<>📷 Scan bonnetje</>}
+          </button>
+          <input ref={scanInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={async e=>{
+            const file=e.target.files?.[0]; e.target.value=""; if(!file)return;
+            setScanningBon(true);
+            try {
+              const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
+              const mt=file.type||"image/jpeg";
+              const {data:{session:s}}=await supabase.auth.getSession();
+              const token=s?.access_token||import.meta.env.VITE_SUPABASE_KEY;
+              const resp=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({action:"scan-bonnetje",image_base64:b64,media_type:mt})});
+              const result=await resp.json();
+              if(!resp.ok)throw new Error(result?.error||"Scan mislukt");
+              const preview=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(file);});
+              setNieuweUitgave({datum:result.datum||localToday(),categorie:"",omschrijving:result.omschrijving||"",bedrag:result.bedrag?String(result.bedrag):"",btw_percentage:[0,9,21].includes(result.btw_percentage)?result.btw_percentage:21,foto:preview});
+              setUitgaveFotoPreview(preview);
+              setUitgaveErr("");
+              setShowAddUitgave(true);
+            } catch(err){alert("Scan mislukt: "+err.message);}
+            setScanningBon(false);
+          }}/>
+          <button className="btn btn-dark" onClick={()=>{setNieuweUitgave({datum:localToday(),categorie:"",omschrijving:"",bedrag:"",btw_percentage:21,foto:""});setUitgaveFotoPreview("");setUitgaveErr("");setShowAddUitgave(true);}}>+ Uitgave</button>
+        </div>
       </div>
       {(uitgaven||[]).length===0
         ?<LeegScherm icon="🧾" titel="Geen uitgaven" sub="Registreer je eerste zakelijke uitgave" actie="+ Uitgave toevoegen" onActie={()=>setShowAddUitgave(true)}/>
