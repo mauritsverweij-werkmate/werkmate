@@ -1797,18 +1797,16 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
           <div className="mob-det-row"><span className="mob-det-lbl">Klant</span><span className="mob-det-val">{mobDetail.klant}</span></div>
         </div>
         <button className="mob-det-action-btn" onClick={()=>exportOfferPdf(mobDetail)}><span className="mob-det-action-ic">📄</span>PDF downloaden</button>
-        {mobDetail.portal_token && (<>
-          <button className="mob-det-action-btn" onClick={async()=>{
-            try {
-              const email = await resendOfferEmail(mobDetail);
-              if (!email) return;
-              await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",mobDetail.id);
-              refresh(); setMobDetail({...mobDetail,status:"Verstuurd"});
-              alert("Offerte verstuurd naar "+email);
-            } catch(err) { alert("Versturen mislukt: "+err.message); }
-          }}><span className="mob-det-action-ic">📤</span>Stuur naar klant</button>
-          <button className="mob-det-action-btn" onClick={()=>waOfferte(mobDetail,klanten,bedrijf)}><span className="mob-det-action-ic">📱</span>Stuur via WhatsApp</button>
-        </>)}
+        <button className="mob-det-action-btn" onClick={async()=>{
+          try {
+            const email = await resendOfferEmail(mobDetail);
+            if (!email) return;
+            await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",mobDetail.id);
+            refresh(); setMobDetail({...mobDetail,status:"Verstuurd"});
+            alert("Offerte verstuurd naar "+email);
+          } catch(err) { alert("Versturen mislukt: "+err.message); }
+        }}><span className="mob-det-action-ic">📤</span>Stuur naar klant</button>
+        {mobDetail.portal_token&&<button className="mob-det-action-btn" onClick={()=>waOfferte(mobDetail,klanten,bedrijf)}><span className="mob-det-action-ic">📱</span>Stuur via WhatsApp</button>}
         <div style={{background:"#fff",borderRadius:14,border:"1px solid #EAECF0",padding:"14px 16px",marginBottom:8}}>
           <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
           <select value={mobDetail.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",mobDetail.id);refresh();setMobDetail({...mobDetail,status:e.target.value});}} style={{width:"100%",border:"1.5px solid #E5E7EB",borderRadius:10,padding:"12px 14px",fontSize:16,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none",background:"#fff",color:"#111"}}>
@@ -1844,14 +1842,14 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
               <td style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button>
-              {o.portal_token&&<button className="btn btn-ghost btn-sm" onClick={async()=>{
+              <button className="btn btn-ghost btn-sm" onClick={async()=>{
                 try {
                   const email = await resendOfferEmail(o);
                   if (!email) return;
                   await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
                   alert("Verstuurd naar "+email);
                 } catch(err) { alert("Versturen mislukt: "+err.message); }
-              }}>Verstuur mail</button>}
+              }}>Verstuur mail</button>
               {o.portal_token&&<button className="btn btn-ghost btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}>WhatsApp</button>}
               <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
                 {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
@@ -3013,7 +3011,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                     <button className="btn btn-ghost btn-sm" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}>PDF</button>
                     {st==="Verstuurd"&&<button className="btn btn-ghost btn-sm" style={{color:"#D97706",borderColor:"#FDE68A"}} onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔 Herinnering</button>}
                     {st!=="Verstuurd"&&st!=="Betaald"&&st!=="Concept"&&<button className="btn btn-ghost btn-sm" title="Herinnering" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔</button>}
-                    <button className="btn btn-ghost btn-sm" title="E-mailen" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>📧</button>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>Verstuur mail</button>
                     <select value={f.status||"Concept"} onChange={e=>updateStatus(f.id,e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
                       {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
                     </select>
@@ -3310,6 +3308,27 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
   const [composeSending, setComposeSending] = useState(false);
   const [composeSent, setComposeSent] = useState(false);
   const [composeErr, setComposeErr] = useState("");
+  const [resending, setResending] = useState(new Set());
+
+  const retryEmail = async (e) => {
+    setResending(prev => new Set(prev).add(e.id));
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const token = s?.access_token || import.meta.env.VITE_SUPABASE_KEY;
+      const res = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ action: "send-compose-email", to_email: e.to_email, subject: e.subject, message: e.body || e.subject }),
+      });
+      const resData = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resData?.message || resData?.error || "Versturen mislukt");
+      await supabase.from("emails_log").update({ status: "verzonden" }).eq("id", e.id);
+      refresh();
+    } catch(err) {
+      alert("Opnieuw versturen mislukt: " + err.message);
+    }
+    setResending(prev => { const n = new Set(prev); n.delete(e.id); return n; });
+  };
 
   const filtered = emailsLog.filter(e => {
     const matchType = filterType === "Alle" || e.type === filterType.toLowerCase();
@@ -3379,10 +3398,13 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
                   <td style={{color:"#374151",fontSize:13}}>{e.subject}</td>
                   <td><TypeBadge type={e.type}/></td>
                   <td>
-                    <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12.5,fontWeight:600,color:e.status==="verzonden"?"#065F46":"#991B1B"}}>
-                      <span style={{width:7,height:7,borderRadius:"50%",background:e.status==="verzonden"?"#10B981":"#EF4444",display:"inline-block"}}/>
-                      {e.status==="verzonden"?"Verzonden":"Mislukt"}
-                    </span>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12.5,fontWeight:600,color:e.status==="verzonden"?"#065F46":"#991B1B"}}>
+                        <span style={{width:7,height:7,borderRadius:"50%",background:e.status==="verzonden"?"#10B981":"#EF4444",display:"inline-block"}}/>
+                        {e.status==="verzonden"?"Verzonden":"Mislukt"}
+                      </span>
+                      {e.status!=="verzonden"&&<button className="btn btn-ghost btn-sm" style={{fontSize:11.5,padding:"2px 9px"}} disabled={resending.has(e.id)} onClick={ev=>{ev.stopPropagation();retryEmail(e);}}>{resending.has(e.id)?"Bezig…":"Opnieuw"}</button>}
+                    </div>
                   </td>
                 </tr>
               ))}
