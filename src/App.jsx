@@ -547,7 +547,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .off-dienst{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}
 .off-omschr{font-size:12px;opacity:.85;line-height:1.5}
 .off-tbl{border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;margin-bottom:12px}
-.off-tbl-grid{display:grid;grid-template-columns:3fr 68px 86px 92px 76px 36px;align-items:center;gap:0}
+.off-tbl-grid{display:grid;grid-template-columns:3fr 68px 86px 92px 68px 76px 36px;align-items:center;gap:0}
 .off-tbl-hdr{background:#F8FAFC;border-bottom:1px solid #E5E7EB}
 .off-tbl-hdr .off-cell{padding:9px 10px;color:#475569;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .off-tbl-row{border-bottom:1px solid #F0F0F0}
@@ -880,27 +880,35 @@ const createOfferPdfDocument = (offer, bedrijf) => {
   });
 
   const summaryY = y + 12;
+  const regels4btw = regels;
+  const btw9amt = regels4btw.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===9?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.09:s;},0);
+  const btw21amt = regels4btw.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===21?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.21:s;},0);
+  let sy = summaryY;
   doc.setFont("helvetica", "bold");
-  doc.text(`Subtotaal:`, 140, summaryY);
-  doc.text(`€ ${formatMoney(subtotal)}`, 190, summaryY, { align: "right" });
-  doc.text(`BTW (21%):`, 140, summaryY + 8);
-  doc.text(`€ ${formatMoney(btw)}`, 190, summaryY + 8, { align: "right" });
+  doc.text(`Subtotaal:`, 140, sy);
+  doc.text(`€ ${formatMoney(subtotal)}`, 190, sy, { align: "right" }); sy += 8;
+  if (btw9amt > 0) {
+    doc.text(`BTW 9%:`, 140, sy);
+    doc.text(`€ ${formatMoney(btw9amt)}`, 190, sy, { align: "right" }); sy += 8;
+  }
+  doc.text(`BTW 21%:`, 140, sy);
+  doc.text(`€ ${formatMoney(btw21amt > 0 ? btw21amt : btw)}`, 190, sy, { align: "right" }); sy += 10;
   doc.setFontSize(13);
-  doc.text(`Totaal:`, 140, summaryY + 18);
-  doc.text(`€ ${formatMoney(total)}`, 190, summaryY + 18, { align: "right" });
+  doc.text(`Totaal:`, 140, sy);
+  doc.text(`€ ${formatMoney(total)}`, 190, sy, { align: "right" });
 
   let notesHeight = 0;
   if (offer.opmerkingen) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("Opmerkingen / garantie:", 20, summaryY + 30);
+    doc.text("Opmerkingen / garantie:", 20, sy + 12);
     doc.setFont("helvetica", "normal");
     const noteLines = doc.splitTextToSize(String(offer.opmerkingen), 170);
-    doc.text(noteLines, 20, summaryY + 37);
+    doc.text(noteLines, 20, sy + 19);
     notesHeight = noteLines.length * 5 + 18;
   }
 
-  const footerY = summaryY + 34 + notesHeight;
+  const footerY = sy + 16 + notesHeight;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text("Contact", 20, footerY);
@@ -980,17 +988,24 @@ const createFactuurPdf = (factuur, bedrijf) => {
   y += 5;
   doc.setDrawColor(229, 231, 235); doc.line(pageW / 2, y, pageW - margin, y); y += 8;
   const sub = regels.reduce((s, r) => s + (Number(r.aantal) || 0) * (Number(r.prijs) || 0), 0);
-  const btwAmt = sub * 0.21, tot = sub + btwAmt;
+  const btw9f = regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===9?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.09:s;},0);
+  const btw21f = regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===21?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.21:s;},0);
+  const btwAmt = btw9f+btw21f, tot = sub + btwAmt;
+  const nlFmt = n => n.toLocaleString("nl-NL", { minimumFractionDigits: 2 });
 
   doc.setFontSize(9.5); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 80, 80);
-  doc.text("Subtotaal:", pageW / 2 + 5, y);
-  doc.text(`€ ${sub.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" }); y += 7;
+  doc.text("Subtotaal (excl. BTW):", pageW / 2 + 5, y);
+  doc.text(`€ ${nlFmt(sub)}`, pageW - margin - 2, y, { align: "right" }); y += 7;
+  if (btw9f > 0) {
+    doc.text("BTW 9%:", pageW / 2 + 5, y);
+    doc.text(`€ ${nlFmt(btw9f)}`, pageW - margin - 2, y, { align: "right" }); y += 7;
+  }
   doc.text("BTW 21%:", pageW / 2 + 5, y);
-  doc.text(`€ ${btwAmt.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" }); y += 4;
+  doc.text(`€ ${nlFmt(btw21f > 0 ? btw21f : btw9f === 0 ? btwAmt : btw21f)}`, pageW - margin - 2, y, { align: "right" }); y += 4;
   doc.setDrawColor(100, 100, 100); doc.line(pageW / 2, y, pageW - margin, y); y += 7;
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(17, 24, 39);
   doc.text("Totaal:", pageW / 2 + 5, y);
-  doc.text(`€ ${tot.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" });
+  doc.text(`€ ${nlFmt(tot)}`, pageW - margin - 2, y, { align: "right" });
 
   if (company.iban) {
     const ibanY = y + 16;
@@ -1482,14 +1497,12 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
 
   const recalcTotals = (offer) => {
     if (!offer?.regels) return offer;
-    const subtotaal = offer.regels.reduce((sum,r) => {
-      const aantal = parseFloat(r.aantal) || 0;
-      const prijs = parseFloat(r.prijs) || 0;
-      return sum + aantal * prijs;
-    }, 0);
-    const btw = parseFloat((subtotaal * 0.21).toFixed(2));
-    const totaal = parseFloat((subtotaal + btw).toFixed(2));
-    return { ...offer, subtotaal, btw, totaal };
+    const subtotaal = offer.regels.reduce((sum,r) => sum + (parseFloat(r.aantal)||0)*(parseFloat(r.prijs)||0), 0);
+    const btw9  = parseFloat(offer.regels.reduce((s,r) => { const pct=Number(r.btw_pct??21); return pct===9  ? s+(parseFloat(r.aantal)||0)*(parseFloat(r.prijs)||0)*0.09 : s; }, 0).toFixed(2));
+    const btw21 = parseFloat(offer.regels.reduce((s,r) => { const pct=Number(r.btw_pct??21); return pct===21 ? s+(parseFloat(r.aantal)||0)*(parseFloat(r.prijs)||0)*0.21 : s; }, 0).toFixed(2));
+    const btw = parseFloat((btw9+btw21).toFixed(2));
+    const totaal = parseFloat((subtotaal+btw).toFixed(2));
+    return { ...offer, subtotaal, btw9, btw21, btw, totaal };
   };
 
   const updateOff = (patch) => setOff((prev) => prev ? recalcTotals({ ...prev, ...patch }) : prev);
@@ -1499,7 +1512,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
     return recalcTotals({ ...prev, regels });
   });
   const addRule = () => setOff((prev) => {
-    const regels = [...(prev?.regels || []), { omschrijving: "", aantal: 1, eenheid: "stuk", prijs: 0 }];
+    const regels = [...(prev?.regels || []), { omschrijving: "", aantal: 1, eenheid: "stuk", prijs: 0, btw_pct: 21 }];
     return recalcTotals({ ...(prev || {}), regels });
   });
   const removeRule = (index) => setOff((prev) => {
@@ -1618,6 +1631,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
             <div className="off-cell right">Aantal</div>
             <div className="off-cell center">Eenheid</div>
             <div className="off-cell right">Prijs</div>
+            <div className="off-cell center">BTW</div>
             <div className="off-cell right">Totaal</div>
             <div className="off-cell del"></div>
           </div>
@@ -1626,12 +1640,18 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
             <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.1" value={r.aantal} onChange={e=>updateRule(i,"aantal",e.target.value)} /></div>
             <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.eenheid} onChange={e=>updateRule(i,"eenheid",e.target.value)}>{["uur","stuk","st","m²","m","rit","dag","persoon","km"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
             <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.01" value={r.prijs} onChange={e=>updateRule(i,"prijs",e.target.value)} /></div>
+            <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.btw_pct??21} onChange={e=>updateRule(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
             <div className="off-cell off-cell-totaal" style={{paddingTop:12}}>€{((Number(r.aantal)||0)*(Number(r.prijs)||0)).toFixed(2)}</div>
             <div className="off-cell del" style={{paddingTop:8}}><button className="btn btn-danger btn-sm" onClick={()=>removeRule(i)}>✕</button></div>
           </div>)}
         </div>
         <button className="btn btn-outline" style={{marginBottom:12}} onClick={addRule}>+ Regel toevoegen</button>
-        <div className="tot-box"><div>Subtotaal: <strong>€ {off.subtotaal}</strong></div><div>BTW: <strong>€ {off.btw}</strong></div><div style={{fontSize:15,fontWeight:800,marginTop:3}}>Totaal: € {off.totaal}</div></div>
+        <div className="tot-box">
+          <div>Subtotaal: <strong>€ {Number(off.subtotaal||0).toFixed(2)}</strong></div>
+          {off.btw9>0&&<div>BTW 9%: <strong>€ {Number(off.btw9||0).toFixed(2)}</strong></div>}
+          {(off.btw21>0||(off.btw9||0)===0)&&<div>BTW 21%: <strong>€ {Number(off.btw21??off.btw??0).toFixed(2)}</strong></div>}
+          <div style={{fontSize:15,fontWeight:800,marginTop:3}}>Totaal: € {Number(off.totaal||0).toFixed(2)}</div>
+        </div>
         <div className="ig"><label className="ilbl">Opmerkingen / garantietekst (optioneel)</label><textarea className="inp" rows={3} value={off.opmerkingen||""} onChange={e=>updateOff({opmerkingen:e.target.value})} placeholder="Bijv. 2 jaar garantie op installatie. Onderdelen inclusief. Geldigheid offerte: 30 dagen."/></div>
         <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setStep(0);setOff(null);setVraag("");}}>Opnieuw</button><button className="btn btn-ai" style={{flex:1,justifyContent:"center"}} onClick={opslaan}>💾 Opslaan & Verstuur</button></div>
       </>}
@@ -2769,6 +2789,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   const [subTab, setSubTab] = useState("facturen");
   const [filterStatus, setFilterStatus] = useState("Alle");
   const [btwJaar, setBtwJaar] = useState(new Date().getFullYear());
+  const [btwQ, setBtwQ] = useState(Math.floor(new Date().getMonth()/3));
   const [winstJaar, setWinstJaar] = useState(new Date().getFullYear());
   const [winstPeriode, setWinstPeriode] = useState("maand");
   const [showCreate, setShowCreate] = useState(false);
@@ -2871,7 +2892,10 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
 
   const calcTotals = (regels) => {
     const sub = regels.reduce((s,r)=>s+(Number(r.aantal)||0)*(Number(r.prijs)||0),0);
-    return {subtotaal:sub, btw:sub*0.21, totaal:sub*1.21};
+    const btw9  = regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===9  ?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.09:s;},0);
+    const btw21 = regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===21 ?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.21:s;},0);
+    const btw = btw9+btw21;
+    return {subtotaal:sub, btw9, btw21, btw, totaal:sub+btw};
   };
 
   const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
@@ -2880,7 +2904,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     setImportOfferte("");
     const datum=todayStr(), d=new Date(now); d.setDate(d.getDate()+30);
     const vervaldatum=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    setNieuw({klant:"",klant_email:"",datum,vervaldatum,regels:[{omschrijving:"",aantal:1,eenheid:"stuk",prijs:""}],status:"Concept"});
+    setNieuw({klant:"",klant_email:"",datum,vervaldatum,regels:[{omschrijving:"",aantal:1,eenheid:"stuk",prijs:"",btw_pct:21}],status:"Concept"});
     setSaveErr(""); setShowCreate(true);
   };
 
@@ -2893,7 +2917,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     setNieuw(prev=>({...prev,klant:o.klant||"",klant_email:k?.email||"",regels}));
   };
 
-  const addRegel = () => setNieuw(prev=>({...prev,regels:[...prev.regels,{omschrijving:"",aantal:1,eenheid:"stuk",prijs:""}]}));
+  const addRegel = () => setNieuw(prev=>({...prev,regels:[...prev.regels,{omschrijving:"",aantal:1,eenheid:"stuk",prijs:"",btw_pct:21}]}));
   const removeRegel = (i) => setNieuw(prev=>({...prev,regels:prev.regels.filter((_,idx)=>idx!==i)}));
   const setRegel = (i,field,val) => setNieuw(prev=>({...prev,regels:prev.regels.map((r,idx)=>idx===i?{...r,[field]:val}:r)}));
 
@@ -2979,7 +3003,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     return dispStatus(f)===filterStatus;
   });
 
-  const {subtotaal:cSub,btw:cBtw,totaal:cTot}=calcTotals(nieuw.regels);
+  const {subtotaal:cSub,btw9:cBtw9,btw21:cBtw21,btw:cBtw,totaal:cTot}=calcTotals(nieuw.regels);
   const fmtEur=(n)=>`€ ${Number(n).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   const fmtDate=(s)=>s?new Date(s).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"}):"-";
 
@@ -3146,135 +3170,103 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     </>)}
 
     {subTab==="btw"&&(()=>{
-      const fmtEurBtw = n => `€ ${Number(n).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-      const kwartalen = [
-        {label:"Q1 (jan–mrt)", start:0, end:2},
-        {label:"Q2 (apr–jun)", start:3, end:5},
-        {label:"Q3 (jul–sep)", start:6, end:8},
-        {label:"Q4 (okt–dec)", start:9, end:11},
-      ].map(q => {
-        const fInQ = facturen.filter(f => {
-          if (f.status !== "Betaald" || !f.datum) return false;
-          const d = new Date(f.datum);
-          return d.getFullYear() === btwJaar && d.getMonth() >= q.start && d.getMonth() <= q.end;
-        });
-        const uInQ = (uitgaven||[]).filter(u => {
-          if (!u.datum) return false;
-          const d = new Date(u.datum);
-          return d.getFullYear() === btwJaar && d.getMonth() >= q.start && d.getMonth() <= q.end;
-        });
-        const omzet = fInQ.reduce((s,f) => s + getTotal(f), 0);
-        const btwOntvangen = fInQ.reduce((s,f) => s + (f.btw != null ? Number(f.btw) : getTotal(f) / 1.21 * 0.21), 0);
-        const omzetExcl = omzet - btwOntvangen;
-        const btwBetaald = uInQ.reduce((s,u) => {
-          const pct = Number(u.btw_percentage || 0);
-          return s + (pct > 0 ? Number(u.bedrag||0) * pct / 100 / (1 + pct / 100) : 0);
-        }, 0);
-        const teBetalen = btwOntvangen - btwBetaald;
-        return { ...q, fInQ, omzet, omzetExcl, btwOntvangen, btwBetaald, teBetalen };
+      const fE = n => `€ ${Number(n||0).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      const quarters = [
+        {label:"Q1",naam:"Q1 (jan–mrt)",start:0,end:2},
+        {label:"Q2",naam:"Q2 (apr–jun)",start:3,end:5},
+        {label:"Q3",naam:"Q3 (jul–sep)",start:6,end:8},
+        {label:"Q4",naam:"Q4 (okt–dec)",start:9,end:11},
+      ];
+      const q = quarters[btwQ];
+      const ingKey = `btw_ingediend_${userId}_${btwJaar}_${q.label}`;
+      const ingediend = !!localStorage.getItem(ingKey);
+
+      const fInQ = facturen.filter(f => {
+        if(f.status!=="Betaald"||!f.datum)return false;
+        const d=new Date(f.datum);
+        return d.getFullYear()===btwJaar&&d.getMonth()>=q.start&&d.getMonth()<=q.end;
+      });
+      const uInQ = (uitgaven||[]).filter(u => {
+        if(!u.datum)return false;
+        const d=new Date(u.datum);
+        return d.getFullYear()===btwJaar&&d.getMonth()>=q.start&&d.getMonth()<=q.end;
       });
 
-      const exportBtwXlsx = () => {
-        const rows = [
-          ["BTW aangifte", btwJaar],
-          [],
-          ["Kwartaal","Omzet (incl. BTW)","Omzet (excl. BTW)","BTW ontvangen","BTW betaald op uitgaven","Te betalen"],
-        ];
-        kwartalen.forEach(q => rows.push([q.label, q.omzet.toFixed(2), q.omzetExcl.toFixed(2), q.btwOntvangen.toFixed(2), q.btwBetaald.toFixed(2), q.teBetalen.toFixed(2)]));
-        const totOmzet = kwartalen.reduce((s,q)=>s+q.omzet,0);
-        const totBtwO = kwartalen.reduce((s,q)=>s+q.btwOntvangen,0);
-        const totBtwB = kwartalen.reduce((s,q)=>s+q.btwBetaald,0);
-        rows.push(["TOTAAL", totOmzet.toFixed(2), (totOmzet-totBtwO).toFixed(2), totBtwO.toFixed(2), totBtwB.toFixed(2), (totBtwO-totBtwB).toFixed(2)]);
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        ws["!cols"] = [{wch:20},{wch:16},{wch:16},{wch:16},{wch:24},{wch:14}];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "BTW aangifte");
-        XLSX.writeFile(wb, `BTW_aangifte_${btwJaar}.xlsx`);
-      };
-
-      const exportBtwPdf = () => {
-        const doc = new jsPDF({ unit:"mm", format:"a4" });
-        doc.setFont("helvetica","bold"); doc.setFontSize(18);
-        doc.text(`BTW aangifte ${btwJaar}`, 20, 22);
-        doc.setFont("helvetica","normal"); doc.setFontSize(10);
-        doc.text(`Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}`, 20, 30);
-        doc.setDrawColor(220); doc.line(20, 34, 190, 34);
-        const cols = [20, 62, 95, 128, 160]; const colW = [42,33,33,32,30];
-        const headers = ["Kwartaal","Omzet excl.BTW","BTW ontvangen","BTW betaald","Te betalen"];
-        let y = 42;
-        doc.setFont("helvetica","bold"); doc.setFontSize(9);
-        headers.forEach((h,i) => doc.text(h, cols[i], y));
-        doc.setDrawColor(200); doc.line(20, y+2, 190, y+2);
-        y += 8; doc.setFont("helvetica","normal");
-        kwartalen.forEach(q => {
-          const rowColor = q.teBetalen < 0 ? [5,150,105] : [220,38,38];
-          doc.setTextColor(0); [q.label, fmtEurBtw(q.omzetExcl), fmtEurBtw(q.btwOntvangen), fmtEurBtw(q.btwBetaald)].forEach((v,i) => doc.text(v, cols[i], y));
-          doc.setTextColor(...rowColor); doc.text(fmtEurBtw(q.teBetalen), cols[4], y);
-          doc.setTextColor(0); y += 7;
-        });
-        doc.setDrawColor(200); doc.line(20, y, 190, y); y += 5;
-        const totO = kwartalen.reduce((s,q)=>s+q.btwOntvangen,0), totB = kwartalen.reduce((s,q)=>s+q.btwBetaald,0), totT = totO-totB;
-        const totExcl = kwartalen.reduce((s,q)=>s+q.omzetExcl,0);
-        doc.setFont("helvetica","bold");
-        ["Totaal", fmtEurBtw(totExcl), fmtEurBtw(totO), fmtEurBtw(totB)].forEach((v,i)=>doc.text(v,cols[i],y));
-        doc.setTextColor(...(totT<0?[5,150,105]:[220,38,38])); doc.text(fmtEurBtw(totT), cols[4], y);
-        doc.save(`BTW_aangifte_${btwJaar}.pdf`);
-      };
-
-      const totBtwO = kwartalen.reduce((s,q)=>s+q.btwOntvangen,0);
-      const totBtwB = kwartalen.reduce((s,q)=>s+q.btwBetaald,0);
-      const totTeBetalen = totBtwO - totBtwB;
+      // Rubrieken berekening
+      let omzet1a=0,btw1a=0,omzet1b=0,btw1b=0;
+      fInQ.forEach(f => {
+        const rr=Array.isArray(f.regels)?f.regels:[];
+        if(rr.length>0){
+          rr.forEach(r=>{
+            const pct=Number(r.btw_pct??21),bedrag=(Number(r.aantal)||0)*(Number(r.prijs)||0);
+            if(pct===21){omzet1a+=bedrag;btw1a+=bedrag*0.21;}
+            else if(pct===9){omzet1b+=bedrag;btw1b+=bedrag*0.09;}
+            else{omzet1a+=bedrag;} // 0% BTW, count as omzet 21% category but no BTW
+          });
+        } else {
+          // oud record zonder regels
+          const tot=getTotal(f),sub=tot/1.21,btwAmt=tot-sub;
+          omzet1a+=sub;btw1a+=btwAmt;
+        }
+      });
+      const voorbelasting5b=uInQ.reduce((s,u)=>{const p=Number(u.btw_percentage||0);return p>0?s+Number(u.bedrag||0)*p/100/(1+p/100):s;},0);
+      const totaalTeBetalen=btw1a+btw1b-voorbelasting5b;
 
       return (
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20}}>
-            <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
               <div style={{fontWeight:700,fontSize:16,color:"#111"}}>BTW aangifte</div>
               <select value={btwJaar} onChange={e=>setBtwJaar(Number(e.target.value))} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer"}}>
                 {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
               </select>
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button className="btn btn-outline" onClick={exportBtwXlsx}>⬇ Excel</button>
-              <button className="btn btn-outline" onClick={exportBtwPdf}>⬇ PDF</button>
-            </div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14,marginBottom:20}}>
-            {kwartalen.map(q=>(
-              <div key={q.label} className="card cp" style={{borderLeft:`4px solid ${q.teBetalen<0?"#10B981":"#6366F1"}`}}>
-                <div style={{fontWeight:700,fontSize:14,color:"#0F0F14",marginBottom:12}}>{q.label}</div>
-                {[
-                  {lbl:"Omzet (excl. BTW)",val:fmtEurBtw(q.omzetExcl),color:"#111"},
-                  {lbl:"BTW ontvangen van klanten",val:fmtEurBtw(q.btwOntvangen),color:"#6366F1"},
-                  {lbl:"BTW betaald op uitgaven",val:fmtEurBtw(q.btwBetaald),color:"#10B981"},
-                ].map(r=>(
-                  <div key={r.lbl} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:7,color:r.color}}>
-                    <span style={{color:"#64748B"}}>{r.lbl}</span><span style={{fontWeight:700}}>{r.val}</span>
-                  </div>
+              <div style={{display:"flex",gap:4}}>
+                {quarters.map((qq,qi)=>(
+                  <button key={qq.label} onClick={()=>setBtwQ(qi)} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:btwQ===qi?"#0F0F14":"#fff",color:btwQ===qi?"#fff":"#555",borderColor:btwQ===qi?"#0F0F14":"#E5E7EB"}}>{qq.label}</button>
                 ))}
-                <div style={{borderTop:"1.5px solid #E5E7EB",marginTop:4,paddingTop:8,display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:14}}>
-                  <span style={{color:"#111"}}>Te betalen</span>
-                  <span style={{color:q.teBetalen>0?"#EF4444":"#10B981"}}>{fmtEurBtw(q.teBetalen)}</span>
-                </div>
-                {q.fInQ.length===0&&<div style={{marginTop:8,fontSize:12,color:"#94A3B8"}}>Geen betaalde facturen dit kwartaal</div>}
               </div>
-            ))}
-          </div>
-          <div className="card cp" style={{borderLeft:"4px solid #0F0F14"}}>
-            <div style={{fontWeight:700,fontSize:14,color:"#0F0F14",marginBottom:12}}>Totaal {btwJaar}</div>
-            {[
-              {lbl:"Totale BTW ontvangen",val:fmtEurBtw(totBtwO),color:"#6366F1"},
-              {lbl:"Totale BTW betaald op uitgaven",val:fmtEurBtw(totBtwB),color:"#10B981"},
-            ].map(r=>(
-              <div key={r.lbl} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:7}}>
-                <span style={{color:"#64748B"}}>{r.lbl}</span><span style={{fontWeight:700,color:r.color}}>{r.val}</span>
-              </div>
-            ))}
-            <div style={{borderTop:"1.5px solid #E5E7EB",marginTop:4,paddingTop:8,display:"flex",justifyContent:"space-between",fontWeight:800,fontSize:16}}>
-              <span style={{color:"#111"}}>Totaal te betalen aan belastingdienst</span>
-              <span style={{color:totTeBetalen>0?"#EF4444":"#10B981"}}>{fmtEurBtw(totTeBetalen)}</span>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              {ingediend&&<span style={{fontSize:12,fontWeight:700,color:"#059669",background:"#ECFDF5",border:"1px solid #A7F3D0",borderRadius:20,padding:"4px 12px"}}>✓ Ingediend</span>}
+              <a href="https://mijn.belastingdienst.nl" target="_blank" rel="noopener noreferrer" style={{padding:"7px 14px",background:"#1C4CC3",color:"#fff",borderRadius:8,fontSize:13,fontWeight:700,textDecoration:"none",fontFamily:"'DM Sans',sans-serif"}}>Ga naar Belastingdienst ↗</a>
             </div>
           </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+            <div className="card cp" style={{borderLeft:"4px solid #6366F1"}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#6366F1",marginBottom:8,textTransform:"uppercase",letterSpacing:".5px",fontSize:11}}>Rubriek 1a — Omzet 21% BTW</div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}><span style={{color:"#64748B"}}>Omzet (excl. BTW)</span><span style={{fontWeight:700}}>{fE(omzet1a)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,borderTop:"1px solid #E5E7EB",paddingTop:8,marginTop:4}}><span style={{color:"#64748B"}}>Te betalen BTW 21%</span><span style={{fontWeight:700,color:"#6366F1"}}>{fE(btw1a)}</span></div>
+            </div>
+            <div className="card cp" style={{borderLeft:"4px solid #F59E0B"}}>
+              <div style={{fontWeight:700,textTransform:"uppercase",letterSpacing:".5px",fontSize:11,color:"#D97706",marginBottom:8}}>Rubriek 1b — Omzet 9% BTW</div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}><span style={{color:"#64748B"}}>Omzet (excl. BTW)</span><span style={{fontWeight:700}}>{fE(omzet1b)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,borderTop:"1px solid #E5E7EB",paddingTop:8,marginTop:4}}><span style={{color:"#64748B"}}>Te betalen BTW 9%</span><span style={{fontWeight:700,color:"#D97706"}}>{fE(btw1b)}</span></div>
+            </div>
+            <div className="card cp" style={{borderLeft:"4px solid #10B981"}}>
+              <div style={{fontWeight:700,textTransform:"uppercase",letterSpacing:".5px",fontSize:11,color:"#059669",marginBottom:8}}>Rubriek 5b — Voorbelasting</div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:5}}>BTW betaald op inkopen/kosten</div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:14,borderTop:"1px solid #E5E7EB",paddingTop:8,marginTop:4}}><span style={{color:"#64748B"}}>Aftrekbare voorbelasting</span><span style={{fontWeight:700,color:"#10B981"}}>{fE(voorbelasting5b)}</span></div>
+            </div>
+            <div className="card cp" style={{borderLeft:`4px solid ${totaalTeBetalen>0?"#EF4444":"#10B981"}`}}>
+              <div style={{fontWeight:700,textTransform:"uppercase",letterSpacing:".5px",fontSize:11,color:totaalTeBetalen>0?"#DC2626":"#059669",marginBottom:8}}>Rubriek 5g — Totaalberekening</div>
+              {[{lbl:"BTW 21% (1a)",v:btw1a},{lbl:"BTW 9% (1b)",v:btw1b},{lbl:"Voorbelasting (5b)",v:-voorbelasting5b}].map(x=>(
+                <div key={x.lbl} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,marginBottom:4}}><span style={{color:"#64748B"}}>{x.lbl}</span><span style={{color:x.v<0?"#10B981":"#111",fontWeight:600}}>{x.v<0?`- ${fE(-x.v)}`:fE(x.v)}</span></div>
+              ))}
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:15,fontWeight:800,borderTop:"2px solid #E5E7EB",paddingTop:8,marginTop:4}}>
+                <span>{totaalTeBetalen>0?"Te betalen":"Terug te ontvangen"}</span>
+                <span style={{color:totaalTeBetalen>0?"#EF4444":"#10B981"}}>{fE(Math.abs(totaalTeBetalen))}</span>
+              </div>
+            </div>
+          </div>
+
+          {!ingediend&&<div style={{background:"#FFF7ED",border:"1.5px solid #FED7AA",borderRadius:12,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:"#92400E"}}>Aangifte gedaan?</div>
+              <div style={{fontSize:13,color:"#78350F",marginTop:2}}>Markeer {q.naam} als ingediend bij de belastingdienst.</div>
+            </div>
+            <button onClick={()=>{localStorage.setItem(ingKey,"1");setBtwQ(btwQ);}} style={{padding:"8px 18px",background:"#D97706",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>✓ Markeer als ingediend</button>
+          </div>}
         </div>
       );
     })()}
@@ -3429,7 +3421,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         </div>
         <div style={{marginTop:8}}>
           <div className="off-tbl-grid" style={{borderBottom:"2px solid #E5E7EB",paddingBottom:6,marginBottom:4}}>
-            {["Omschrijving","Aantal","Eenheid","Prijs","Totaal",""].map((h,i)=><div key={i} className="off-cell" style={{fontWeight:700,fontSize:12,color:"#94A3B8",justifyContent:i>=3&&i<5?"flex-end":i===1?"center":"flex-start"}}>{h}</div>)}
+            {["Omschrijving","Aantal","Eenheid","Prijs","BTW","Totaal",""].map((h,i)=><div key={i} className="off-cell" style={{fontWeight:700,fontSize:12,color:"#94A3B8",justifyContent:i>=3&&i<6?"flex-end":i===1?"center":"flex-start"}}>{h}</div>)}
           </div>
           {nieuw.regels.map((r,i)=>(
             <div key={i} className="off-tbl-grid" style={{borderBottom:"1px solid #F3F4F6",alignItems:"flex-start"}}>
@@ -3437,6 +3429,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
               <div className="off-cell" style={{paddingTop:8}}><input className="off-inp" type="number" value={r.aantal} onChange={e=>setRegel(i,"aantal",e.target.value)} style={{textAlign:"center"}}/></div>
               <div className="off-cell" style={{paddingTop:8}}><select className="off-inp" value={r.eenheid} onChange={e=>setRegel(i,"eenheid",e.target.value)} style={{minWidth:80}}>{["stuk","uur","dag","m²","m","kg","l"].map(u=><option key={u}>{u}</option>)}</select></div>
               <div className="off-cell" style={{paddingTop:8}}><input className="off-inp" type="number" value={r.prijs} onChange={e=>setRegel(i,"prijs",e.target.value)} style={{textAlign:"right"}}/></div>
+              <div className="off-cell" style={{paddingTop:8}}><select className="off-inp center" value={r.btw_pct??21} onChange={e=>setRegel(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
               <div className="off-cell off-cell-totaal">{fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</div>
               <div className="off-cell"><button onClick={()=>removeRegel(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:16}}>×</button></div>
             </div>
@@ -3444,8 +3437,9 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           <button className="btn btn-ghost btn-sm" onClick={addRegel} style={{marginTop:8}}>+ Regel</button>
         </div>
         <div style={{background:"#F8FAFC",border:"1px solid #EAECF0",borderRadius:10,padding:"12px 16px",marginTop:10}}>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>Subtotaal</span><span>{fmtEur(cSub)}</span></div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:6}}><span>BTW 21%</span><span>{fmtEur(cBtw)}</span></div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>Subtotaal (excl. BTW)</span><span>{fmtEur(cSub)}</span></div>
+          {cBtw9>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>BTW 9%</span><span>{fmtEur(cBtw9)}</span></div>}
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:6}}><span>BTW 21%</span><span>{fmtEur(cBtw21??cBtw)}</span></div>
           <div style={{display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:800,color:"#111"}}><span>Totaal</span><span>{fmtEur(cTot)}</span></div>
         </div>
         {saveErr&&<div style={{color:"#EF4444",fontSize:12.5,marginTop:8}}>{saveErr}</div>}
@@ -4483,7 +4477,9 @@ function PortalPage({ token }) {
   const fmtEur = (n) => `€ ${Number(n||0).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   const regels = parseOfferRules(offerte);
   const subtotaal = offerte?.subtotaal ?? regels.reduce((s,r)=>s+(Number(r.aantal)||0)*(Number(r.prijs)||0),0);
-  const btw = offerte?.btw ?? subtotaal * 0.21;
+  const btw9p = regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===9?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.09:s;},0);
+  const btw21p = regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===21?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.21:s;},0);
+  const btw = offerte?.btw ?? (btw9p + btw21p || subtotaal * 0.21);
   const totaal = offerte?.totaal ?? subtotaal + btw;
 
   const portalStyle = {fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#F8FAFC",color:"#111"};
@@ -4546,8 +4542,9 @@ function PortalPage({ token }) {
               </table>
               </div>
               <div style={{textAlign:"right",fontSize:13,color:"#555",lineHeight:2,background:"#F8FAFC",borderRadius:10,padding:"12px 16px"}}>
-                <div>Subtotaal: <strong>{fmtEur(subtotaal)}</strong></div>
-                <div>BTW (21%): <strong>{fmtEur(btw)}</strong></div>
+                <div>Subtotaal (excl. BTW): <strong>{fmtEur(subtotaal)}</strong></div>
+                {regels.some(r=>Number(r.btw_pct??21)===9)&&<div>BTW 9%: <strong>{fmtEur(regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===9?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.09:s;},0))}</strong></div>}
+                <div>BTW 21%: <strong>{fmtEur(regels.some(r=>Number(r.btw_pct??21)===21)?regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===21?s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*0.21:s;},0):btw)}</strong></div>
                 <div style={{fontSize:18,fontWeight:800,color:"#0F0F14",marginTop:4}}>Totaal: {fmtEur(totaal)}</div>
               </div>
             </div>
