@@ -18,6 +18,13 @@ function storageSet(key, val) { try { localStorage.setItem(key, val); } catch(e)
 function storageRemove(key) { try { localStorage.removeItem(key); } catch(e) {} }
 function localToday() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim());
+// Accepts 06-XXXXXXXX, 0XX-XXXXXXX, +316XXXXXXXXX, 0031... — strips spaces/dashes/dots first
+const isValidDutchPhone = (v) => {
+  const s = String(v||"").replace(/[\s\-\.\(\)]/g,"");
+  return /^(\+31[1-9][0-9]{8}|0031[1-9][0-9]{8}|0[1-9][0-9]{8})$/.test(s);
+};
+
 async function acceptInviteToken(token, userId) {
   if (!token || !userId) return;
   await supabase.from("team")
@@ -413,7 +420,7 @@ const SC = {
 };
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden}
 body{background:#0F0F14}
@@ -463,7 +470,7 @@ body{background:#0F0F14}
 .mob-day-empty{padding:28px 16px;text-align:center;color:#94A3B8;font-size:13.5px}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
-.shell{display:flex;height:100vh;background:#F4F4F6;font-family:'DM Sans',sans-serif;overflow:hidden}
+.shell{display:flex;height:100vh;background:#F1F5F9;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;overflow:hidden}
 .sidebar{width:220px;min-width:220px;background:#0F0F14;display:flex;flex-direction:column;overflow:hidden}
 .sb-logo{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
 .sb-mark{display:flex;align-items:center;gap:9px;margin-bottom:2px}
@@ -482,12 +489,12 @@ body{background:#0F0F14}
 .su-plan{font-size:10.5px;color:rgba(255,255,255,.3);margin-top:1px}
 .logout-btn{width:100%;margin-top:8px;background:rgba(255,255,255,.08);border:none;border-radius:7px;padding:7px;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .14s}
 .logout-btn:hover{background:rgba(255,255,255,.14);color:#fff}
-.main{flex:1;overflow-y:auto;padding:28px 32px;background:#F4F4F6}
+.main{flex:1;overflow-y:auto;padding:28px 32px;background:#F1F5F9}
 .pg-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#0F0F14;letter-spacing:-.4px;margin-bottom:2px}
 .pg-sub{font-size:12.5px;color:#94A3B8}
 .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
 .sec-ttl{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#0F0F14;margin-bottom:10px}
-.btn{border:none;border-radius:9px;padding:9px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .14s;white-space:nowrap}
+.btn{border:none;border-radius:10px;padding:9px 17px;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .14s;white-space:nowrap;letter-spacing:.1px}
 .btn-dark{background:#0F0F14;color:#fff}
 .btn-dark:hover{background:#1e1e2e;transform:translateY(-1px)}
 .btn-ai{background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.28)}
@@ -500,11 +507,11 @@ body{background:#0F0F14}
 .btn-danger:hover{background:#FECACA}
 .btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
 .btn-full{width:100%;justify-content:center}
-.card{background:#fff;border-radius:13px;border:1px solid #EAECF0;overflow:hidden}
+.card{background:#fff;border-radius:14px;border:1px solid #E2E8F0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .cp{padding:20px 22px}
 .sg{display:grid;gap:12px;margin-bottom:20px}
-.sc{background:#fff;border-radius:13px;padding:16px 18px;border:1px solid #EAECF0;transition:transform .14s}
-.sc:hover{transform:translateY(-1px)}
+.sc{background:#fff;border-radius:14px;padding:16px 20px;border:1px solid #E2E8F0;transition:transform .14s,box-shadow .14s;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.sc:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
 .sl{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#94A3B8;margin-bottom:6px}
 .sv{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#0F0F14}
 .ss{font-size:11px;color:#94A3B8;margin-top:2px}
@@ -517,13 +524,15 @@ tbody tr:hover{background:#FAFBFC}
 td{padding:12px 14px;font-size:13px;color:#374151}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .bdot{width:5px;height:5px;border-radius:50%}
-.inp{width:100%;border:1.5px solid #E5E7EB;border-radius:9px;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:#111;outline:none;transition:border-color .14s;background:#fff}
-.inp:focus{border-color:#6366F1}
-textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
-.ilbl{font-size:11.5px;font-weight:600;color:#555;display:block;margin-bottom:5px}
+.inp{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px 14px;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;font-size:13.5px;color:#0F172A;outline:none;transition:border-color .18s,box-shadow .18s;background:#fff}
+.inp:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.inp::placeholder{color:#94A3B8}
+select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394A3B8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+textarea.inp{min-height:100px;resize:vertical;line-height:1.6}
+.ilbl{font-size:11px;font-weight:700;color:#64748B;display:block;margin-bottom:5px;letter-spacing:.2px;text-transform:uppercase}
 .ig{margin-bottom:14px}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px)}
-.modal{background:#fff;border-radius:18px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 56px rgba(0,0,0,.18)}
+.modal{background:#fff;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 64px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.04)}
 .modal-lg{max-width:720px}
 .mh{padding:20px 24px;border-bottom:1px solid #F0F0F0;display:flex;justify-content:space-between;align-items:flex-start}
 .mt{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#111}
@@ -617,26 +626,26 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .voice-btn-rec{width:34px;height:34px;border-radius:50%;background:#EF4444;border:2px solid #EF4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;animation:voicePulse 1.2s infinite;color:#fff}
 .tip-row{font-size:12px;color:#6366F1;cursor:pointer;padding:3px 0}
 .tip-row:hover{text-decoration:underline}
-.cal-wrap{background:#fff;border-radius:13px;border:1px solid #EAECF0;overflow:hidden;margin-bottom:20px}
-.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #F0F0F0}
+.cal-wrap{background:#fff;border-radius:14px;border:1px solid #E2E8F0;overflow:hidden;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #F0F3F8;background:#FAFBFD}
 .cal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#0F0F14}
-.cal-nav-btn{background:#F3F4F6;border:none;border-radius:7px;width:30px;height:30px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;line-height:1;transition:all .14s}
-.cal-nav-btn:hover{background:#E5E7EB}
+.cal-nav-btn{background:#F1F5F9;border:none;border-radius:8px;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#475569;line-height:1;transition:all .14s}
+.cal-nav-btn:hover{background:#E2E8F0;color:#0F172A}
 .cal-view-toggle{display:flex;background:#F3F4F6;border-radius:9px;padding:3px;gap:2px}
 .cal-vt-btn{background:transparent;border:none;border-radius:7px;padding:5px 14px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;color:#666;transition:all .14s}
 .cal-vt-btn.on{background:#fff;color:#0F0F14;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:#F8FAFC;border-bottom:1px solid #E5E7EB}
 .cal-dow-cell{padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
-.cal-day{min-height:82px;padding:6px 7px;border-right:1px solid #F0F0F0;border-bottom:1px solid #F0F0F0;cursor:pointer;transition:background .1s;box-sizing:border-box}
+.cal-day{min-height:96px;padding:7px 8px;border-right:1px solid #F0F3F8;border-bottom:1px solid #F0F3F8;cursor:pointer;transition:background .1s;box-sizing:border-box}
 .cal-day:nth-child(7n){border-right:none}
-.cal-day:hover{background:#F9FAFB}
-.cal-day.empty{background:#FAFAFA;cursor:default;pointer-events:none}
-.cal-day.today .cal-dn{background:#6366F1;color:#fff;border-radius:50%}
+.cal-day:hover{background:#F8FAFB}
+.cal-day.empty{background:#FAFBFD;cursor:default;pointer-events:none}
+.cal-day.today .cal-dn{background:#6366F1;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 .cal-dn{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#374151;margin-bottom:3px}
-.cal-task{border-radius:4px;padding:2px 5px;font-size:10.5px;font-weight:600;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#EEF2FF;color:#4338CA}
-.cal-task.onderweg{background:#FEF3C7;color:#92400E}
-.cal-task.klaar{background:#F3F4F6;color:#9CA3AF;text-decoration:line-through}
+.cal-task{border-radius:5px;padding:3px 6px;font-size:10.5px;font-weight:600;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#EEF2FF;color:#4338CA;border-left:2.5px solid #6366F1}
+.cal-task.onderweg{background:#FEF3C7;color:#92400E;border-left-color:#F59E0B}
+.cal-task.klaar{background:#F3F4F6;color:#9CA3AF;text-decoration:line-through;border-left-color:#D1D5DB}
 .cal-more{font-size:9.5px;color:#94A3B8;padding-left:2px}
 .cal-day.feestdag{background:#FFFBEB}
 .cal-feestdag{font-size:9px;color:#92400E;font-weight:600;margin-bottom:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -649,18 +658,19 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .cal-week-hdr.today .cal-week-dn{color:#6366F1}
 .cal-week-hdr.today .cal-week-day{color:#6366F1}
 .cal-wg-outer{overflow:hidden}
-.cal-wg-hdr-row{display:flex;border-bottom:1px solid #E5E7EB}
-.cal-wg-hdr-spc{width:44px;flex-shrink:0;border-right:1px solid #F0F0F0;box-sizing:border-box}
-.cal-wg-hdr-cell{flex:1;min-width:0;border-right:1px solid #F0F0F0;box-sizing:border-box}
+.cal-wg-hdr-row{display:flex;border-bottom:1px solid #E2E8F0;background:#FAFBFD}
+.cal-wg-hdr-spc{width:52px;flex-shrink:0;border-right:1px solid #F0F3F8;box-sizing:border-box}
+.cal-wg-hdr-cell{flex:1;min-width:0;border-right:1px solid #F0F3F8;box-sizing:border-box}
 .cal-wg-hdr-cell:last-child{border-right:none}
-.cal-wg-body-row{display:flex;overflow-y:auto;max-height:560px}
-.cal-wg-tc{width:44px;flex-shrink:0;border-right:1px solid #F0F0F0;box-sizing:border-box}
-.cal-wg-tl{height:40px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:6px;padding-top:2px;box-sizing:border-box}
-.cal-wg-dc{flex:1;min-width:0;border-right:1px solid #F0F0F0;box-sizing:border-box;position:relative}
+.cal-wg-dc.today-col{background:rgba(99,102,241,.018)}
+.cal-wg-body-row{display:flex;overflow-y:auto;max-height:620px}
+.cal-wg-tc{width:52px;flex-shrink:0;border-right:1px solid #F0F3F8;box-sizing:border-box;background:#FAFBFD}
+.cal-wg-tl{height:40px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:8px;padding-top:3px;box-sizing:border-box;font-size:10.5px;font-weight:700;color:#94A3B8;letter-spacing:.2px}
+.cal-wg-dc{flex:1;min-width:0;border-right:1px solid #F0F3F8;box-sizing:border-box;position:relative}
 .cal-wg-dc:last-child{border-right:none}
-.cal-wg-slot{position:absolute;left:0;right:0;height:0;pointer-events:none}
-.cal-task-blk{position:absolute;left:2px;right:2px;border-radius:6px;padding:4px 6px;overflow:hidden;background:#EEF2FF;color:#4338CA;cursor:pointer;box-sizing:border-box;font-size:10.5px;line-height:1.3;transition:opacity .1s}
-.cal-task-blk:hover{opacity:.85}
+.cal-wg-slot{position:absolute;left:0;right:0;height:0;border-top:1px dashed #F0F3F8;pointer-events:none}
+.cal-task-blk{position:absolute;left:3px;right:3px;border-radius:7px;padding:5px 7px;overflow:hidden;background:#EEF2FF;color:#4338CA;cursor:pointer;box-sizing:border-box;font-size:10.5px;line-height:1.35;transition:opacity .1s,transform .1s;border-left:3px solid #6366F1}
+.cal-task-blk:hover{opacity:.9;transform:scale(1.01)}
 .cal-task-blk.onderweg{background:#FEF3C7;color:#92400E}
 .cal-task-blk.klaar{opacity:.45}
 .cal-task-blk .cal-tbk-time{font-size:9.5px;font-weight:700;opacity:.8;white-space:nowrap}
@@ -1175,6 +1185,9 @@ function OnboardingWizard({ userId, onDone }) {
 
   const next = async (fields) => {
     if (fields) {
+      if (fields.bedrijfsnaam && fields.bedrijfsnaam.length > 100) { setErr("Bedrijfsnaam mag maximaal 100 tekens zijn."); return; }
+      if (fields.email && !isValidEmail(fields.email)) { setErr("Voer een geldig e-mailadres in."); return; }
+      if (fields.telefoon && !isValidDutchPhone(fields.telefoon)) { setErr("Voer een geldig Nederlands telefoonnummer in (bijv. 06-12345678)."); return; }
       setSaving(true); setErr("");
       const error = await saveProfiel(fields);
       setSaving(false);
@@ -1222,7 +1235,7 @@ function OnboardingWizard({ userId, onDone }) {
             ))}
           </div>
           <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15,color:"#111",marginBottom:12}}>Jouw bedrijfsgegevens</div>
-          <div className="ig"><label className="ilbl">Bedrijfsnaam *</label><input className="inp" value={data.bedrijfsnaam} onChange={e=>setData({...data,bedrijfsnaam:e.target.value})} placeholder="Bijv. Jansen Installatie BV"/></div>
+          <div className="ig"><label className="ilbl">Bedrijfsnaam *</label><input className="inp" maxLength={100} value={data.bedrijfsnaam} onChange={e=>setData({...data,bedrijfsnaam:e.target.value})} placeholder="Bijv. Jansen Installatie BV"/></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" type="tel" value={data.telefoon} onChange={e=>setData({...data,telefoon:e.target.value})} placeholder="06-12345678"/></div>
             <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={data.email} onChange={e=>setData({...data,email:e.target.value})} placeholder="info@bedrijf.nl"/></div>
@@ -1366,6 +1379,9 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
   }, [bedrijf]);
 
   const saveProfile = async () => {
+    if (profile.bedrijfsnaam && profile.bedrijfsnaam.length > 100) { setSaveMsg({ type: "error", text: "Bedrijfsnaam mag maximaal 100 tekens zijn." }); return; }
+    if (profile.email && !isValidEmail(profile.email)) { setSaveMsg({ type: "error", text: "Voer een geldig e-mailadres in." }); return; }
+    if (profile.telefoon && !isValidDutchPhone(profile.telefoon)) { setSaveMsg({ type: "error", text: "Voer een geldig Nederlands telefoonnummer in (bijv. 06-12345678)." }); return; }
     setSaving(true);
     setSaveMsg({ type: "", text: "" });
     const payload = { ...profile, user_id: userId };
@@ -1428,7 +1444,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
           </div>
         )}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div className="ig"><label className="ilbl">Bedrijfsnaam</label><input className="inp" value={profile.bedrijfsnaam} onChange={e=>setProfile({...profile,bedrijfsnaam:e.target.value})} /></div>
+          <div className="ig"><label className="ilbl">Bedrijfsnaam</label><input className="inp" maxLength={100} value={profile.bedrijfsnaam} onChange={e=>setProfile({...profile,bedrijfsnaam:e.target.value})} /></div>
           <div className="ig"><label className="ilbl">Sector</label><input className="inp" value={profile.sector} onChange={e=>setProfile({...profile,sector:e.target.value})} /></div>
           <div className="ig"><label className="ilbl">Stad</label><input className="inp" value={profile.stad} onChange={e=>setProfile({...profile,stad:e.target.value})} /></div>
           <div className="ig"><label className="ilbl">Adres</label><input className="inp" value={profile.adres} onChange={e=>setProfile({...profile,adres:e.target.value})} /></div>
@@ -2508,11 +2524,11 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
           </div>
           {Array.from({length:7},(_,i)=>{
             const d=new Date(mon);d.setDate(mon.getDate()+i);
-            const ds=fmtDate(d);const tasks=tasksFor(ds);
-            return<div key={i} className="cal-wg-dc">
+            const ds=fmtDate(d);const tasks=tasksFor(ds);const isToday=ds===todayStr;
+            return<div key={i} className={`cal-wg-dc${isToday?" today-col":""}`}>
               <div style={{position:"relative",height:WG_TOTAL_H}}>
                 {Array.from({length:WG_SLOTS},(_,j)=>(
-                  <div key={j} className="cal-wg-slot" style={{top:j*WG_SLOT_H,borderTop:j%2===0?"1px solid #E5E7EB":"1px dashed #F3F4F6"}}/>
+                  <div key={j} className="cal-wg-slot" style={{top:j*WG_SLOT_H,borderTop:j%2===0?"1px solid #E8EDF5":"1px dashed #F3F5F9"}}/>
                 ))}
                 {tasks.map(t=>{
                   const top=wgTop(t.tijd);const height=wgH(t.tijd,t.eindtijd);
@@ -2521,10 +2537,10 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
                   return<div key={t.id} className={`cal-task-blk${t.status==="Onderweg"?" onderweg":t.status==="Klaar"?" klaar":""}`} style={{top,height,...blkStyle}}>
                     <div className="cal-tbk-time">{t.eindtijd?`${t.tijd}–${t.eindtijd}`:t.tijd}</div>
                     <div className={`cal-tbk-name${t.status==="Klaar"?" done":""}`}>{t.klant}</div>
-                    {height>55&&<div className="cal-tbk-dienst">{t.dienst}</div>}
+                    {height>44&&<div className="cal-tbk-dienst">{t.dienst}</div>}
                     <div className="cal-tbk-actions">
-                      <button style={{background:"none",border:"1px solid currentColor",borderRadius:3,padding:"1px 4px",fontSize:9,cursor:"pointer",color:"currentColor",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}} onClick={e=>markDone(e,t.id,t.status)}>{t.status==="Klaar"?"↩":"✓"}</button>
-                      <button style={{background:"none",border:"1px solid currentColor",borderRadius:3,padding:"1px 4px",fontSize:9,cursor:"pointer",color:"currentColor",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}} onClick={e=>{e.stopPropagation();initieerVerwijder(t);}}>&#x2715;</button>
+                      <button style={{background:"none",border:"1px solid currentColor",borderRadius:4,padding:"1px 5px",fontSize:9,cursor:"pointer",color:"currentColor",lineHeight:1.4}} onClick={e=>markDone(e,t.id,t.status)}>{t.status==="Klaar"?"↩":"✓"}</button>
+                      <button style={{background:"none",border:"1px solid currentColor",borderRadius:4,padding:"1px 5px",fontSize:9,cursor:"pointer",color:"currentColor",lineHeight:1.4}} onClick={e=>{e.stopPropagation();initieerVerwijder(t);}}>✕</button>
                     </div>
                   </div>;
                 })}
@@ -2593,6 +2609,9 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
 
   const add = async () => {
     if(!nieuw.naam) return;
+    if (nieuw.naam.length > 100) { setCrmErr("Naam mag maximaal 100 tekens zijn."); return; }
+    if (nieuw.email && !isValidEmail(nieuw.email)) { setCrmErr("Voer een geldig e-mailadres in."); return; }
+    if (nieuw.tel && !isValidDutchPhone(nieuw.tel)) { setCrmErr("Voer een geldig Nederlands telefoonnummer in (bijv. 06-12345678)."); return; }
     setCrmErr("");
     const {error}=await supabase.from("klanten").insert({...nieuw, user_id:userId});
     if(error){setCrmErr(error.message||"Opslaan mislukt");return;}
@@ -2615,6 +2634,9 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
 
   const saveEdit = async () => {
     if(!bewerkt.naam || editingId == null) return;
+    if (bewerkt.naam.length > 100) { setCrmErr("Naam mag maximaal 100 tekens zijn."); return; }
+    if (bewerkt.email && !isValidEmail(bewerkt.email)) { setCrmErr("Voer een geldig e-mailadres in."); return; }
+    if (bewerkt.tel && !isValidDutchPhone(bewerkt.tel)) { setCrmErr("Voer een geldig Nederlands telefoonnummer in (bijv. 06-12345678)."); return; }
     setCrmErr("");
     const {error}=await supabase.from("klanten").update({
       naam: bewerkt.naam,
@@ -2690,7 +2712,7 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
           </div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}>✕</button></div><div className="mb">
-      <div className="ig"><label className="ilbl">Naam</label><input className="inp" value={nieuw.naam} onChange={e=>setNieuw({...nieuw,naam:e.target.value})} placeholder="Bedrijf of naam"/></div>
+      <div className="ig"><label className="ilbl">Naam</label><input className="inp" maxLength={100} value={nieuw.naam} onChange={e=>setNieuw({...nieuw,naam:e.target.value})} placeholder="Bedrijf of naam"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" value={nieuw.tel} onChange={e=>setNieuw({...nieuw,tel:e.target.value})} placeholder="06-12345678"/></div>
         <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={nieuw.email} onChange={e=>setNieuw({...nieuw,email:e.target.value})} placeholder="klant@email.nl"/></div><div className="ig"><label className="ilbl">Adres</label><input className="inp" value={nieuw.adres} onChange={e=>setNieuw({...nieuw,adres:e.target.value})} placeholder="Straat 1, Amsterdam"/></div>
@@ -2700,7 +2722,7 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
       <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setCrmErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.naam}>Toevoegen</button></div>
     </div></div></div>}
     {showEdit&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant bewerken</div></div><button className="mc" onClick={()=>setShowEdit(false)}>✕</button></div><div className="mb">
-      <div className="ig"><label className="ilbl">Naam</label><input className="inp" value={bewerkt.naam} onChange={e=>setBewerkt({...bewerkt,naam:e.target.value})} placeholder="Bedrijf of naam"/></div>
+      <div className="ig"><label className="ilbl">Naam</label><input className="inp" maxLength={100} value={bewerkt.naam} onChange={e=>setBewerkt({...bewerkt,naam:e.target.value})} placeholder="Bedrijf of naam"/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <div className="ig"><label className="ilbl">Telefoon</label><input className="inp" value={bewerkt.tel} onChange={e=>setBewerkt({...bewerkt,tel:e.target.value})} placeholder="06-12345678"/></div>
         <div className="ig"><label className="ilbl">E-mail</label><input className="inp" value={bewerkt.email} onChange={e=>setBewerkt({...bewerkt,email:e.target.value})} placeholder="klant@email.nl"/></div><div className="ig"><label className="ilbl">Adres</label><input className="inp" value={bewerkt.adres} onChange={e=>setBewerkt({...bewerkt,adres:e.target.value})} placeholder="Straat 1, Amsterdam"/></div>
@@ -4037,7 +4059,7 @@ function TeamTab({ ownerId, teamMembers, refresh, bedrijf }) {
   const inviteMember = async () => {
     const email = String(invite.email || "").trim().toLowerCase();
     if (!email || !invite.role) { setError("E-mail en rol zijn verplicht."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Ongeldig e-mailadres."); return; }
+    if (!isValidEmail(email)) { setError("Ongeldig e-mailadres."); return; }
     setSaving(true);
     setError("");
     const token = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : `${Math.random().toString(36).slice(2)}${Date.now()}`;
@@ -4961,15 +4983,20 @@ function WerkMateApp({ user, onLogout }) {
       else { setShowOnboard(true); }
 
       if (!SUBSCRIPTION_WHITELIST.includes(user.email)) {
-        const { data: sub } = await supabase.from("subscriptions").select("status,trial_ends_at").eq("user_id", orgOwnerId).maybeSingle();
-        if (sub) {
-          setSubscription(sub);
-          const isActive = sub.status === "active";
-          const inTrial = sub.status === "trialing" && sub.trial_ends_at && new Date(sub.trial_ends_at) > new Date();
-          if (!isActive && !inTrial) {
-            setMustSubscribe(true);
-            setLoadingData(false);
-            return;
+        // Check time-limited free access whitelist
+        const { data: freeAccess } = await supabase.from("free_access_whitelist").select("expires_at").eq("email", user.email).maybeSingle();
+        const hasFreeAccess = freeAccess && new Date(freeAccess.expires_at) > new Date();
+        if (!hasFreeAccess) {
+          const { data: sub } = await supabase.from("subscriptions").select("status,trial_ends_at").eq("user_id", orgOwnerId).maybeSingle();
+          if (sub) {
+            setSubscription(sub);
+            const isActive = sub.status === "active";
+            const inTrial = sub.status === "trialing" && sub.trial_ends_at && new Date(sub.trial_ends_at) > new Date();
+            if (!isActive && !inTrial) {
+              setMustSubscribe(true);
+              setLoadingData(false);
+              return;
+            }
           }
         }
       }
@@ -5034,9 +5061,9 @@ function WerkMateApp({ user, onLogout }) {
   const handleTabSwitch = async (newTab) => {
     setTab(newTab);
     if (SUBSCRIPTION_WHITELIST.includes(user.email)) return;
-    // Re-check subscription status in the background on every tab switch.
-    // Only block if we get back a definitively expired status.
     try {
+      const { data: freeAccess } = await supabase.from("free_access_whitelist").select("expires_at").eq("email", user.email).maybeSingle();
+      if (freeAccess && new Date(freeAccess.expires_at) > new Date()) return;
       const { data: sub } = await supabase.from("subscriptions").select("status,trial_ends_at").eq("user_id", orgOwnerId).maybeSingle();
       if (!sub) return;
       setSubscription(sub);
@@ -5177,7 +5204,7 @@ function PortalPage({ token }) {
       if (e || !data) { setError("Offerte niet gevonden. Controleer de link."); setLoading(false); return; }
       setOfferte(data);
       if (data.status === "Geaccepteerd") setStep("done");
-      const { data: bp } = await supabase.from("bedrijfsprofiel").select("bedrijfsnaam,logo,adres,email,telefoon,website").eq("user_id", data.user_id).single();
+      const { data: bp } = await supabase.from("bedrijfsprofiel_portal").select("bedrijfsnaam,logo,adres,email,telefoon,website").eq("user_id", data.user_id).single();
       setBedrijf(bp);
       setLoading(false);
     })();
@@ -5320,6 +5347,12 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
+  const [whitelist, setWhitelist] = useState([]);
+  const [wlEmail, setWlEmail] = useState("");
+  const [wlMonths, setWlMonths] = useState(2);
+  const [wlNote, setWlNote] = useState("");
+  const [wlSaving, setWlSaving] = useState(false);
+  const [wlMsg, setWlMsg] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -5330,48 +5363,119 @@ function AdminPage() {
   }, []);
 
   const loadStats = async () => {
-    const { data: profielen } = await supabase.from("bedrijfsprofiel").select("*").order("created_at",{ascending:false});
-    const { data: subs } = await supabase.from("subscriptions").select("*");
+    const [{ data: profielen }, { data: subs }, { data: wl }] = await Promise.all([
+      supabase.from("bedrijfsprofiel").select("*").order("created_at",{ascending:false}),
+      supabase.from("subscriptions").select("*"),
+      supabase.from("free_access_whitelist").select("*").order("created_at",{ascending:false}),
+    ]);
     const activeCount = (subs||[]).filter(s=>s.status==="active").length;
     const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
     const newThisWeek = (profielen||[]).filter(p=>new Date(p.created_at)>weekAgo).length;
     setStats({ total:(profielen||[]).length, active:activeCount, newThisWeek });
     setUsers(profielen||[]);
+    setWhitelist(wl||[]);
     setLoading(false);
   };
+
+  const addWhitelist = async () => {
+    if (!wlEmail.trim() || !isValidEmail(wlEmail)) { setWlMsg("Vul een geldig e-mailadres in."); return; }
+    setWlSaving(true); setWlMsg("");
+    const expires = new Date();
+    expires.setMonth(expires.getMonth() + Number(wlMonths));
+    const { error } = await supabase.from("free_access_whitelist").upsert({ email: wlEmail.trim().toLowerCase(), expires_at: expires.toISOString(), note: wlNote||null }, { onConflict: "email" });
+    if (error) { setWlMsg("Fout: " + error.message); }
+    else { setWlMsg(`✓ ${wlEmail} heeft ${wlMonths} maanden gratis toegang t/m ${expires.toLocaleDateString("nl-NL")}`); setWlEmail(""); setWlNote(""); loadStats(); }
+    setWlSaving(false);
+  };
+
+  const removeWhitelist = async (id, email) => {
+    if (!window.confirm(`Gratis toegang verwijderen voor ${email}?`)) return;
+    await supabase.from("free_access_whitelist").delete().eq("id", id);
+    loadStats();
+  };
+
+  const cardStyle = {background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",overflow:"hidden",marginBottom:20};
+  const thStyle = {padding:"10px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"};
+  const tdStyle = {padding:"12px 16px",fontSize:13};
 
   if (loading) return <div style={{minHeight:"100vh",background:"#0F0F14",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontFamily:"sans-serif"}}>⚡ Laden…</div>;
   if (!user) return <div style={{minHeight:"100vh",background:"#0F0F14",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontFamily:"sans-serif",textAlign:"center"}}><div><div style={{fontSize:40,marginBottom:16}}>🔒</div><div>Toegang geweigerd</div></div></div>;
 
   return (
-    <div style={{fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#F4F4F6"}}>
+    <div style={{fontFamily:"'Plus Jakarta Sans','DM Sans',sans-serif",minHeight:"100vh",background:"#F1F5F9"}}>
       <div style={{background:"#0F0F14",padding:"20px 32px",display:"flex",alignItems:"center",gap:12}}>
         <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#fff"}}>⚡ WerkMate Admin</div>
         <span style={{marginLeft:"auto",fontSize:12,color:"rgba(255,255,255,.4)"}}>{user.email}</span>
       </div>
-      <div style={{maxWidth:1000,margin:"0 auto",padding:"28px 24px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:28}}>
+      <div style={{maxWidth:1060,margin:"0 auto",padding:"28px 24px"}}>
+        {/* Stats */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:24}}>
           {[{label:"Totaal gebruikers",val:stats?.total||0,color:"#6366F1"},{label:"Actieve abonnementen",val:stats?.active||0,color:"#10B981"},{label:"Nieuw deze week",val:stats?.newThisWeek||0,color:"#F59E0B"}].map(s=>(
-            <div key={s.label} style={{background:"#fff",borderRadius:13,border:"1px solid #EAECF0",padding:"18px 20px"}}>
+            <div key={s.label} style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",padding:"18px 20px"}}>
               <div style={{fontSize:10,fontWeight:700,letterSpacing:".7px",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>{s.label}</div>
               <div style={{fontFamily:"'Syne',sans-serif",fontSize:32,fontWeight:800,color:s.color}}>{s.val}</div>
             </div>
           ))}
         </div>
-        <div style={{background:"#fff",borderRadius:13,border:"1px solid #EAECF0",overflow:"hidden"}}>
-          <div style={{padding:"14px 20px",borderBottom:"1px solid #F0F0F0",fontWeight:700,fontSize:14}}>Alle gebruikers</div>
+
+        {/* Gratis toegang whitelist */}
+        <div style={cardStyle}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid #F0F3F8",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",gap:8}}>
+            🎁 Gratis toegang verlenen
+          </div>
+          <div style={{padding:"18px 20px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 100px 1fr auto",gap:10,alignItems:"flex-end",marginBottom:12}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#64748B",marginBottom:4,textTransform:"uppercase",letterSpacing:".2px"}}>E-mailadres</div>
+                <input value={wlEmail} onChange={e=>setWlEmail(e.target.value)} placeholder="gebruiker@email.nl" style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"9px 13px",fontSize:13,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#64748B",marginBottom:4,textTransform:"uppercase",letterSpacing:".2px"}}>Maanden</div>
+                <input type="number" min={1} max={24} value={wlMonths} onChange={e=>setWlMonths(e.target.value)} style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"9px 13px",fontSize:13,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#64748B",marginBottom:4,textTransform:"uppercase",letterSpacing:".2px"}}>Notitie (optioneel)</div>
+                <input value={wlNote} onChange={e=>setWlNote(e.target.value)} placeholder="Bijv. Betatester, partner..." style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,padding:"9px 13px",fontSize:13,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+              </div>
+              <button onClick={addWhitelist} disabled={wlSaving||!wlEmail} style={{background:"#0F0F14",color:"#fff",border:"none",borderRadius:10,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                {wlSaving?"Opslaan…":"+ Toevoegen"}
+              </button>
+            </div>
+            {wlMsg&&<div style={{fontSize:13,color:wlMsg.startsWith("✓")?"#15803D":"#B91C1C",background:wlMsg.startsWith("✓")?"#F0FDF4":"#FEF2F2",borderRadius:8,padding:"8px 12px"}}>{wlMsg}</div>}
+            {whitelist.length > 0 && (
+              <table style={{width:"100%",borderCollapse:"collapse",marginTop:16}}>
+                <thead><tr style={{background:"#F8FAFC"}}>
+                  {["E-mail","Geldig t/m","Notitie",""].map(h=><th key={h} style={thStyle}>{h}</th>)}
+                </tr></thead>
+                <tbody>{whitelist.map(w=>{
+                  const expired = new Date(w.expires_at) < new Date();
+                  return <tr key={w.id} style={{borderTop:"1px solid #F0F3F8"}}>
+                    <td style={{...tdStyle,fontWeight:600,color:expired?"#94A3B8":"#0F172A"}}>{w.email}</td>
+                    <td style={{...tdStyle,color:expired?"#EF4444":"#10B981",fontWeight:600}}>{new Date(w.expires_at).toLocaleDateString("nl-NL")}{expired?" (verlopen)":""}</td>
+                    <td style={{...tdStyle,color:"#64748B"}}>{w.note||"—"}</td>
+                    <td style={{...tdStyle}}><button onClick={()=>removeWhitelist(w.id,w.email)} style={{background:"#FEE2E2",color:"#B91C1C",border:"none",borderRadius:7,padding:"4px 10px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Verwijderen</button></td>
+                  </tr>;
+                })}</tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* Alle gebruikers */}
+        <div style={cardStyle}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid #F0F3F8",fontWeight:700,fontSize:14}}>Alle gebruikers ({users.length})</div>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr style={{background:"#FAFAFA"}}>
-                {["Bedrijf","Sector","Stad","Email","Aangemeld"].map(h=><th key={h} style={{padding:"10px 14px",textAlign:"left",fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".4px"}}>{h}</th>)}
+              <thead><tr style={{background:"#F8FAFC"}}>
+                {["Bedrijf","Sector","Stad","Email","Aangemeld"].map(h=><th key={h} style={thStyle}>{h}</th>)}
               </tr></thead>
               <tbody>{users.map(u=>(
-                <tr key={u.id} style={{borderTop:"1px solid #F5F5F5"}}>
-                  <td style={{padding:"12px 14px",fontWeight:700,fontSize:13,color:"#111"}}>{u.bedrijfsnaam||"—"}</td>
-                  <td style={{padding:"12px 14px",fontSize:13,color:"#555"}}>{u.sector||"—"}</td>
-                  <td style={{padding:"12px 14px",fontSize:13,color:"#555"}}>{u.stad||"—"}</td>
-                  <td style={{padding:"12px 14px",fontSize:13,color:"#6366F1"}}>{u.email||"—"}</td>
-                  <td style={{padding:"12px 14px",fontSize:12,color:"#888"}}>{u.created_at?new Date(u.created_at).toLocaleDateString("nl-NL"):"—"}</td>
+                <tr key={u.id} style={{borderTop:"1px solid #F0F3F8"}}>
+                  <td style={{...tdStyle,fontWeight:700,color:"#0F172A"}}>{u.bedrijfsnaam||"—"}</td>
+                  <td style={{...tdStyle,color:"#555"}}>{u.sector||"—"}</td>
+                  <td style={{...tdStyle,color:"#555"}}>{u.stad||"—"}</td>
+                  <td style={{...tdStyle,color:"#6366F1"}}>{u.email||"—"}</td>
+                  <td style={{...tdStyle,color:"#888",fontSize:12}}>{u.created_at?new Date(u.created_at).toLocaleDateString("nl-NL"):"—"}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -5393,29 +5497,45 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState("");
   const [kmLoading, setKmLoading] = useState(false);
+  const [kmErr, setKmErr] = useState("");
 
   const kmRate = Number(bedrijf?.km_vergoeding ?? 0.23);
 
   const calcKm = async (vertrek, bestemming) => {
     if (!vertrek.trim() || !bestemming.trim()) return;
     setKmLoading(true);
+    setKmErr("");
     try {
       const geocode = async (addr) => {
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=nl,be,de`, {headers:{"User-Agent":"WerkMate/1.0"}});
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=nl,be,de`, {headers:{"User-Agent":"WerkMate/1.0 (mauritsverweij2010@gmail.com)"}});
         const d = await r.json();
         return d.length ? {lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon)} : null;
       };
-      const [from, to] = await Promise.all([geocode(vertrek), geocode(bestemming)]);
-      if (!from || !to) { setKmLoading(false); return; }
+      const from = await geocode(vertrek);
+      if (!from) { setKmLoading(false); setKmErr("Vertrekpunt niet gevonden"); return; }
+      const to = await geocode(bestemming);
+      if (!to) { setKmLoading(false); setKmErr("Bestemming niet gevonden"); return; }
       const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`);
       const d = await r.json();
       if (d.code === "Ok" && d.routes?.length) {
         const km = Math.round(d.routes[0].distance / 100) / 10;
         setNieuw(prev => ({...prev, km: km.toString()}));
+      } else {
+        setKmErr("Route niet berekend, vul km handmatig in");
       }
-    } catch(e) { console.warn("km calc:", e); }
+    } catch(e) { setKmErr("Berekening mislukt, vul km handmatig in"); }
     setKmLoading(false);
   };
+
+  useEffect(() => {
+    if (!showAdd) return;
+    const timer = setTimeout(() => {
+      if (nieuw.vertrek.trim() && nieuw.bestemming.trim()) {
+        calcKm(nieuw.vertrek, nieuw.bestemming);
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [nieuw.vertrek, nieuw.bestemming, showAdd]);
 
   const filtered = ritten.filter(r => {
     if (filterDoel !== "Alle" && r.doel !== filterDoel) return false;
@@ -5520,9 +5640,10 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
     {showAdd && <div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Rit toevoegen</div></div><button className="mc" onClick={()=>{setShowAdd(false);setSaveErr("");}}>✕</button></div>
       <div className="mb">
         <div className="ig"><label className="ilbl">Datum</label><input className="inp" type="date" value={nieuw.datum} onChange={e=>setNieuw({...nieuw,datum:e.target.value})}/></div>
-        <div className="ig"><label className="ilbl">Vertrekpunt</label><input className="inp" value={nieuw.vertrek} onChange={e=>setNieuw({...nieuw,vertrek:e.target.value})} onBlur={e=>nieuw.bestemming&&calcKm(e.target.value,nieuw.bestemming)} placeholder="Straat 1, Amsterdam"/></div>
-        <div className="ig"><label className="ilbl">Bestemming</label><input className="inp" value={nieuw.bestemming} onChange={e=>setNieuw({...nieuw,bestemming:e.target.value})} onBlur={e=>nieuw.vertrek&&calcKm(nieuw.vertrek,e.target.value)} placeholder="Straat 2, Rotterdam"/></div>
-        <div className="ig"><label className="ilbl">Afstand (km){kmLoading&&<span style={{marginLeft:6,fontSize:11,color:"#6366F1",fontWeight:600}}>Berekenen…</span>}</label><input className="inp" type="number" value={nieuw.km} onChange={e=>setNieuw({...nieuw,km:e.target.value})} placeholder="Wordt automatisch berekend"/></div>
+        <div className="ig"><label className="ilbl">Vertrekpunt</label><input className="inp" value={nieuw.vertrek} onChange={e=>setNieuw({...nieuw,vertrek:e.target.value})} placeholder="Straat 1, Amsterdam"/></div>
+        <div className="ig"><label className="ilbl">Bestemming</label><input className="inp" value={nieuw.bestemming} onChange={e=>setNieuw({...nieuw,bestemming:e.target.value})} placeholder="Straat 2, Rotterdam"/></div>
+        <div className="ig"><label className="ilbl">Afstand (km){kmLoading&&<span style={{marginLeft:6,fontSize:11,color:"#6366F1",fontWeight:600}}>Berekenen…</span>}</label><input className="inp" type="number" value={nieuw.km} onChange={e=>{setNieuw({...nieuw,km:e.target.value});setKmErr("");}} placeholder="Wordt automatisch berekend"/>
+        {kmErr&&<div style={{marginTop:4,fontSize:12,color:"#B45309"}}>{kmErr}</div>}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div className="ig">
             <label className="ilbl">Doel</label>
@@ -5539,7 +5660,7 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
         {nieuw.km && nieuw.doel==="zakelijk" && <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:9,padding:"10px 13px",fontSize:13,color:"#15803D",marginBottom:12}}>Vergoeding: <strong>€{(Number(nieuw.km)*kmRate).toFixed(2)}</strong> ({kmRate.toFixed(2)}/km)</div>}
         {nieuw.km && nieuw.doel==="privé" && <div style={{background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:9,padding:"10px 13px",fontSize:13,color:"#64748B",marginBottom:12}}>Privérit — geen zakelijke vergoeding</div>}
         {saveErr && <div style={{marginBottom:10,padding:"9px 13px",borderRadius:8,fontSize:13,fontWeight:500,background:"#FEE2E2",color:"#B91C1C"}}>{saveErr}</div>}
-        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setSaveErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={saving||!nieuw.vertrek||!nieuw.bestemming||!nieuw.km}>{saving?"Opslaan…":"Opslaan"}</button></div>
+        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setSaveErr("");setKmErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={saving||kmLoading||!nieuw.vertrek||!nieuw.bestemming||!nieuw.km}>{saving?"Opslaan…":kmLoading?"Berekenen…":"Opslaan"}</button></div>
       </div>
     </div></div>}
   </div>);
