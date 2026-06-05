@@ -508,7 +508,7 @@ body{background:#0F0F14}
 .sl{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#94A3B8;margin-bottom:6px}
 .sv{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#0F0F14}
 .ss{font-size:11px;color:#94A3B8;margin-top:2px}
-.tw{overflow-x:auto}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse}
 thead tr{background:#FAFAFA;border-bottom:1px solid #F0F0F0}
 th{padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#94A3B8}
@@ -547,7 +547,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .off-dienst{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}
 .off-omschr{font-size:12px;opacity:.85;line-height:1.5}
 .off-tbl{border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;margin-bottom:12px}
-.off-tbl-grid{display:grid;grid-template-columns:3fr 68px 86px 92px 68px 76px 36px;align-items:center;gap:0}
+.off-tbl-grid{display:grid;grid-template-columns:1fr 60px 72px 84px 58px 68px 36px;align-items:center;gap:0}
 .off-tbl-hdr{background:#F8FAFC;border-bottom:1px solid #E5E7EB}
 .off-tbl-hdr .off-cell{padding:9px 10px;color:#475569;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .off-tbl-row{border-bottom:1px solid #F0F0F0}
@@ -603,6 +603,8 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
 .onboard-card{border:2px solid #E5E7EB;border-radius:13px;padding:18px;cursor:pointer;transition:all .14s;text-align:center}
 .onboard-card:hover{border-color:#6366F1;background:#EEF2FF}
 .onboard-card.sel{border-color:#6366F1;background:#EEF2FF}
+.sg-3{display:grid;gap:12px;margin-bottom:20px;grid-template-columns:repeat(3,1fr)}
+.btw-row-mob{display:none}
 .leeg{text-align:center;padding:48px 24px;color:#94A3B8}
 .leeg-icon{font-size:36px;margin-bottom:12px}
 .leeg-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#555;margin-bottom:6px}
@@ -714,6 +716,18 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.55}
   .sv{font-size:20px}
   .dash-banner{padding:18px 20px;margin-bottom:14px}
   .db-name{font-size:18px}
+  .modal-act{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  .tab-scroll{overflow-x:auto;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch;padding-bottom:2px;scrollbar-width:none}
+  .tab-scroll::-webkit-scrollbar{display:none}
+  .sg-3{grid-template-columns:1fr 1fr!important}
+  .ph-wrap{flex-wrap:wrap;gap:10px}
+  .btw-hdr-cols{display:none}
+  .btw-row-desktop{display:none}
+  .btw-row-mob{display:block}
+  .pl-row{flex-wrap:wrap;gap:8px 6px}
+  .pl-cat{display:none}
+  .pl-inp{font-size:16px;min-height:40px}
+  .off-tbl-act{flex-wrap:wrap;gap:8px}
 }
 `;
 
@@ -811,14 +825,29 @@ const formatMoney = (value) => {
 
 const parseOfferRules = (offer) => {
   if (!offer) return [];
-  if (Array.isArray(offer.regels)) return offer.regels;
+  if (Array.isArray(offer.regels) && offer.regels.length > 0) return offer.regels;
   if (typeof offer.regels === "string") {
-    try { return JSON.parse(offer.regels); } catch { }
+    try {
+      const parsed = JSON.parse(offer.regels);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch { }
   }
-  if (offer.regels && typeof offer.regels === "object") return [offer.regels];
-  const prijs = parseFloat((offer.bedrag||"0").toString().replace(/[€\s]/g, "").replace(/,/g, "."));
-  return [{ omschrijving: offer.dienst || "Offerte", aantal: 1, eenheid: "", prijs: isNaN(prijs) ? 0 : prijs }];
+  if (offer.regels && typeof offer.regels === "object" && !Array.isArray(offer.regels)) return [offer.regels];
+  // Fallback: use subtotaal (ex-BTW). bedrag is inc-BTW and must NOT be used directly.
+  const exBtw = offer.subtotaal != null && Number(offer.subtotaal) > 0
+    ? Number(offer.subtotaal)
+    : parseFloat((offer.bedrag||"0").toString().replace(/[^\d,.]/g,"").replace(/,/g,".")) / 1.21;
+  return [{ omschrijving: offer.dienst || "Offerte", aantal: 1, eenheid: "stuk", prijs: isNaN(exBtw) ? 0 : parseFloat(exBtw.toFixed(2)), btw_pct: 21 }];
 };
+
+const companyEmailFields = bedrijf => ({
+  company_name: bedrijf?.bedrijfsnaam || "",
+  reply_to: bedrijf?.email || undefined,
+  company_phone: bedrijf?.telefoon || undefined,
+  company_email: bedrijf?.email || undefined,
+  company_iban: bedrijf?.iban || undefined,
+  company_website: bedrijf?.website || undefined,
+});
 
 const createOfferPdfDocument = (offer, bedrijf) => {
   const company = {
@@ -826,6 +855,9 @@ const createOfferPdfDocument = (offer, bedrijf) => {
     telefoon: bedrijf?.telefoon || "",
     email: bedrijf?.email || "",
     adres: bedrijf?.adres || "",
+    iban: bedrijf?.iban || "",
+    kvk_nummer: bedrijf?.kvk_nummer || "",
+    btw_nummer: bedrijf?.btw_nummer || "",
   };
   const regels = parseOfferRules(offer);
   const subtotal = offer.subtotaal != null ? Number(offer.subtotaal) : regels.reduce((sum, r) => sum + ((Number(r.aantal) || 0) * (Number(r.prijs) || 0)), 0);
@@ -891,11 +923,20 @@ const createOfferPdfDocument = (offer, bedrijf) => {
     doc.text(`BTW 9%:`, 140, sy);
     doc.text(`€ ${formatMoney(btw9amt)}`, 190, sy, { align: "right" }); sy += 8;
   }
-  doc.text(`BTW 21%:`, 140, sy);
-  doc.text(`€ ${formatMoney(btw21amt > 0 ? btw21amt : btw)}`, 190, sy, { align: "right" }); sy += 10;
+  if (btw21amt > 0) {
+    doc.text(`BTW 21%:`, 140, sy);
+    doc.text(`€ ${formatMoney(btw21amt)}`, 190, sy, { align: "right" }); sy += 8;
+  }
+  if (btw9amt === 0 && btw21amt === 0 && btw > 0) {
+    doc.text(`BTW:`, 140, sy);
+    doc.text(`€ ${formatMoney(btw)}`, 190, sy, { align: "right" }); sy += 8;
+  }
+  sy += 2;
   doc.setFontSize(13);
   doc.text(`Totaal:`, 140, sy);
   doc.text(`€ ${formatMoney(total)}`, 190, sy, { align: "right" });
+  const offRateNote = btwRateLabel(regels);
+  if (offRateNote) { sy += 7; doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(130, 130, 130); doc.text(offRateNote, 190, sy, { align: "right" }); }
 
   let notesHeight = 0;
   if (offer.opmerkingen) {
@@ -911,10 +952,22 @@ const createOfferPdfDocument = (offer, bedrijf) => {
   const footerY = sy + 16 + notesHeight;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("Contact", 20, footerY);
-  doc.text(`Telefoon: ${company.telefoon}`, 20, footerY + 6);
-  doc.text(`Email: ${company.email}`, 20, footerY + 12);
-  doc.text(`Adres: ${company.adres}`, 20, footerY + 18);
+  doc.setTextColor(80, 80, 80);
+  let fy = footerY;
+  doc.setFont("helvetica", "bold");
+  doc.text("Contact", 20, fy);
+  doc.setFont("helvetica", "normal");
+  if (company.telefoon) { fy += 6; doc.text(`Telefoon: ${company.telefoon}`, 20, fy); }
+  if (company.email)    { fy += 6; doc.text(`Email: ${company.email}`, 20, fy); }
+  if (company.adres)    { fy += 6; doc.text(`Adres: ${company.adres}`, 20, fy); }
+  if (company.kvk_nummer) { fy += 6; doc.text(`KVK: ${company.kvk_nummer}`, 20, fy); }
+  if (company.btw_nummer) { fy += 6; doc.text(`BTW-nr: ${company.btw_nummer}`, 20, fy); }
+  if (company.iban) {
+    doc.setFont("helvetica", "bold");
+    doc.text(`IBAN: ${company.iban}`, 110, footerY + 6);
+    doc.setFont("helvetica", "normal");
+  }
+  doc.setTextColor(0, 0, 0);
 
   return doc;
 };
@@ -923,6 +976,15 @@ const createOfferPdfBase64 = (offer, bedrijf) => {
   const dataUri = createOfferPdfDocument(offer, bedrijf).output("datauristring");
   const idx = dataUri.indexOf(",");
   return idx >= 0 ? dataUri.slice(idx + 1) : dataUri;
+};
+
+const btwRateLabel = (regels = []) => {
+  const has9  = regels.some(r => Number(r.btw_pct ?? 21) === 9  && (Number(r.aantal)||0)*(Number(r.prijs)||0) > 0);
+  const has21 = regels.some(r => Number(r.btw_pct ?? 21) === 21 && (Number(r.aantal)||0)*(Number(r.prijs)||0) > 0);
+  if (has9 && has21) return "Inclusief BTW (9% en 21%)";
+  if (has9)  return "Inclusief 9% BTW";
+  if (has21) return "Inclusief 21% BTW";
+  return "";
 };
 
 const createFactuurPdf = (factuur, bedrijf) => {
@@ -1000,12 +1062,20 @@ const createFactuurPdf = (factuur, bedrijf) => {
     doc.text("BTW 9%:", pageW / 2 + 5, y);
     doc.text(`€ ${nlFmt(btw9f)}`, pageW - margin - 2, y, { align: "right" }); y += 7;
   }
-  doc.text("BTW 21%:", pageW / 2 + 5, y);
-  doc.text(`€ ${nlFmt(btw21f > 0 ? btw21f : btw9f === 0 ? btwAmt : btw21f)}`, pageW - margin - 2, y, { align: "right" }); y += 4;
+  if (btw21f > 0) {
+    doc.text("BTW 21%:", pageW / 2 + 5, y);
+    doc.text(`€ ${nlFmt(btw21f)}`, pageW - margin - 2, y, { align: "right" }); y += 7;
+  }
+  if (btw9f === 0 && btw21f === 0 && btwAmt > 0) {
+    doc.text("BTW:", pageW / 2 + 5, y);
+    doc.text(`€ ${nlFmt(btwAmt)}`, pageW - margin - 2, y, { align: "right" }); y += 7;
+  }
   doc.setDrawColor(100, 100, 100); doc.line(pageW / 2, y, pageW - margin, y); y += 7;
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(17, 24, 39);
   doc.text("Totaal:", pageW / 2 + 5, y);
   doc.text(`€ ${nlFmt(tot)}`, pageW - margin - 2, y, { align: "right" });
+  const fRateNote = btwRateLabel(regels);
+  if (fRateNote) { y += 6; doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(130, 130, 130); doc.text(fRateNote, pageW - margin - 2, y, { align: "right" }); }
 
   if (company.iban) {
     const ibanY = y + 16;
@@ -1023,9 +1093,13 @@ const createFactuurPdf = (factuur, bedrijf) => {
   const footerY = 270;
   doc.setDrawColor(229, 231, 235); doc.line(margin, footerY - 5, pageW - margin, footerY - 5);
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(120, 120, 120);
-  doc.text(`${company.bedrijfsnaam || ""}  |  ${company.email || ""}  |  ${company.telefoon || ""}`, margin, footerY);
-  if (company.adres) doc.text(company.adres, margin, footerY + 6);
-  doc.text("Gelieve het bedrag over te maken binnen 14 dagen na factuurdatum.", margin, footerY + 12);
+  const footerParts = [company.bedrijfsnaam, company.email, company.telefoon].filter(Boolean).join("  |  ");
+  doc.text(footerParts, margin, footerY);
+  let ffy = footerY + 6;
+  if (company.adres) { doc.text(company.adres, margin, ffy); ffy += 6; }
+  const regNrs = [company.kvk_nummer ? `KVK: ${company.kvk_nummer}` : null, company.btw_nummer ? `BTW-nr: ${company.btw_nummer}` : null].filter(Boolean).join("  |  ");
+  if (regNrs) { doc.text(regNrs, margin, ffy); ffy += 6; }
+  doc.text("Gelieve het bedrag over te maken binnen 14 dagen na factuurdatum.", margin, ffy);
 
   return doc;
 };
@@ -1348,6 +1422,9 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
               onClick={() => setLogoLightbox(true)}
               title="Klik om te vergroten"
             />
+            <div style={{marginTop:8}}>
+              <button type="button" className="btn btn-ghost btn-sm" style={{color:"#EF4444",fontSize:13}} onClick={()=>setProfile({...profile,logo:""})}>✕ Logo verwijderen</button>
+            </div>
           </div>
         )}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -1532,7 +1609,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
       action: "send-offer-email",
       customer_email: email,
       customer_name: name,
-      company_name: bedrijf?.bedrijfsnaam,
+      ...companyEmailFields(bedrijf),
       dienst,
       regels,
       subtotaal,
@@ -1599,7 +1676,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
     onClose();
   };
 
-  return(<div className="overlay"><div className="modal">
+  return(<div className="overlay"><div className="modal modal-lg">
     <div className="mh"><div><div className="mt">✨ Slimme offerte generator</div><div className="ms">Gebruikt jouw prijslijst</div></div><button className="mc" onClick={onClose}>✕</button></div>
     <div className="mb">
       {step===0&&<><div className="ig"><label className="ilbl">Kies klant</label><select className="inp" value={selectedKlantId} onChange={e=>setSelectedKlantId(e.target.value)}>
@@ -1626,7 +1703,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
           <div className="ig"><label className="ilbl">Offerte omschrijving</label><textarea className="inp" value={off.omschrijving} onChange={e=>updateOff({omschrijving:e.target.value})} rows={3} /></div>
         </div>
         <div className="off-tbl">
-          <div className="off-tbl-grid off-tbl-hdr">
+          <div className="off-tbl-grid off-tbl-hdr mob-hide">
             <div className="off-cell">Omschrijving</div>
             <div className="off-cell right">Aantal</div>
             <div className="off-cell center">Eenheid</div>
@@ -1635,15 +1712,32 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
             <div className="off-cell right">Totaal</div>
             <div className="off-cell del"></div>
           </div>
-          {off.regels?.map((r,i)=><div key={i} className="off-tbl-grid off-tbl-row" style={{alignItems:"flex-start"}}>
-            <div className="off-cell" style={{paddingTop:8}}><textarea className="off-inp off-inp-ta" rows={1} value={r.omschrijving} ref={el=>{if(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}}} onChange={e=>{e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px";updateRule(i,"omschrijving",e.target.value);}}/></div>
-            <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.1" value={r.aantal} onChange={e=>updateRule(i,"aantal",e.target.value)} /></div>
-            <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.eenheid} onChange={e=>updateRule(i,"eenheid",e.target.value)}>{["uur","stuk","st","m²","m","rit","dag","persoon","km"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
-            <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.01" value={r.prijs} onChange={e=>updateRule(i,"prijs",e.target.value)} /></div>
-            <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.btw_pct??21} onChange={e=>updateRule(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
-            <div className="off-cell off-cell-totaal" style={{paddingTop:12}}>€{((Number(r.aantal)||0)*(Number(r.prijs)||0)).toFixed(2)}</div>
-            <div className="off-cell del" style={{paddingTop:8}}><button className="btn btn-danger btn-sm" onClick={()=>removeRule(i)}>✕</button></div>
-          </div>)}
+          {off.regels?.map((r,i)=><Fragment key={i}>
+            <div className="off-tbl-grid off-tbl-row mob-hide" style={{alignItems:"flex-start"}}>
+              <div className="off-cell" style={{paddingTop:8}}><textarea className="off-inp off-inp-ta" rows={1} value={r.omschrijving} ref={el=>{if(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}}} onChange={e=>{e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px";updateRule(i,"omschrijving",e.target.value);}}/></div>
+              <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.1" value={r.aantal} onChange={e=>updateRule(i,"aantal",e.target.value)} /></div>
+              <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.eenheid} onChange={e=>updateRule(i,"eenheid",e.target.value)}>{["uur","stuk","st","m²","m","rit","dag","persoon","km"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+              <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.01" value={r.prijs} onChange={e=>updateRule(i,"prijs",e.target.value)} /></div>
+              <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.btw_pct??21} onChange={e=>updateRule(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
+              <div className="off-cell off-cell-totaal" style={{paddingTop:12}}>€{((Number(r.aantal)||0)*(Number(r.prijs)||0)).toFixed(2)}</div>
+              <div className="off-cell del" style={{paddingTop:8}}><button className="btn btn-danger btn-sm" onClick={()=>removeRule(i)}>✕</button></div>
+            </div>
+            <div className="btw-row-mob" style={{border:"1.5px solid #E5E7EB",borderRadius:10,padding:"12px",margin:"0 0 8px"}}>
+              <div className="ig" style={{marginBottom:8}}><label className="ilbl">Omschrijving</label><textarea className="off-inp off-inp-ta" rows={2} value={r.omschrijving} onChange={e=>updateRule(i,"omschrijving",e.target.value)}/></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <div className="ig" style={{marginBottom:0}}><label className="ilbl">Aantal</label><input className="off-inp" type="number" value={r.aantal} onChange={e=>updateRule(i,"aantal",e.target.value)} style={{textAlign:"center"}}/></div>
+                <div className="ig" style={{marginBottom:0}}><label className="ilbl">Eenheid</label><select className="off-inp" value={r.eenheid} onChange={e=>updateRule(i,"eenheid",e.target.value)}>{["uur","stuk","st","m²","m","rit","dag","persoon","km"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div className="ig" style={{marginBottom:0}}><label className="ilbl">Prijs (€)</label><input className="off-inp" type="number" value={r.prijs} onChange={e=>updateRule(i,"prijs",e.target.value)} style={{textAlign:"right"}}/></div>
+                <div className="ig" style={{marginBottom:0}}><label className="ilbl">BTW</label><select className="off-inp center" value={r.btw_pct??21} onChange={e=>updateRule(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
+                <span style={{fontSize:13,fontWeight:700}}>= €{((Number(r.aantal)||0)*(Number(r.prijs)||0)).toFixed(2)}</span>
+                <button className="btn btn-danger btn-sm" onClick={()=>removeRule(i)}>Verwijderen</button>
+              </div>
+            </div>
+          </Fragment>)}
         </div>
         <button className="btn btn-outline" style={{marginBottom:12}} onClick={addRule}>+ Regel toevoegen</button>
         <div className="tot-box">
@@ -1661,6 +1755,7 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
 
 // ── Dashboard ─────────────────────────────────────────────────
 function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten, certificaten = [], userId, userEmail }) {
+  const mob = useMobile();
   const hr=new Date().getHours();
   const gr=hr<12?"Goedemorgen":hr<18?"Goedemiddag":"Goedenavond";
   const openOffertes = offertes.filter(o=>o.status==="In afwachting").length;
@@ -1740,7 +1835,7 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten,
         {label:"Klanten",val:(klanten||[]).length.toString(),sub:"zie Klanten",color:"#10B981"},
       ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color}}>{s.val}</div><div className="ss">{s.sub}</div></div>)}
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:mob?14:20}}>
       <div>
         <div className="sec-ttl">Planning vandaag</div>
         {planning.filter(p=>p.datum===todayStr).length===0
@@ -1780,6 +1875,29 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
   const mob = useMobile();
   const [showAI,setShowAI]=useState(false);
   const [mobDetail,setMobDetail]=useState(null);
+  const [editOff,setEditOff]=useState(null);
+  const [editSaving,setEditSaving]=useState(false);
+  const [editSaved,setEditSaved]=useState(false);
+  const [editSavedData,setEditSavedData]=useState(null);
+  const [editResending,setEditResending]=useState(false);
+  const [editResent,setEditResent]=useState(false);
+
+  const closeEdit = () => { setEditOff(null); setEditSaved(false); setEditSavedData(null); setEditResending(false); setEditResent(false); };
+  const openEdit = o => { closeEdit(); setEditOff({id:o.id,klant:o.klant||"",dienst:o.dienst||"",opmerkingen:o.opmerkingen||"",portal_token:o.portal_token||null,regels:parseOfferRules(o).map(r=>({...r}))}); };
+  const setEditRegel = (i,f,v) => setEditOff(prev=>({...prev,regels:prev.regels.map((r,idx)=>idx===i?{...r,[f]:v}:r)}));
+  const saveEdit = async () => {
+    if(!editOff)return;
+    setEditSaving(true);
+    const regels=editOff.regels;
+    const subtotaal=regels.reduce((s,r)=>s+(Number(r.aantal)||0)*(Number(r.prijs)||0),0);
+    const btw=parseFloat(regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===0?s:s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*p/100;},0).toFixed(2));
+    const totaal=parseFloat((subtotaal+btw).toFixed(2));
+    await supabase.from("offertes").update({klant:editOff.klant,dienst:editOff.dienst,opmerkingen:editOff.opmerkingen,regels,subtotaal,btw,totaal,bedrag:`€ ${totaal.toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`}).eq("id",editOff.id);
+    setEditSaving(false);
+    setEditSavedData({...editOff,regels,subtotaal,btw,totaal});
+    setEditSaved(true);
+    refresh();
+  };
   const totaal = offertes.reduce((s,o)=>{
     const bedrag = (o.bedrag||"0").replace(/[€\s]/g, "");
     const clean = bedrag.includes(",") ? bedrag.replace(/\./g, "").replace(",", ".") : bedrag;
@@ -1798,13 +1916,18 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
 
   const parseOfferRules = (offer) => {
     if (!offer) return [];
-    if (Array.isArray(offer.regels)) return offer.regels;
+    if (Array.isArray(offer.regels) && offer.regels.length > 0) return offer.regels;
     if (typeof offer.regels === "string") {
-      try { return JSON.parse(offer.regels); } catch { }
+      try {
+        const parsed = JSON.parse(offer.regels);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch { }
     }
-    if (offer.regels && typeof offer.regels === "object") return [offer.regels];
-    const prijs = parseFloat((offer.bedrag||"0").replace(/[€\s]/g, "").replace(/,/g, "."));
-    return [{ omschrijving: offer.dienst || "Offerte", aantal: 1, eenheid: "", prijs: isNaN(prijs) ? 0 : prijs }];
+    if (offer.regels && typeof offer.regels === "object" && !Array.isArray(offer.regels)) return [offer.regels];
+    const exBtw = offer.subtotaal != null && Number(offer.subtotaal) > 0
+      ? Number(offer.subtotaal)
+      : parseFloat((offer.bedrag||"0").replace(/[^\d,.]/g,"").replace(/,/g,".")) / 1.21;
+    return [{ omschrijving: offer.dienst || "Offerte", aantal: 1, eenheid: "stuk", prijs: isNaN(exBtw) ? 0 : parseFloat(exBtw.toFixed(2)), btw_pct: 21 }];
   };
 
   const exportOfferPdf = (offer) => {
@@ -1829,7 +1952,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
       action: "send-offer-email",
       customer_email: email,
       customer_name: o.klant,
-      company_name: bedrijf?.bedrijfsnaam,
+      ...companyEmailFields(bedrijf),
       dienst: o.dienst,
       regels,
       subtotaal: o.subtotaal || 0,
@@ -1838,7 +1961,6 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
       portal_url,
       ...(tpl?.subject ? { custom_subject: fillVars(tpl.subject, vars) } : {}),
       ...(tpl?.body    ? { custom_body:    fillVars(tpl.body,    vars) } : {}),
-      ...(bedrijf?.email ? { reply_to: bedrijf.email } : {}),
       attachments: [{
         type: "application/pdf",
         filename: `offerte-${o.klant.replace(/\s+/g,"_")}.pdf`,
@@ -1861,6 +1983,71 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
 
   return(<div>
     {showAI&&<AIOfferte onClose={()=>setShowAI(false)} prijslijst={prijslijst} userId={userId} klanten={klanten} onSaved={refresh} bedrijf={bedrijf} emailTemplates={emailTemplates}/>}
+
+    {editOff&&<div className="overlay"><div className="modal modal-lg">
+      <div className="mh"><div><div className="mt">Offerte bewerken</div></div><button className="mc" onClick={closeEdit}>✕</button></div>
+      <div className="mb">
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+          <div className="ig"><label className="ilbl">Klant</label>
+            <select className="inp" value={editOff.klant} onChange={e=>setEditOff({...editOff,klant:e.target.value})}>
+              <option value="">— Kies klant —</option>
+              {(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}
+              {editOff.klant&&!(klanten||[]).find(k=>k.naam===editOff.klant)&&<option value={editOff.klant}>{editOff.klant}</option>}
+            </select>
+          </div>
+          <div className="ig"><label className="ilbl">Dienst omschrijving</label>
+            <input className="inp" value={editOff.dienst} onChange={e=>setEditOff({...editOff,dienst:e.target.value})}/>
+          </div>
+        </div>
+        <div className="off-tbl">
+          <div className="off-tbl-grid off-tbl-hdr mob-hide">
+            <div className="off-cell">Omschrijving</div><div className="off-cell right">Aantal</div><div className="off-cell center">Eenheid</div><div className="off-cell right">Prijs</div><div className="off-cell center">BTW</div><div className="off-cell right">Totaal</div><div className="off-cell del"></div>
+          </div>
+          {editOff.regels.map((r,i)=>(
+            <div key={i} className="off-tbl-grid off-tbl-row" style={{alignItems:"flex-start"}}>
+              <div className="off-cell" style={{paddingTop:8}}><textarea className="off-inp off-inp-ta" rows={1} value={r.omschrijving} ref={el=>{if(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}}} onChange={e=>{e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px";setEditRegel(i,"omschrijving",e.target.value);}}/></div>
+              <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.1" value={r.aantal} onChange={e=>setEditRegel(i,"aantal",e.target.value)}/></div>
+              <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.eenheid} onChange={e=>setEditRegel(i,"eenheid",e.target.value)}>{["uur","stuk","st","m²","m","rit","dag","persoon","km"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+              <div className="off-cell" style={{paddingTop:8}}><input className="off-inp right" type="number" min="0" step="0.01" value={r.prijs} onChange={e=>setEditRegel(i,"prijs",e.target.value)}/></div>
+              <div className="off-cell center" style={{paddingTop:8}}><select className="off-inp center" value={r.btw_pct??21} onChange={e=>setEditRegel(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
+              <div className="off-cell off-cell-totaal" style={{paddingTop:12}}>€{((Number(r.aantal)||0)*(Number(r.prijs)||0)).toFixed(2)}</div>
+              <div className="off-cell del" style={{paddingTop:8}}><button className="btn btn-danger btn-sm" onClick={()=>setEditOff(prev=>({...prev,regels:prev.regels.filter((_,ii)=>ii!==i)}))}>✕</button></div>
+            </div>
+          ))}
+        </div>
+        <button className="btn btn-ghost btn-sm" style={{marginTop:8,marginBottom:16}} onClick={()=>setEditOff(prev=>({...prev,regels:[...prev.regels,{omschrijving:"",aantal:1,eenheid:"stuk",prijs:0,btw_pct:21}]}))}>+ Regel</button>
+        {(()=>{const sub=editOff.regels.reduce((s,r)=>s+(Number(r.aantal)||0)*(Number(r.prijs)||0),0);const btw=editOff.regels.reduce((s,r)=>{const p=Number(r.btw_pct??21);return p===0?s:s+(Number(r.aantal)||0)*(Number(r.prijs)||0)*p/100;},0);return<div style={{background:"#F8FAFC",border:"1px solid #EAECF0",borderRadius:10,padding:"12px 16px",marginBottom:12}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>Subtotaal</span><span>€ {sub.toFixed(2)}</span></div><div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:6}}><span>BTW</span><span>€ {btw.toFixed(2)}</span></div><div style={{display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:800,color:"#111"}}><span>Totaal</span><span>€ {(sub+btw).toFixed(2)}</span></div></div>;})()}
+        <div className="ig"><label className="ilbl">Opmerkingen</label><textarea className="inp" rows={2} value={editOff.opmerkingen} onChange={e=>setEditOff({...editOff,opmerkingen:e.target.value})} placeholder="Bijv. 2 jaar garantie op installatie."/></div>
+        {editSaved ? (
+          <div>
+            <div style={{background:"#DCFCE7",border:"1px solid #86EFAC",borderRadius:10,padding:"14px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:18}}>✓</span>
+              <div>
+                <div style={{fontWeight:700,color:"#15803D",fontSize:14}}>Offerte opgeslagen</div>
+                <div style={{color:"#166534",fontSize:12.5,marginTop:2}}>{editSavedData?.klant} · {editSavedData?.dienst} · €{editSavedData?.totaal?.toLocaleString("nl-NL",{minimumFractionDigits:2})}</div>
+              </div>
+            </div>
+            {editResent
+              ? <div style={{textAlign:"center",padding:"10px 0 4px",color:"#15803D",fontWeight:600,fontSize:14}}>✓ Verstuurd!</div>
+              : <div className="modal-act">
+                  <button className="btn btn-ghost" onClick={closeEdit}>Sluiten</button>
+                  <button className="btn btn-dark btn-full" disabled={editResending} onClick={async()=>{
+                    setEditResending(true);
+                    try {
+                      const r = await resendOfferEmail(editSavedData);
+                      if (r !== null) { setEditResent(true); setTimeout(closeEdit, 2000); }
+                    } catch(e) { alert("Versturen mislukt: "+e.message); }
+                    setEditResending(false);
+                  }}>{editResending?"Versturen…":"↺ Opnieuw versturen naar klant"}</button>
+                </div>
+            }
+          </div>
+        ) : (
+          <div className="modal-act"><button className="btn btn-ghost" onClick={closeEdit}>Annuleren</button><button className="btn btn-dark btn-full" onClick={saveEdit} disabled={editSaving}>{editSaving?"Opslaan…":"Opslaan"}</button></div>
+        )}
+      </div>
+    </div></div>}
+
     {mob && mobDetail && (
       <MobDetailScreen title={mobDetail.klant} onBack={()=>setMobDetail(null)}>
         <div className="mob-det-section">
@@ -1870,6 +2057,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
           <div className="mob-det-row"><span className="mob-det-lbl">Datum</span><span className="mob-det-val">{mobDetail.datum||"—"}</span></div>
           <div className="mob-det-row"><span className="mob-det-lbl">Klant</span><span className="mob-det-val">{mobDetail.klant}</span></div>
         </div>
+        <button className="mob-det-action-btn" onClick={()=>{openEdit(mobDetail);setMobDetail(null);}}><span className="mob-det-action-ic">✎</span>Bewerken</button>
         <button className="mob-det-action-btn" onClick={()=>exportOfferPdf(mobDetail)}><span className="mob-det-action-ic">📄</span>PDF downloaden</button>
         <button className="mob-det-action-btn" onClick={async()=>{
           try {
@@ -1915,19 +2103,23 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
           ))}</div>
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
-              <td style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button>
-              <button className="btn btn-ghost btn-sm" onClick={async()=>{
-                try {
-                  const email = await resendOfferEmail(o);
-                  if (!email) return;
-                  await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
-                  alert("Verstuurd naar "+email);
-                } catch(err) { alert("Versturen mislukt: "+err.message); }
-              }}>Verstuur mail</button>
-              {o.portal_token&&<button className="btn btn-ghost btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}>WhatsApp</button>}
-              <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
-                {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
-              </select><button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}>✕</button></td>
+              <td style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                <button className="btn btn-outline btn-sm" style={{fontWeight:600}} onClick={()=>openEdit(o)}>✎ Bewerken</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button>
+                <button className="btn btn-ghost btn-sm" onClick={async()=>{
+                  try {
+                    const email = await resendOfferEmail(o);
+                    if (!email) return;
+                    await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
+                    alert("Verstuurd naar "+email);
+                  } catch(err) { alert("Versturen mislukt: "+err.message); }
+                }}>Mail</button>
+                {o.portal_token&&<button className="btn btn-ghost btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}>WA</button>}
+                <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
+                  {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
+                </select>
+                <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}>✕</button>
+              </td>
             </tr>)}</tbody>
           </table></div></div>
     }
@@ -1956,9 +2148,10 @@ function detectPrijslijstColumns(headers) {
   };
 }
 
-function PrijslijstTab({ initialItems, onSaveItems }) {
+function PrijslijstTab({ initialItems, onSaveItems, userId }) {
   const [items,setItems]=useState(initialItems || []);
   const [saved,setSaved]=useState(false);
+  const [saving,setSaving]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
   const [nieuw,setNieuw]=useState({dienst:"",eenheid:"uur",prijs:"",categorie:"Arbeid"});
   const [importError,setImportError]=useState(null);
@@ -1969,11 +2162,25 @@ function PrijslijstTab({ initialItems, onSaveItems }) {
   }, [initialItems]);
   const upd=(id,f,v)=>setItems(p=>p.map(x=>x.id===id?{...x,[f]:v}:x));
   const del=(id)=>setItems(p=>p.filter(x=>x.id!==id));
-  const save=()=>{
-    onSaveItems?.(items);
+
+  const saveToDb = async (list) => {
+    if (!userId) return;
+    setSaving(true);
+    const { error: delErr } = await supabase.from("prijslijst_items").delete().eq("user_id", userId);
+    if (delErr) { setSaving(false); alert("Opslaan mislukt: " + delErr.message); return; }
+    if (list.length > 0) {
+      const { error: insErr } = await supabase.from("prijslijst_items").insert(
+        list.map(({dienst,eenheid,prijs,categorie}) => ({user_id:userId,dienst,eenheid,prijs:parseFloat(prijs)||0,categorie:categorie||"Overig"}))
+      );
+      if (insErr) { setSaving(false); alert("Opslaan mislukt: " + insErr.message); return; }
+    }
+    onSaveItems?.(list);
+    setSaving(false);
     setSaved(true);
     setTimeout(()=>setSaved(false),2000);
   };
+
+  const save=()=>saveToDb(items);
   const add=()=>{if(!nieuw.dienst||!nieuw.prijs)return;setItems(p=>[...p,{...nieuw,id:Date.now(),prijs:parseFloat(nieuw.prijs)}]);setNieuw({dienst:"",eenheid:"uur",prijs:"",categorie:"Arbeid"});setShowAdd(false);};
   const cats=[...new Set(items.map(i=>i.categorie))];
 
@@ -2011,12 +2218,14 @@ function PrijslijstTab({ initialItems, onSaveItems }) {
       };
     }).filter(Boolean);
     if (!imported.length) { setImportError({ type:"norows" }); return; }
-    setItems((current) => [...current, ...imported]);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setItems((current) => {
+      const merged = [...current, ...imported];
+      saveToDb(merged);
+      return merged;
+    });
   };
   return(<div>
-    <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — de slimme generator gebruikt deze als basis</div></div><div style={{display:"flex",gap:8,alignItems:"center"}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}>+ Dienst</button><button className="btn btn-outline" onClick={()=>fileInputRef.current?.click()}>Excel importeren</button><button className="btn btn-dark" onClick={save}>{saved?"✓ Opgeslagen!":"Opslaan"}</button><input ref={fileInputRef} type="file" accept=".xlsx,.csv" style={{display:"none"}} onChange={importFile} /></div></div>
+    <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — de slimme generator gebruikt deze als basis</div></div><div style={{display:"flex",gap:8,alignItems:"center"}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}>+ Dienst</button><button className="btn btn-outline" onClick={()=>fileInputRef.current?.click()}>Excel importeren</button><button className="btn btn-dark" onClick={save} disabled={saving}>{saving?"Opslaan…":saved?"✓ Opgeslagen!":"Opslaan"}</button><input ref={fileInputRef} type="file" accept=".xlsx,.csv" style={{display:"none"}} onChange={importFile} /></div></div>
     <div className="card cp">
       <div style={{background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:9,padding:"10px 13px",marginBottom:18,fontSize:12.5,color:"#4338CA"}}>💡 De slimme offerte generator gebruikt jouw tarieven automatisch als basis.</div>
       {importError&&<div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:9,padding:"14px 16px",marginBottom:18,fontSize:13,color:"#B91C1C",lineHeight:1.6}}>
@@ -2611,12 +2820,11 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
     const payload = {
       action: "send-review-request-email",
       customer_email: clientEmail,
-      company_name: bedrijf?.bedrijfsnaam || "WerkMate",
+      ...companyEmailFields(bedrijf),
       service_description: serviceDescription || "jouw opdracht",
       google_review_url: bedrijf?.google_review_url || null,
       ...(tpl?.subject ? { custom_subject: fillVars(tpl.subject, vars) } : {}),
       ...(tpl?.body    ? { custom_body:    fillVars(tpl.body,    vars) } : {}),
-      ...(bedrijf?.email ? { reply_to: bedrijf.email } : {}),
     };
     const { data: { session: reviewSess } } = await supabase.auth.getSession();
     const reviewToken = reviewSess?.access_token || import.meta.env.VITE_SUPABASE_KEY;
@@ -2791,6 +2999,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   const [btwJaar, setBtwJaar] = useState(new Date().getFullYear());
   const [btwQ, setBtwQ] = useState(Math.floor(new Date().getMonth()/3));
   const [btwStap, setBtwStap] = useState(0);
+  const [btwCopied, setBtwCopied] = useState(null);
   const [winstJaar, setWinstJaar] = useState(new Date().getFullYear());
   const [winstPeriode, setWinstPeriode] = useState("maand");
   const [showCreate, setShowCreate] = useState(false);
@@ -2846,7 +3055,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           const autoRes = await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy", {
             method:"POST",
             headers:{"Content-Type":"application/json","Authorization":`Bearer ${autoToken}`},
-            body:JSON.stringify({action:"send-reminder-email",customer_email:f.klant_email,customer_name:f.klant,factuur_nummer:f.nummer,totaal:f.totaal,company_name:bedrijf?.bedrijfsnaam,...(tplRem?.subject?{custom_subject:fillVars(tplRem.subject,vars)}:{}),...(tplRem?.body?{custom_body:fillVars(tplRem.body,vars)}:{})}),
+            body:JSON.stringify({action:"send-reminder-email",customer_email:f.klant_email,customer_name:f.klant,factuur_nummer:f.nummer,totaal:f.totaal,...companyEmailFields(bedrijf),...(tplRem?.subject?{custom_subject:fillVars(tplRem.subject,vars)}:{}),...(tplRem?.body?{custom_body:fillVars(tplRem.body,vars)}:{})}),
           });
           const autoData = await autoRes.json().catch(()=>null);
           if (!autoRes.ok) {
@@ -2907,7 +3116,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     setImportOfferte("");
     const datum=todayStr(), d=new Date(now); d.setDate(d.getDate()+30);
     const vervaldatum=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    setNieuw({klant:"",klant_email:"",datum,vervaldatum,regels:[{omschrijving:"",aantal:1,eenheid:"stuk",prijs:"",btw_pct:21}],status:"Concept"});
+    setNieuw({klant:"",klant_email:"",datum,vervaldatum,regels:[{omschrijving:"",aantal:1,eenheid:"stuk",prijs:"",btw_pct:21}],status:"Concept",_offerteBtw:null,_offerteTotaal:null});
     setSaveErr(""); setShowCreate(true);
   };
 
@@ -2915,20 +3124,29 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     const o=(offertes||[]).find(x=>String(x.id)===String(offerteId));
     if(!o) return;
     const k=(klanten||[]).find(x=>x.naam===o.klant);
-    const prijs = parseFloat(String(o.bedrag).replace(/[€\s]/g, '')) || 0;
-    const regels=[{omschrijving:o.dienst||"",aantal:1,eenheid:"stuk",prijs}];
-    setNieuw(prev=>({...prev,klant:o.klant||"",klant_email:k?.email||"",regels}));
+    const regels = parseOfferRules(o).map(r=>({...r}));
+    setNieuw(prev=>({
+      ...prev,
+      klant:o.klant||"",
+      klant_email:k?.email||"",
+      regels,
+      _offerteBtw: (o.btw != null && Number(o.btw) > 0) ? Number(o.btw) : null,
+      _offerteTotaal: (o.totaal != null && Number(o.totaal) > 0) ? Number(o.totaal) : null,
+    }));
   };
 
-  const addRegel = () => setNieuw(prev=>({...prev,regels:[...prev.regels,{omschrijving:"",aantal:1,eenheid:"stuk",prijs:"",btw_pct:21}]}));
-  const removeRegel = (i) => setNieuw(prev=>({...prev,regels:prev.regels.filter((_,idx)=>idx!==i)}));
-  const setRegel = (i,field,val) => setNieuw(prev=>({...prev,regels:prev.regels.map((r,idx)=>idx===i?{...r,[field]:val}:r)}));
+  // Clear locked offerte totals when the user edits regels manually
+  const addRegel = () => setNieuw(prev=>({...prev,regels:[...prev.regels,{omschrijving:"",aantal:1,eenheid:"stuk",prijs:"",btw_pct:21}],_offerteBtw:null,_offerteTotaal:null}));
+  const removeRegel = (i) => setNieuw(prev=>({...prev,regels:prev.regels.filter((_,idx)=>idx!==i),_offerteBtw:null,_offerteTotaal:null}));
+  const setRegel = (i,field,val) => setNieuw(prev=>({...prev,regels:prev.regels.map((r,idx)=>idx===i?{...r,[field]:val}:r),_offerteBtw:null,_offerteTotaal:null}));
 
   const saveFactuur = async () => {
     if(!nieuw.klant){setSaveErr("Vul een klant in.");return;}
     if(!nieuw.regels.length){setSaveErr("Voeg minimaal één regel toe.");return;}
     setSaving(true); setSaveErr("");
-    const {btw,totaal}=calcTotals(nieuw.regels);
+    const calc=calcTotals(nieuw.regels);
+    const btw   = nieuw._offerteBtw    != null ? nieuw._offerteBtw    : calc.btw;
+    const totaal = nieuw._offerteTotaal != null ? nieuw._offerteTotaal : calc.totaal;
     const {data:numData,error:numErr}=await supabase.rpc("next_factuur_nummer",{p_user_id:userId});
     if(numErr){setSaveErr("Kon factuurnummer niet genereren: "+numErr.message);setSaving(false);return;}
     const {error}=await supabase.from("facturen").insert({user_id:userId,nummer:numData,klant:nieuw.klant,klant_email:nieuw.klant_email,datum:nieuw.datum,vervaldatum:nieuw.vervaldatum,regels:nieuw.regels,btw,totaal,status:nieuw.status});
@@ -2948,7 +3166,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       const vars={klantnaam:showEmail.klant,bedrijfsnaam:bedrijf?.bedrijfsnaam||"WerkMate",nummer:showEmail.nummer||""};
       const {data:{session:invSess}}=await supabase.auth.getSession();
       const invToken=invSess?.access_token||import.meta.env.VITE_SUPABASE_KEY;
-      const invRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${invToken}`},body:JSON.stringify({action:"send-invoice-email",customer_email:emailAddr,customer_name:showEmail.klant,factuur_nummer:showEmail.nummer,company_name:bedrijf?.bedrijfsnaam,...(tpl?.subject?{custom_subject:fillVars(tpl.subject,vars)}:{}),...(tpl?.body?{custom_body:fillVars(tpl.body,vars)}:{}),attachments:[{filename:`Factuur-${showEmail.nummer||"factuur"}.pdf`,content:pdfB64}]})});
+      const invRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${invToken}`},body:JSON.stringify({action:"send-invoice-email",customer_email:emailAddr,customer_name:showEmail.klant,factuur_nummer:showEmail.nummer,...companyEmailFields(bedrijf),...(tpl?.subject?{custom_subject:fillVars(tpl.subject,vars)}:{}),...(tpl?.body?{custom_body:fillVars(tpl.body,vars)}:{}),attachments:[{filename:`Factuur-${showEmail.nummer||"factuur"}.pdf`,content:pdfB64}]})});
       const invData=await invRes.json().catch(()=>null);
       console.log("[sendInvoiceEmail] result:", invRes.status, invData);
       if(!invRes.ok) throw new Error(invData?.message||invData?.error||`Versturen mislukt (${invRes.status})`);
@@ -2974,7 +3192,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       const vars={klantnaam:showReminder.klant,bedrijfsnaam:bedrijf?.bedrijfsnaam||"WerkMate",nummer:showReminder.nummer||"",bedrag:totF};
       const {data:{session:remSess}}=await supabase.auth.getSession();
       const remToken=remSess?.access_token||import.meta.env.VITE_SUPABASE_KEY;
-      const remRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${remToken}`},body:JSON.stringify({action:"send-reminder-email",customer_email:emailAddr,customer_name:showReminder.klant,factuur_nummer:showReminder.nummer,totaal:getTotal(showReminder),company_name:bedrijf?.bedrijfsnaam,...(tpl?.subject?{custom_subject:fillVars(tpl.subject,vars)}:{}),...(tpl?.body?{custom_body:fillVars(tpl.body,vars)}:{}),attachments:[{filename:`Herinnering-${showReminder.nummer||"factuur"}.pdf`,content:pdfB64}]})});
+      const remRes=await fetch("https://cpfdyrscucicvqzpnisd.supabase.co/functions/v1/ai-proxy",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${remToken}`},body:JSON.stringify({action:"send-reminder-email",customer_email:emailAddr,customer_name:showReminder.klant,factuur_nummer:showReminder.nummer,totaal:getTotal(showReminder),...companyEmailFields(bedrijf),...(tpl?.subject?{custom_subject:fillVars(tpl.subject,vars)}:{}),...(tpl?.body?{custom_body:fillVars(tpl.body,vars)}:{}),attachments:[{filename:`Herinnering-${showReminder.nummer||"factuur"}.pdf`,content:pdfB64}]})});
       const remData=await remRes.json().catch(()=>null);
       console.log("[sendReminder] result:", remRes.status, remData);
       if(!remRes.ok) throw new Error(remData?.message||remData?.error||`Versturen mislukt (${remRes.status})`);
@@ -3052,9 +3270,9 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color}}>{s.val}</div><div className="ss">{s.sub}</div></div>)}
     </div>
 
-    <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      {[["facturen","📄 Facturen"],["uitgaven","🧾 Uitgaven"],["btw","🧾 BTW aangifte"],["winst","📊 Winst & verlies"],["ai","✨ Assistent"]].map(([id,lbl])=>(
-        <button key={id} onClick={()=>setSubTab(id)} style={{padding:"7px 18px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB"}}>{lbl}</button>
+    <div className={mob?"tab-scroll":""}  style={{display:"flex",gap:8,marginBottom:16,flexWrap:mob?"nowrap":"wrap"}}>
+      {[["facturen","📄 Facturen"],["uitgaven","🧾 Uitgaven"],["btw","🧾 BTW"],["winst","📊 Winst"],["ai","✨ Assistent"]].map(([id,lbl])=>(
+        <button key={id} onClick={()=>setSubTab(id)} style={{padding:"7px 16px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{lbl}</button>
       ))}
     </div>
 
@@ -3107,14 +3325,14 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     </>)}
 
     {subTab==="uitgaven"&&(<>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:mob?"flex-start":"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontWeight:700,fontSize:15,color:"#111"}}>Totaal uitgaven: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0),0))}</div>
-          <div style={{fontSize:13,color:"#64748B"}}>BTW terugvragen: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0)*Number(u.btw_percentage||0)/100/(1+Number(u.btw_percentage||0)/100),0))}</div>
+          <div style={{fontWeight:700,fontSize:15,color:"#111"}}>Totaal: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0),0))}</div>
+          <div style={{fontSize:13,color:"#64748B"}}>BTW terug: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0)*Number(u.btw_percentage||0)/100/(1+Number(u.btw_percentage||0)/100),0))}</div>
         </div>
-        <div style={{display:"flex",gap:8}}>
+        <div style={{display:"flex",gap:8,flexShrink:0}}>
           <button className="btn btn-ghost" disabled={scanningBon} onClick={()=>scanInputRef.current?.click()} style={{display:"flex",alignItems:"center",gap:6}}>
-            {scanningBon?<><span style={{width:14,height:14,border:"2px solid #94A3B8",borderTopColor:"#475569",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite"}}/>Scannen…</>:<>📷 Scan bonnetje</>}
+            {scanningBon?<><span style={{width:14,height:14,border:"2px solid #94A3B8",borderTopColor:"#475569",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite"}}/>Scannen…</>:<>📷 Scan</>}
           </button>
           <input ref={scanInputRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={async e=>{
             const file=e.target.files?.[0]; e.target.value=""; if(!file)return;
@@ -3140,7 +3358,22 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       </div>
       {(uitgaven||[]).length===0
         ?<LeegScherm icon="🧾" titel="Geen uitgaven" sub="Registreer je eerste zakelijke uitgave" actie="+ Uitgave toevoegen" onActie={()=>setShowAddUitgave(true)}/>
-        :<div className="card"><div className="tw"><table><thead><tr>{["Datum","Categorie","Omschrijving","Bedrag","BTW %","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+        : mob
+          ? <div className="mob-card-list">{(uitgaven||[]).map(u=>(
+              <div className="mob-card" key={u.id}>
+                <div className="mob-card-top">
+                  <div className="mob-card-name">{u.omschrijving||"Uitgave"}</div>
+                  {u.categorie&&<span style={{background:"#F1F5F9",borderRadius:6,padding:"2px 8px",fontSize:12,fontWeight:600,color:"#475569",flexShrink:0}}>{u.categorie}</span>}
+                </div>
+                <div className="mob-card-amount" style={{fontSize:22}}>{fmtEur(u.bedrag)}</div>
+                <div className="mob-card-sub">{u.datum} · BTW {u.btw_percentage}%{u.foto&&" · 📷"}</div>
+                <div className="mob-card-actions">
+                  {u.foto&&<button className="btn btn-ghost btn-sm" onClick={()=>window.open(u.foto)}>📷 Bon</button>}
+                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Uitgave verwijderen?"))supabase.from("uitgaven").delete().eq("id",u.id).then(()=>refresh());}}>Verwijderen</button>
+                </div>
+              </div>
+            ))}</div>
+          : <div className="card"><div className="tw"><table><thead><tr>{["Datum","Categorie","Omschrijving","Bedrag","BTW %","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
           <tbody>{(uitgaven||[]).map(u=><tr key={u.id}>
             <td style={{color:"#888",fontSize:13}}>{u.datum}</td>
             <td><span style={{background:"#F1F5F9",borderRadius:6,padding:"2px 8px",fontSize:12,fontWeight:600}}>{u.categorie}</span></td>
@@ -3243,11 +3476,47 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         <span title={txt} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:"50%",background:"#E0E7FF",color:"#6366F1",fontSize:10,fontWeight:700,cursor:"help",marginLeft:5,flexShrink:0}}>?</span>
       );
 
-      const RubriekRow = ({lbl,tip,left,right,highlight}) => (
+      const CopyBtn = ({value, id, roundUp=false}) => {
+        const rounded = roundUp ? Math.ceil(value) : Math.floor(value);
+        const ok = btwCopied === id;
+        return (
+          <button onClick={()=>{navigator.clipboard.writeText(String(rounded));setBtwCopied(id);setTimeout(()=>setBtwCopied(c=>c===id?null:c),2000);}} style={{marginLeft:5,padding:"1px 7px",fontSize:11,fontWeight:600,border:"1px solid",borderColor:ok?"#A5B4FC":"#C7D2FE",borderRadius:12,background:ok?"#EEF2FF":"#fff",color:ok?"#4338CA":"#6366F1",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .15s",fontFamily:"'DM Sans',sans-serif"}}>
+            {ok?"✓ Gekopieerd!":"kopieer"}
+          </button>
+        );
+      };
+
+      const RubriekRow = ({lbl,tip,left,right,highlight,copyLeft,copyRight,copyRightUp}) => mob ? (
+        <div style={{padding:"12px 14px",borderBottom:"1px solid #F3F4F6"}}>
+          <div style={{fontSize:13,color:"#374151",display:"flex",alignItems:"center",marginBottom:8,lineHeight:1.3}}>{lbl}<Tip txt={tip}/></div>
+          <div style={{display:"flex",gap:8}}>
+            {left!=null&&<div style={{flex:1}}>
+              <div style={{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",letterSpacing:".4px",marginBottom:3}}>Omzet</div>
+              <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
+                <span style={{fontSize:14,fontWeight:600,color:"#111"}}>{fE(left)}</span>
+                {copyLeft!=null&&<CopyBtn value={left} id={copyLeft}/>}
+              </div>
+            </div>}
+            <div style={{flex:1,textAlign:left!=null?"right":"left"}}>
+              <div style={{fontSize:10,color:"#94A3B8",fontWeight:700,textTransform:"uppercase",letterSpacing:".4px",marginBottom:3}}>BTW</div>
+              <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:left!=null?"flex-end":"flex-start",flexWrap:"wrap"}}>
+                <span style={{fontSize:14,fontWeight:highlight?"800":"600",color:highlight?highlight:"#6366F1"}}>{right!=null?fE(right):"—"}</span>
+                {copyRight!=null&&right!=null&&<CopyBtn value={right} id={copyRight} roundUp={copyRightUp}/>}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
         <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #F3F4F6"}}>
           <div style={{fontSize:13,color:"#374151",display:"flex",alignItems:"center"}}>{lbl}<Tip txt={tip}/></div>
-          <div style={{fontSize:13,fontWeight:600,textAlign:"right",color:"#111"}}>{left!=null?fE(left):"—"}</div>
-          <div style={{fontSize:13,fontWeight:highlight?"800":"600",textAlign:"right",color:highlight?highlight:"#6366F1"}}>{right!=null?fE(right):"—"}</div>
+          <div style={{fontSize:13,fontWeight:600,color:"#111",display:"flex",alignItems:"center",justifyContent:"flex-end"}}>
+            {left!=null?fE(left):"—"}
+            {copyLeft!=null&&left!=null&&<CopyBtn value={left} id={copyLeft}/>}
+          </div>
+          <div style={{fontSize:13,fontWeight:highlight?"800":"600",color:highlight?highlight:"#6366F1",display:"flex",alignItems:"center",justifyContent:"flex-end"}}>
+            {right!=null?fE(right):"—"}
+            {copyRight!=null&&right!=null&&<CopyBtn value={right} id={copyRight} roundUp={copyRightUp}/>}
+          </div>
         </div>
       );
 
@@ -3322,29 +3591,24 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           </div>
 
           {/* Header met kwartaal/jaar selector */}
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12,marginBottom:20}}>
-            <div>
-              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
-                <div style={{fontWeight:800,fontSize:17,color:"#0F0F14",fontFamily:"'Syne',sans-serif"}}>BTW aangifte</div>
-                {ingediend&&<span style={{fontSize:11.5,fontWeight:700,color:"#059669",background:"#ECFDF5",border:"1px solid #A7F3D0",borderRadius:20,padding:"3px 10px"}}>✓ Ingediend</span>}
-              </div>
-              <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                <select value={btwJaar} onChange={e=>{setBtwJaar(Number(e.target.value));setBtwStap(0);}} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer"}}>
-                  {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
-                </select>
-                {quarters.map((qq,qi)=>(
-                  <button key={qq.label} onClick={()=>{setBtwQ(qi);setBtwStap(0);}} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:btwQ===qi?"#0F0F14":"#fff",color:btwQ===qi?"#fff":"#555",borderColor:btwQ===qi?"#0F0F14":"#E5E7EB"}}>{qq.label}</button>
-                ))}
-              </div>
+          <div style={{marginBottom:mob?14:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
+              <div style={{fontWeight:800,fontSize:mob?15:17,color:"#0F0F14",fontFamily:"'Syne',sans-serif"}}>BTW aangifte</div>
+              {ingediend&&<span style={{fontSize:11.5,fontWeight:700,color:"#059669",background:"#ECFDF5",border:"1px solid #A7F3D0",borderRadius:20,padding:"3px 10px"}}>✓ Ingediend</span>}
             </div>
-            <div style={{fontSize:12.5,color:"#94A3B8",textAlign:"right",lineHeight:1.6}}>
-              <div>{fInQ.length} betaalde factuur{fInQ.length!==1?"en":""} · {uInQ.length} uitgave{uInQ.length!==1?"n":""}</div>
-              <div>{q.naam} {btwJaar}</div>
+            <div className={mob?"tab-scroll":""} style={{display:"flex",gap:6,alignItems:"center",flexWrap:mob?"nowrap":"wrap",paddingBottom:mob?4:0}}>
+              <select value={btwJaar} onChange={e=>{setBtwJaar(Number(e.target.value));setBtwStap(0);}} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer",flexShrink:0}}>
+                {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
+              </select>
+              {quarters.map((qq,qi)=>(
+                <button key={qq.label} onClick={()=>{setBtwQ(qi);setBtwStap(0);}} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:btwQ===qi?"#0F0F14":"#fff",color:btwQ===qi?"#fff":"#555",borderColor:btwQ===qi?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{qq.label}</button>
+              ))}
             </div>
+            {!mob&&<div style={{fontSize:12,color:"#94A3B8",marginTop:6}}>{fInQ.length} betaalde factuur{fInQ.length!==1?"en":""} · {uInQ.length} uitgave{uInQ.length!==1?"n":""} · {q.naam} {btwJaar}</div>}
           </div>
 
           {/* Stap-indicator */}
-          <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:24,overflowX:"auto"}}>
+          <div className={mob?"tab-scroll":""} style={{display:"flex",alignItems:"center",gap:0,marginBottom:24,overflowX:"auto",paddingBottom:mob?4:0}}>
             {stappen.map((s,i)=>(
               <Fragment key={s}>
                 <button onClick={()=>setBtwStap(i)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:20,border:`1.5px solid ${btwStap===i?"#6366F1":"#E5E7EB"}`,background:btwStap===i?"#EEF2FF":"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:12.5,fontWeight:600,color:btwStap===i?"#4338CA":"#64748B",whiteSpace:"nowrap"}}>
@@ -3363,7 +3627,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                 💡 Hier vul je in wat je hebt gefactureerd aan BTW. WerkMate heeft dit automatisch uit je facturen gehaald.
               </div>
               <div className="card" style={{overflow:"hidden",marginBottom:12}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",background:"#F8FAFC",borderBottom:"2px solid #E5E7EB"}}>
+                <div className="btw-hdr-cols" style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",background:"#F8FAFC",borderBottom:"2px solid #E5E7EB"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".5px"}}>Rubriek</div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>Omzet excl. BTW</div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>BTW bedrag</div>
@@ -3393,7 +3657,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                 💡 Voorbelasting is de BTW die jij zelf hebt betaald op inkopen en kosten. Dit mag je aftrekken van wat je moet afdragen.
               </div>
               <div className="card" style={{overflow:"hidden",marginBottom:12}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",background:"#F8FAFC",borderBottom:"2px solid #E5E7EB"}}>
+                <div className="btw-hdr-cols" style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",background:"#F8FAFC",borderBottom:"2px solid #E5E7EB"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".5px"}}>Rubriek</div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>Omzet excl. BTW</div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>BTW bedrag</div>
@@ -3421,37 +3685,65 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           {btwStap===2&&(
             <div>
               {/* Grote uitkomstkaart */}
-              <div style={{background:teBetalen?"#FEF2F2":"#F0FDF4",border:`2px solid ${teBetalen?"#FECACA":"#BBF7D0"}`,borderRadius:16,padding:"24px 28px",marginBottom:20,textAlign:"center"}}>
-                <div style={{fontSize:14,color:teBetalen?"#991B1B":"#15803D",fontWeight:600,marginBottom:6}}>{teBetalen?"Te betalen aan Belastingdienst":"Je krijgt terug van Belastingdienst"}</div>
-                <div style={{fontSize:40,fontWeight:900,color:teBetalen?"#DC2626":"#059669",fontFamily:"'Syne',sans-serif",lineHeight:1}}>{fE(Math.abs(res5g))}</div>
-                <div style={{fontSize:13,color:"#64748B",marginTop:8}}>{q.naam} {btwJaar}</div>
+              <div style={{background:teBetalen?"#FEF2F2":"#F0FDF4",border:`2px solid ${teBetalen?"#FECACA":"#BBF7D0"}`,borderRadius:16,padding:mob?"16px 18px":"24px 28px",marginBottom:mob?14:20,textAlign:"center"}}>
+                <div style={{fontSize:mob?12:14,color:teBetalen?"#991B1B":"#15803D",fontWeight:600,marginBottom:4}}>{teBetalen?"Te betalen aan Belastingdienst":"Je krijgt terug van Belastingdienst"}</div>
+                <div style={{fontSize:mob?32:40,fontWeight:900,color:teBetalen?"#DC2626":"#059669",fontFamily:"'Syne',sans-serif",lineHeight:1}}>{fE(Math.abs(res5g))}</div>
+                <div style={{fontSize:12,color:"#64748B",marginTop:6}}>{q.naam} {btwJaar}</div>
               </div>
 
               {/* Volledige specificatie */}
               <div className="card" style={{overflow:"hidden",marginBottom:16}}>
                 <div style={{padding:"10px 14px",background:"#F8FAFC",borderBottom:"2px solid #E5E7EB",fontWeight:700,fontSize:13,color:"#0F0F14"}}>Specificatie</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",borderBottom:"1px solid #F8FAFC"}}>
+                <div className="btw-hdr-cols" style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"9px 14px",borderBottom:"1px solid #F8FAFC"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textTransform:"uppercase",letterSpacing:".5px"}}></div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>Omzet excl. BTW</div>
                   <div style={{fontSize:11,fontWeight:700,color:"#94A3B8",textAlign:"right",textTransform:"uppercase",letterSpacing:".5px"}}>BTW</div>
                 </div>
-                <RubriekRow lbl="1a — Omzet 21%" tip="Gefactureerde omzet belast met 21% BTW" left={omzet1a} right={btw1a}/>
-                <RubriekRow lbl="1b — Omzet 9%" tip="Gefactureerde omzet belast met 9% BTW" left={omzet1b} right={btw1b}/>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"10px 14px",borderBottom:"1px solid #F3F4F6",background:"#F8FAFC"}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"#374151"}}>5a — Totaal verschuldigd</div>
-                  <div/>
-                  <div style={{fontSize:13,fontWeight:700,textAlign:"right",color:"#6366F1"}}>{fE(btw5a)}</div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"10px 14px",borderBottom:"1px solid #F3F4F6"}}>
-                  <div style={{fontSize:13,color:"#374151",display:"flex",alignItems:"center"}}>5b — Voorbelasting<Tip txt="BTW die je zelf hebt betaald op zakelijke inkopen. Dit trekt de Belastingdienst af van wat je moet afdragen."/></div>
-                  <div/>
-                  <div style={{fontSize:13,fontWeight:700,textAlign:"right",color:"#10B981"}}>- {fE(vb5b)}</div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"12px 14px",background:teBetalen?"#FEF2F2":"#F0FDF4"}}>
-                  <div style={{fontSize:14,fontWeight:800,color:teBetalen?"#DC2626":"#059669"}}>5g — {teBetalen?"Te betalen":"Terug te ontvangen"}</div>
-                  <div/>
-                  <div style={{fontSize:14,fontWeight:900,textAlign:"right",color:teBetalen?"#DC2626":"#059669"}}>{fE(Math.abs(res5g))}</div>
-                </div>
+                <RubriekRow lbl="1a — Omzet 21%" tip="Gefactureerde omzet belast met 21% BTW" left={omzet1a} right={btw1a} copyLeft="1a-omzet" copyRight="1a-btw"/>
+                <RubriekRow lbl="1b — Omzet 9%" tip="Gefactureerde omzet belast met 9% BTW" left={omzet1b} right={btw1b} copyLeft="1b-omzet" copyRight="1b-btw"/>
+                {mob ? (
+                  <>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #F3F4F6",background:"#F8FAFC"}}>
+                      <span style={{fontSize:13,fontWeight:700,color:"#374151"}}>5a — Totaal verschuldigd</span>
+                      <span style={{fontSize:14,fontWeight:700,color:"#6366F1"}}>{fE(btw5a)}</span>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #F3F4F6"}}>
+                      <span style={{fontSize:13,color:"#374151",display:"flex",alignItems:"center"}}>5b — Voorbelasting<Tip txt="BTW die je zelf hebt betaald op zakelijke inkopen."/></span>
+                      <div style={{display:"flex",alignItems:"center",gap:4}}>
+                        <span style={{fontSize:14,fontWeight:700,color:"#10B981"}}>- {fE(vb5b)}</span>
+                        <CopyBtn value={vb5b} id="5b-vb" roundUp={true}/>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px",background:teBetalen?"#FEF2F2":"#F0FDF4"}}>
+                      <span style={{fontSize:14,fontWeight:800,color:teBetalen?"#DC2626":"#059669"}}>5g — {teBetalen?"Te betalen":"Terug"}</span>
+                      <span style={{fontSize:16,fontWeight:900,color:teBetalen?"#DC2626":"#059669"}}>{fE(Math.abs(res5g))}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"10px 14px",borderBottom:"1px solid #F3F4F6",background:"#F8FAFC"}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#374151"}}>5a — Totaal verschuldigd</div>
+                      <div/>
+                      <div style={{fontSize:13,fontWeight:700,textAlign:"right",color:"#6366F1"}}>{fE(btw5a)}</div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"10px 14px",borderBottom:"1px solid #F3F4F6"}}>
+                      <div style={{fontSize:13,color:"#374151",display:"flex",alignItems:"center"}}>5b — Voorbelasting<Tip txt="BTW die je zelf hebt betaald op zakelijke inkopen. Dit trekt de Belastingdienst af van wat je moet afdragen."/></div>
+                      <div/>
+                      <div style={{fontSize:13,fontWeight:700,color:"#10B981",display:"flex",alignItems:"center",justifyContent:"flex-end"}}>- {fE(vb5b)}<CopyBtn value={vb5b} id="5b-vb" roundUp={true}/></div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 140px 140px",gap:8,padding:"12px 14px",background:teBetalen?"#FEF2F2":"#F0FDF4"}}>
+                      <div style={{fontSize:14,fontWeight:800,color:teBetalen?"#DC2626":"#059669"}}>5g — {teBetalen?"Te betalen":"Terug te ontvangen"}</div>
+                      <div/>
+                      <div style={{fontSize:14,fontWeight:900,textAlign:"right",color:teBetalen?"#DC2626":"#059669"}}>{fE(Math.abs(res5g))}</div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Kopieer-tip */}
+              <div style={{fontSize:12.5,color:"#64748B",background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:8,padding:"8px 12px",marginBottom:16,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{flexShrink:0}}>📋</span>
+                <span>Vul deze getallen in op belastingdienst.nl — gebruik de <strong>kopieer</strong>-knoppen hierboven. Alleen hele bedragen toegestaan.</span>
               </div>
 
               {/* Acties */}
@@ -3570,7 +3862,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
               <button className="btn btn-outline" onClick={exportWinstPdf}>⬇ PDF</button>
             </div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
+          <div className="sg-3">
             {[
               {lbl:"Totale inkomsten",val:fmtEurW(totInk),color:"#10B981",bg:"#F0FDF4",border:"#BBF7D0"},
               {lbl:"Totale uitgaven",val:fmtEurW(totUit),color:"#EF4444",bg:"#FEF2F2",border:"#FECACA"},
@@ -3635,27 +3927,53 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
             <select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Concept","Verstuurd","Betaald"].map(s=><option key={s}>{s}</option>)}</select></div>
         </div>
         <div style={{marginTop:8}}>
-          <div className="off-tbl-grid" style={{borderBottom:"2px solid #E5E7EB",paddingBottom:6,marginBottom:4}}>
-            {["Omschrijving","Aantal","Eenheid","Prijs","BTW","Totaal",""].map((h,i)=><div key={i} className="off-cell" style={{fontWeight:700,fontSize:12,color:"#94A3B8",justifyContent:i>=3&&i<6?"flex-end":i===1?"center":"flex-start"}}>{h}</div>)}
-          </div>
-          {nieuw.regels.map((r,i)=>(
-            <div key={i} className="off-tbl-grid" style={{borderBottom:"1px solid #F3F4F6",alignItems:"flex-start"}}>
-              <div className="off-cell" style={{alignItems:"flex-start",paddingTop:8}}><textarea className="off-inp off-inp-ta" rows={1} value={r.omschrijving} ref={el=>{if(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}}} onChange={e=>{e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px";setRegel(i,"omschrijving",e.target.value);}} placeholder="Omschrijving"/></div>
-              <div className="off-cell" style={{paddingTop:8}}><input className="off-inp" type="number" value={r.aantal} onChange={e=>setRegel(i,"aantal",e.target.value)} style={{textAlign:"center"}}/></div>
-              <div className="off-cell" style={{paddingTop:8}}><select className="off-inp" value={r.eenheid} onChange={e=>setRegel(i,"eenheid",e.target.value)} style={{minWidth:80}}>{["stuk","uur","dag","m²","m","kg","l"].map(u=><option key={u}>{u}</option>)}</select></div>
-              <div className="off-cell" style={{paddingTop:8}}><input className="off-inp" type="number" value={r.prijs} onChange={e=>setRegel(i,"prijs",e.target.value)} style={{textAlign:"right"}}/></div>
-              <div className="off-cell" style={{paddingTop:8}}><select className="off-inp center" value={r.btw_pct??21} onChange={e=>setRegel(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
-              <div className="off-cell off-cell-totaal">{fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</div>
-              <div className="off-cell"><button onClick={()=>removeRegel(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:16}}>×</button></div>
+          {mob ? (
+            <div>
+              {nieuw.regels.map((r,i)=>(
+                <div key={i} style={{border:"1.5px solid #E5E7EB",borderRadius:10,padding:"12px",marginBottom:8}}>
+                  <div className="ig" style={{marginBottom:8}}><label className="ilbl">Omschrijving</label><textarea className="off-inp off-inp-ta" rows={2} value={r.omschrijving} onChange={e=>setRegel(i,"omschrijving",e.target.value)} placeholder="Omschrijving"/></div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                    <div className="ig" style={{marginBottom:0}}><label className="ilbl">Aantal</label><input className="off-inp" type="number" value={r.aantal} onChange={e=>setRegel(i,"aantal",e.target.value)} style={{textAlign:"center"}}/></div>
+                    <div className="ig" style={{marginBottom:0}}><label className="ilbl">Eenheid</label><select className="off-inp" value={r.eenheid} onChange={e=>setRegel(i,"eenheid",e.target.value)}>{["stuk","st","uur","dag","m²","m","rit","persoon","km","kg","l"].map(u=><option key={u}>{u}</option>)}</select></div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <div className="ig" style={{marginBottom:0}}><label className="ilbl">Prijs (€)</label><input className="off-inp" type="number" value={r.prijs} onChange={e=>setRegel(i,"prijs",e.target.value)} style={{textAlign:"right"}}/></div>
+                    <div className="ig" style={{marginBottom:0}}><label className="ilbl">BTW</label><select className="off-inp center" value={r.btw_pct??21} onChange={e=>setRegel(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
+                    <span style={{fontSize:13,fontWeight:700,color:"#111"}}>= {fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</span>
+                    <button onClick={()=>removeRegel(i)} style={{background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:7,padding:"5px 12px",color:"#EF4444",fontSize:13,fontWeight:600,cursor:"pointer"}}>Verwijderen</button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <div style={{overflowX:"auto"}}>
+              <div className="off-tbl-grid" style={{borderBottom:"2px solid #E5E7EB",paddingBottom:6,marginBottom:4}}>
+                {["Omschrijving","Aantal","Eenheid","Prijs","BTW","Totaal",""].map((h,i)=><div key={i} className="off-cell" style={{fontWeight:700,fontSize:12,color:"#94A3B8",justifyContent:i>=3&&i<6?"flex-end":i===1?"center":"flex-start"}}>{h}</div>)}
+              </div>
+              {nieuw.regels.map((r,i)=>(
+                <div key={i} className="off-tbl-grid" style={{borderBottom:"1px solid #F3F4F6",alignItems:"flex-start"}}>
+                  <div className="off-cell" style={{alignItems:"flex-start",paddingTop:8}}><textarea className="off-inp off-inp-ta" rows={1} value={r.omschrijving} ref={el=>{if(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}}} onChange={e=>{e.target.style.height="auto";e.target.style.height=e.target.scrollHeight+"px";setRegel(i,"omschrijving",e.target.value);}} placeholder="Omschrijving"/></div>
+                  <div className="off-cell" style={{paddingTop:8}}><input className="off-inp" type="number" value={r.aantal} onChange={e=>setRegel(i,"aantal",e.target.value)} style={{textAlign:"center"}}/></div>
+                  <div className="off-cell" style={{paddingTop:8}}><select className="off-inp" value={r.eenheid} onChange={e=>setRegel(i,"eenheid",e.target.value)} style={{minWidth:80}}>{["stuk","st","uur","dag","m²","m","rit","persoon","km","kg","l"].map(u=><option key={u}>{u}</option>)}</select></div>
+                  <div className="off-cell" style={{paddingTop:8}}><input className="off-inp" type="number" value={r.prijs} onChange={e=>setRegel(i,"prijs",e.target.value)} style={{textAlign:"right"}}/></div>
+                  <div className="off-cell" style={{paddingTop:8}}><select className="off-inp center" value={r.btw_pct??21} onChange={e=>setRegel(i,"btw_pct",Number(e.target.value))}>{[0,9,21].map(p=><option key={p} value={p}>{p}%</option>)}</select></div>
+                  <div className="off-cell off-cell-totaal">{fmtEur((Number(r.aantal)||0)*(Number(r.prijs)||0))}</div>
+                  <div className="off-cell"><button onClick={()=>removeRegel(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:16}}>×</button></div>
+                </div>
+              ))}
+            </div>
+          )}
           <button className="btn btn-ghost btn-sm" onClick={addRegel} style={{marginTop:8}}>+ Regel</button>
         </div>
         <div style={{background:"#F8FAFC",border:"1px solid #EAECF0",borderRadius:10,padding:"12px 16px",marginTop:10}}>
           <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>Subtotaal (excl. BTW)</span><span>{fmtEur(cSub)}</span></div>
           {cBtw9>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>BTW 9%</span><span>{fmtEur(cBtw9)}</span></div>}
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:6}}><span>BTW 21%</span><span>{fmtEur(cBtw21??cBtw)}</span></div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:800,color:"#111"}}><span>Totaal</span><span>{fmtEur(cTot)}</span></div>
+          {cBtw21>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>BTW 21%</span><span>{fmtEur(cBtw21)}</span></div>}
+          {cBtw>0&&!cBtw9&&!cBtw21&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#888",marginBottom:4}}><span>BTW</span><span>{fmtEur(cBtw)}</span></div>}
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:800,color:"#111",marginTop:2}}><span>Totaal</span><span>{fmtEur(cTot)}</span></div>
+          {btwRateLabel(nieuw.regels)&&<div style={{textAlign:"right",fontSize:11,color:"#94A3B8",marginTop:4}}>{btwRateLabel(nieuw.regels)}</div>}
         </div>
         {saveErr&&<div style={{color:"#EF4444",fontSize:12.5,marginTop:8}}>{saveErr}</div>}
         <div style={{display:"flex",gap:9,marginTop:12}}>
@@ -3750,8 +4068,7 @@ function TeamTab({ ownerId, teamMembers, refresh, bedrijf }) {
             inviter_email: (await supabase.auth.getUser()).data?.user?.email || "",
             invite_token: token,
             appUrl: window.location.origin,
-            company_name: bedrijf?.bedrijfsnaam,
-            reply_to: bedrijf?.email || "",
+            ...companyEmailFields(bedrijf),
           }),
         });
         const fnRes = await response.json().catch(() => null);
@@ -3849,6 +4166,12 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
     setResending(prev => { const n = new Set(prev); n.delete(e.id); return n; });
   };
 
+  const deleteEmail = async (id, ev) => {
+    ev.stopPropagation();
+    await supabase.from("emails_log").delete().eq("id", id);
+    refresh();
+  };
+
   const filtered = emailsLog.filter(e => {
     const matchType = filterType === "Alle" || e.type === filterType.toLowerCase();
     const q = search.toLowerCase();
@@ -3908,7 +4231,7 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
       {filtered.length === 0
         ? <LeegScherm icon="📭" titel="Geen e-mails gevonden" sub={emailsLog.length === 0 ? "Verstuurde e-mails verschijnen hier automatisch" : "Geen e-mails die overeenkomen met je zoekopdracht"}/>
         : <div className="card"><div className="tw"><table>
-            <thead><tr>{["Datum","Ontvanger","Onderwerp","Type","Status"].map(h=><th key={h}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Datum","Ontvanger","Onderwerp","Type","Status",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>
               {filtered.map(e=>(
                 <tr key={e.id} onClick={()=>setDetail(e)} style={{cursor:"pointer"}}>
@@ -3925,6 +4248,7 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
                       {e.status!=="verzonden"&&<button className="btn btn-ghost btn-sm" style={{fontSize:11.5,padding:"2px 9px"}} disabled={resending.has(e.id)} onClick={ev=>{ev.stopPropagation();retryEmail(e);}}>{resending.has(e.id)?"Bezig…":"Opnieuw"}</button>}
                     </div>
                   </td>
+                  <td onClick={ev=>ev.stopPropagation()}><button className="btn btn-danger btn-sm" style={{fontSize:11.5,padding:"2px 8px"}} onClick={ev=>deleteEmail(e.id,ev)}>✕</button></td>
                 </tr>
               ))}
             </tbody>
@@ -4010,7 +4334,11 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
 }
 
 // ── Social ────────────────────────────────────────────────────
-function SocialTab() {
+function SocialTab({ userId }) {
+  const storageKey = `werkmate_social_${userId||"u"}`;
+  const [links, setLinks] = useState(()=>{try{return JSON.parse(localStorage.getItem(storageKey)||"{}");}catch{return {};}});
+  const [linksSaved, setLinksSaved] = useState(false);
+  const saveLinks = l => { setLinks(l); localStorage.setItem(storageKey, JSON.stringify(l)); setLinksSaved(true); setTimeout(()=>setLinksSaved(false),2000); };
   const [plat,setPlat]=useState("beide");const [ond,setOnd]=useState("");const [stijl,setStijl]=useState("professioneel");const [loading,setLoading]=useState(false);const [posts,setPosts]=useState(null);const [copyMsg,setCopyMsg]=useState("");
   const gen=async()=>{if(!ond.trim())return;setLoading(true);setPosts(null);
     try{
@@ -4027,7 +4355,15 @@ function SocialTab() {
     <div className="ph"><div><div className="pg-title">Social Media</div><div className="pg-sub">Slimme posts voor Instagram, TikTok & Facebook</div></div></div>
     {copyMsg&&<div style={{position:"fixed",bottom:24,right:24,background:"#0F0F14",color:"#fff",padding:"10px 20px",borderRadius:10,fontSize:14,fontWeight:600,zIndex:9999,boxShadow:"0 8px 24px rgba(0,0,0,.25)"}}>{copyMsg}</div>}
     <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:20}}>
-      <div><div className="sec-ttl">⚙️ Instellingen</div><div className="card cp">
+      <div>
+        <div className="sec-ttl">🔗 Mijn accounts</div>
+        <div className="card cp" style={{marginBottom:16}}>
+          <div className="ig"><label className="ilbl">📘 Facebook pagina URL</label><input className="inp" value={links.facebook||""} onChange={e=>setLinks({...links,facebook:e.target.value})} placeholder="https://facebook.com/jouwpagina"/></div>
+          <div className="ig"><label className="ilbl">📸 Instagram profiel URL</label><input className="inp" value={links.instagram||""} onChange={e=>setLinks({...links,instagram:e.target.value})} placeholder="https://instagram.com/jouwprofiel"/></div>
+          <div className="ig" style={{marginBottom:12}}><label className="ilbl">⭐ Google Business URL</label><input className="inp" value={links.google||""} onChange={e=>setLinks({...links,google:e.target.value})} placeholder="https://g.page/jouwbedrijf"/></div>
+          <button className="btn btn-outline btn-full" onClick={()=>saveLinks(links)}>{linksSaved?"✓ Opgeslagen!":"Links opslaan"}</button>
+        </div>
+        <div className="sec-ttl">⚙️ Instellingen</div><div className="card cp">
         <div className="ig"><label className="ilbl">Platform</label><div className="soc-plat" style={{flexWrap:"wrap"}}>
           <button className={`soc-btn ${plat==="insta"?"on insta":""}`} onClick={()=>setPlat("insta")}>📸 Insta</button>
           <button className={`soc-btn ${plat==="tiktok"?"on tik":""}`} onClick={()=>setPlat("tiktok")}>🎵 TikTok</button>
@@ -4046,9 +4382,9 @@ function SocialTab() {
         {!posts&&!loading&&<div style={{background:"#fff",border:"1px dashed #D1D5DB",borderRadius:13,padding:"48px 24px",textAlign:"center",color:"#94A3B8"}}><div style={{fontSize:32,marginBottom:10}}>📱</div><div style={{fontSize:14,fontWeight:600,color:"#555",marginBottom:5}}>Nog geen posts</div><div style={{fontSize:12.5}}>Vul links in en klik op maak posts</div></div>}
         {loading&&<div style={{background:"#fff",border:"1px solid #EAECF0",borderRadius:13,padding:"48px 24px",textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>⚡</div><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15}}>Bezig<span className="dot">…</span></div></div>}
         {posts&&<>
-          {posts.instagram&&(plat==="insta"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar insta">📸 Instagram</div><div className="post-body">{posts.instagram}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.instagram)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
-          {posts.tiktok&&(plat==="tiktok"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar tik">🎵 TikTok</div><div className="post-body">{posts.tiktok}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.tiktok)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
-          {posts.facebook&&(plat==="facebook"||plat==="alle")&&<div className="post-card"><div className="post-bar" style={{background:"#EBF5FB",color:"#1877F2",borderBottom:"1px solid #C9E6F8"}}>📘 Facebook</div><div className="post-body">{posts.facebook}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.facebook)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
+          {posts.instagram&&(plat==="insta"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar insta">📸 Instagram</div><div className="post-body">{posts.instagram}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.instagram)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={()=>{copy(posts.instagram);window.open(links.instagram||"https://instagram.com","_blank");}}>📸 Open Instagram</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
+          {posts.tiktok&&(plat==="tiktok"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar tik">🎵 TikTok</div><div className="post-body">{posts.tiktok}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.tiktok)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={()=>{copy(posts.tiktok);window.open("https://tiktok.com","_blank");}}>🎵 Open TikTok</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
+          {posts.facebook&&(plat==="facebook"||plat==="alle")&&<div className="post-card"><div className="post-bar" style={{background:"#EBF5FB",color:"#1877F2",borderBottom:"1px solid #C9E6F8"}}>📘 Facebook</div><div className="post-body">{posts.facebook}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.facebook)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" style={{color:"#1877F2",borderColor:"#1877F2"}} onClick={()=>{copy(posts.facebook);window.open(links.facebook||"https://facebook.com","_blank");}}>📘 Open Facebook</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
         </>}
       </div>
     </div>
@@ -4250,7 +4586,7 @@ function EmailTemplatesSection({ userId, bedrijf, emailTemplates, onTemplatesUpd
 }
 
 // ── Instellingen ───────────────────────────────────────────────
-function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpdate, openTab, emailTemplates = {}, onTemplatesUpdate }) {
+function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpdate, openTab, emailTemplates = {}, onTemplatesUpdate, onPrijslijstUpdate }) {
   const [settings, setSettings] = useState({
     auto_review_email: true,
     auto_reminder_email: true,
@@ -4264,6 +4600,8 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
   const [kmRate, setKmRate] = useState(Number(bedrijf?.km_vergoeding ?? 0.23));
   const [kmSaving, setKmSaving] = useState(false);
   const [kmMsg, setKmMsg] = useState({ type: "", text: "" });
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoMsg, setDemoMsg] = useState("");
 
   useEffect(() => {
     supabase.from("email_settings").select("*").eq("user_id", userId).maybeSingle().then(({ data }) => {
@@ -4301,6 +4639,162 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
     if (error) { setKmMsg({ type: "error", text: `Opslaan mislukt: ${error.message}` }); return; }
     setKmMsg({ type: "ok", text: "KM-vergoeding opgeslagen." });
     if (onBedrijfUpdate) onBedrijfUpdate({ ...bedrijf, km_vergoeding: kmRate });
+  };
+
+  const generateDemoData = async () => {
+    if (!window.confirm("Dit verwijdert alle huidige gegevens (klanten, offertes, facturen, planning, werkbonnen, ritten, uitgaven, certificaten) en vervangt ze door verse demo data. Doorgaan?")) return;
+    setDemoLoading(true); setDemoMsg("");
+
+    // ── Alles wissen ──────────────────────────────────────────────
+    await Promise.all([
+      supabase.from("certificaten").delete().eq("user_id",userId),
+      supabase.from("uitgaven").delete().eq("user_id",userId),
+      supabase.from("ritten").delete().eq("user_id",userId),
+      supabase.from("werkbonnen").delete().eq("user_id",userId),
+      supabase.from("planning").delete().eq("user_id",userId),
+      supabase.from("facturen").delete().eq("user_id",userId),
+      supabase.from("offertes").delete().eq("user_id",userId),
+      supabase.from("klanten").delete().eq("user_id",userId),
+    ]);
+
+    const iso = d => d.toISOString().slice(0,10);
+    const nlDatum = d => d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+    const addDays = (n,base=new Date()) => { const d=new Date(base); d.setDate(d.getDate()+n); return d; };
+    const now = new Date();
+
+    // ── Klanten ──────────────────────────────────────────────────
+    const {error:klErr}=await supabase.from("klanten").insert([
+      {user_id:userId,naam:"Villa Zonnedal",email:"eigenaar@villazonnedal.nl",tel:"0620384756",adres:"Zonneweg 14, Wassenaar",status:"Actief"},
+      {user_id:userId,naam:"Bakkerij De Molen",email:"info@demolenbrood.nl",tel:"0612345678",adres:"Molenstraat 12, Rotterdam",status:"Actief"},
+      {user_id:userId,naam:"Zorgcentrum De Bron",email:"facilitair@debron.nl",tel:"0698011234",adres:"Bronlaan 88, Delft",status:"Actief"},
+      {user_id:userId,naam:"Jan van der Berg",email:"j.vanderberg@gmail.com",tel:"0687654321",adres:"Acacialaan 3, Haarlem",status:"Actief"},
+      {user_id:userId,naam:"Cafe t Centrum",email:"info@cafetcentrum.nl",tel:"0611223344",adres:"Marktplein 7, Leiden",status:"Actief"},
+      {user_id:userId,naam:"Sporthal De Brug",email:"beheer@debrug.nl",tel:"0654321987",adres:"Brugweg 5, Utrecht",status:"Actief"},
+    ]);
+    if(klErr){setDemoLoading(false);setDemoMsg("Klanten insert mislukt: "+klErr.message);return;}
+
+    // ── Offerte regels ────────────────────────────────────────────
+    const rZonnedal=[
+      {omschrijving:"Tuin aanleggen (arbeid)",aantal:24,eenheid:"uur",prijs:55,btw_pct:21},
+      {omschrijving:"Bestrating leggen terras 40m2",aantal:40,eenheid:"m2",prijs:35,btw_pct:21},
+      {omschrijving:"Beplanting en vaste planten",aantal:1,eenheid:"stuk",prijs:680,btw_pct:21},
+    ];
+    const rMolen=[
+      {omschrijving:"Tuinonderhoud seizoen",aantal:8,eenheid:"uur",prijs:45,btw_pct:21},
+      {omschrijving:"Heg snoeien frontheg 18m",aantal:18,eenheid:"m",prijs:3.50,btw_pct:21},
+    ];
+    const rBron=[
+      {omschrijving:"Bestrating leggen pad 60m2",aantal:60,eenheid:"m2",prijs:35,btw_pct:21},
+      {omschrijving:"Borders aanleggen",aantal:12,eenheid:"uur",prijs:55,btw_pct:21},
+      {omschrijving:"Mulch aanbrengen",aantal:8,eenheid:"m2",prijs:18,btw_pct:21},
+    ];
+    const rBerg=[
+      {omschrijving:"Beplanting aanbrengen",aantal:6,eenheid:"uur",prijs:40,btw_pct:21},
+      {omschrijving:"Grind aanbrengen 25m2",aantal:25,eenheid:"m2",prijs:45,btw_pct:21},
+    ];
+    const rCafe=[
+      {omschrijving:"Heg snoeien terras",aantal:10,eenheid:"m",prijs:3.50,btw_pct:21},
+      {omschrijving:"Onkruid verwijderen",aantal:2,eenheid:"uur",prijs:45,btw_pct:21},
+    ];
+    const totStr = regels => {
+      const sub=regels.reduce((s,r)=>s+(r.aantal||0)*(r.prijs||0),0);
+      const btw=parseFloat(regels.reduce((s,r)=>{const p=r.btw_pct??21;return p===0?s:s+(r.aantal||0)*(r.prijs||0)*p/100;},0).toFixed(2));
+      return {subtotaal:sub,btw,totaal:parseFloat((sub+btw).toFixed(2))};
+    };
+    const fmtB = n => `EUR ${n.toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    const tZ=totStr(rZonnedal),tM=totStr(rMolen),tBr=totStr(rBron),tBe=totStr(rBerg),tC=totStr(rCafe);
+
+    await supabase.from("offertes").insert([
+      {user_id:userId,klant:"Villa Zonnedal",dienst:"Tuin aanleggen",bedrag:fmtB(tZ.totaal),status:"Ondertekend",datum:nlDatum(addDays(-14)),regels:rZonnedal,...tZ,opmerkingen:"1 jaar garantie op beplanting. Materialen inclusief. Geldigheid: 30 dagen."},
+      {user_id:userId,klant:"Bakkerij De Molen",dienst:"Tuinonderhoud",bedrag:fmtB(tM.totaal),status:"Verstuurd",datum:nlDatum(addDays(-5)),regels:rMolen,...tM,opmerkingen:"Seizoensonderhoud lente/zomer. Maandelijks bezoek."},
+      {user_id:userId,klant:"Zorgcentrum De Bron",dienst:"Bestrating en borders",bedrag:fmtB(tBr.totaal),status:"In afwachting",datum:nlDatum(addDays(-3)),regels:rBron,...tBr,opmerkingen:"Uitvoering in overleg met facilitair beheer."},
+      {user_id:userId,klant:"Jan van der Berg",dienst:"Beplanting en grind",bedrag:fmtB(tBe.totaal),status:"Verstuurd",datum:nlDatum(addDays(-8)),regels:rBerg,...tBe,opmerkingen:"Grind kleur naar wens aanpasbaar. Beplanting winterhard."},
+      {user_id:userId,klant:"Cafe t Centrum",dienst:"Heg snoeien terras",bedrag:fmtB(tC.totaal),status:"Afgewezen",datum:nlDatum(addDays(-20)),regels:rCafe,...tC,opmerkingen:""},
+    ]);
+
+    // ── Facturen ──────────────────────────────────────────────────
+    const {data:n1}=await supabase.rpc("next_factuur_nummer",{p_user_id:userId});
+    await supabase.from("facturen").insert({user_id:userId,nummer:n1,klant:"Villa Zonnedal",klant_email:"eigenaar@villazonnedal.nl",datum:iso(addDays(-30)),vervaldatum:iso(addDays(-2)),regels:rZonnedal,btw:tZ.btw,totaal:tZ.totaal,status:"Betaald"});
+    const {data:n2}=await supabase.rpc("next_factuur_nummer",{p_user_id:userId});
+    await supabase.from("facturen").insert({user_id:userId,nummer:n2,klant:"Bakkerij De Molen",klant_email:"info@demolenbrood.nl",datum:iso(addDays(-10)),vervaldatum:iso(addDays(20)),regels:rMolen,btw:tM.btw,totaal:tM.totaal,status:"Verstuurd"});
+    const {data:n3}=await supabase.rpc("next_factuur_nummer",{p_user_id:userId});
+    await supabase.from("facturen").insert({user_id:userId,nummer:n3,klant:"Sporthal De Brug",klant_email:"beheer@debrug.nl",datum:iso(addDays(-20)),vervaldatum:iso(addDays(-5)),regels:[{omschrijving:"Tuinaanleg sportvelden omgeving",aantal:20,eenheid:"uur",prijs:55,btw_pct:21}],btw:231,totaal:1331,status:"Herinnering gestuurd"});
+    const {data:n4}=await supabase.rpc("next_factuur_nummer",{p_user_id:userId});
+    await supabase.from("facturen").insert({user_id:userId,nummer:n4,klant:"Jan van der Berg",klant_email:"j.vanderberg@gmail.com",datum:iso(now),vervaldatum:iso(addDays(30)),regels:rBerg,btw:tBe.btw,totaal:tBe.totaal,status:"Concept"});
+
+    // ── Planning categorieën ──────────────────────────────────────
+    const {data:existingCats}=await supabase.from("planning_categorieen").select("naam,kleur").eq("user_id",userId);
+    let cats = existingCats || [];
+    if (cats.length === 0) {
+      const defaultCats = [
+        {user_id:userId,naam:"Onderhoud",kleur:"#22C55E"},
+        {user_id:userId,naam:"Aanleg",kleur:"#3B82F6"},
+        {user_id:userId,naam:"Overleg",kleur:"#F97316"},
+        {user_id:userId,naam:"Levering",kleur:"#A855F7"},
+      ];
+      await supabase.from("planning_categorieen").insert(defaultCats);
+      cats = defaultCats;
+    }
+    const catNaam = naam => cats.find(c=>c.naam===naam)?.naam || cats[0]?.naam || "";
+
+    // ── Planning ──────────────────────────────────────────────────
+    await supabase.from("planning").insert([
+      {user_id:userId,datum:iso(now),tijd:"08:00",eindtijd:"12:00",klant:"Villa Zonnedal",adres:"Zonneweg 14, Wassenaar",dienst:"Tuin aanleggen dag 1 bestrating",status:"Ingepland",categorie:catNaam("Aanleg")},
+      {user_id:userId,datum:iso(now),tijd:"13:00",eindtijd:"17:00",klant:"Bakkerij De Molen",adres:"Molenstraat 12, Rotterdam",dienst:"Tuinonderhoud heg snoeien",status:"Ingepland",categorie:catNaam("Onderhoud")},
+      {user_id:userId,datum:iso(addDays(1)),tijd:"08:30",eindtijd:"12:30",klant:"Villa Zonnedal",adres:"Zonneweg 14, Wassenaar",dienst:"Tuin aanleggen dag 2 beplanting",status:"Ingepland",categorie:catNaam("Aanleg")},
+      {user_id:userId,datum:iso(addDays(2)),tijd:"09:00",eindtijd:"15:00",klant:"Zorgcentrum De Bron",adres:"Bronlaan 88, Delft",dienst:"Bestrating leggen voorbereiding",status:"Ingepland",categorie:catNaam("Aanleg")},
+      {user_id:userId,datum:iso(addDays(7)),tijd:"08:00",eindtijd:"13:00",klant:"Jan van der Berg",adres:"Acacialaan 3, Haarlem",dienst:"Beplanting en grind aanbrengen",status:"Ingepland",categorie:catNaam("Onderhoud")},
+      {user_id:userId,datum:iso(addDays(8)),tijd:"10:00",eindtijd:"12:00",klant:"Sporthal De Brug",adres:"Brugweg 5, Utrecht",dienst:"Inspectie en nalevering materialen",status:"Ingepland",categorie:catNaam("Levering")},
+    ]);
+
+    // ── Werkbonnen ────────────────────────────────────────────────
+    const {error:wbErr}=await supabase.from("werkbonnen").insert([
+      {user_id:userId,klant:"Villa Zonnedal",datum:iso(addDays(-7)),omschrijving:"Voortuin volledig aangelegd. Bestrating gelegd, borders aangemaakt en beplanting geplaatst. Klant aanwezig en akkoord.",uren:8,materialen:"Tegels 60x60 (40st), Grondfolie, Compost 4 zak, Vaste planten assortiment",status:"Afgerond"},
+      {user_id:userId,klant:"Sporthal De Brug",datum:iso(addDays(-14)),omschrijving:"Gazon rondom sporthal gemaaid, opgeschoond en nagelopen. Beschadigd gazon bijgezaaid. Onkruid verwijderd.",uren:4,materialen:"Graszaad 2kg, Onkruidverwijderaar",status:"Afgerond"},
+      {user_id:userId,klant:"Bakkerij De Molen",datum:iso(addDays(-21)),omschrijving:"Achterzijde tuin gesnoeid en opgeruimd. Heg bijgewerkt op hoogte. Snoeiafval afgevoerd.",uren:3,materialen:"Hegmaaier messen vervangen, Snoeiafval afgevoerd",status:"Afgerond"},
+    ]);
+    if(wbErr){setDemoLoading(false);setDemoMsg("Werkbonnen insert mislukt: "+wbErr.message);return;}
+
+    // ── Ritten ────────────────────────────────────────────────────
+    await supabase.from("ritten").insert([
+      {user_id:userId,datum:iso(now),vertrek:"Utrecht",bestemming:"Wassenaar Villa Zonnedal",km:68,doel:"zakelijk",klant:"Villa Zonnedal"},
+      {user_id:userId,datum:iso(addDays(-1)),vertrek:"Utrecht",bestemming:"Rotterdam Bakkerij De Molen",km:58,doel:"zakelijk",klant:"Bakkerij De Molen"},
+      {user_id:userId,datum:iso(addDays(-5)),vertrek:"Utrecht",bestemming:"Delft Zorgcentrum De Bron",km:42,doel:"zakelijk",klant:"Zorgcentrum De Bron"},
+      {user_id:userId,datum:iso(addDays(-7)),vertrek:"Utrecht",bestemming:"Haarlem Jan van der Berg",km:54,doel:"zakelijk",klant:"Jan van der Berg"},
+    ]);
+
+    // ── Uitgaven ─────────────────────────────────────────────────
+    await supabase.from("uitgaven").insert([
+      {user_id:userId,datum:iso(addDays(-3)),categorie:"Materialen",omschrijving:"Tegels, grondfolie en compost Villa Zonnedal project",bedrag:386,btw_percentage:21},
+      {user_id:userId,datum:iso(addDays(-8)),categorie:"Gereedschap",omschrijving:"Nieuwe hegrotor messen en slijpbladen",bedrag:74,btw_percentage:21},
+      {user_id:userId,datum:iso(addDays(-12)),categorie:"Brandstof",omschrijving:"Diesel busje week 23",bedrag:118,btw_percentage:21},
+    ]);
+
+    // ── Certificaten ──────────────────────────────────────────────
+    await supabase.from("certificaten").insert([
+      {user_id:userId,naam:"BHV Basis",type:"Veiligheid",vervaldatum:iso(addDays(18)),notitie:"Verlenging inplannen via Rode Kruis. Cursus duurt 1 dag."},
+      {user_id:userId,naam:"VBA Hovenieren",type:"Vakbekwaamheid",vervaldatum:iso(addDays(420)),notitie:"Gecertificeerd door Vakgroep Hovenierswerk Nederland."},
+    ]);
+
+    // ── Prijslijst ────────────────────────────────────────────────
+    const demoPrijslijst=[
+      {dienst:"Tuinonderhoud",eenheid:"uur",prijs:45,categorie:"Arbeid"},
+      {dienst:"Tuin aanleggen (arbeid)",eenheid:"uur",prijs:55,categorie:"Arbeid"},
+      {dienst:"Beplanting aanbrengen",eenheid:"uur",prijs:40,categorie:"Arbeid"},
+      {dienst:"Boomonderhoud",eenheid:"uur",prijs:75,categorie:"Arbeid"},
+      {dienst:"Bestrating leggen",eenheid:"m²",prijs:35,categorie:"Materiaal"},
+      {dienst:"Gazon aanleggen",eenheid:"m²",prijs:12,categorie:"Materiaal"},
+      {dienst:"Grind of kies aanbrengen",eenheid:"m²",prijs:45,categorie:"Materiaal"},
+      {dienst:"Heg snoeien",eenheid:"m",prijs:3.50,categorie:"Onderhoud"},
+    ];
+    await supabase.from("prijslijst_items").delete().eq("user_id",userId);
+    await supabase.from("prijslijst_items").insert(demoPrijslijst.map(p=>({...p,user_id:userId})));
+    if(onPrijslijstUpdate) onPrijslijstUpdate(demoPrijslijst);
+
+    setDemoLoading(false);
+    setDemoMsg("Demo data aangemaakt! Navigeer door de app om alles te bekijken.");
+    if(refresh) refresh();
+    setTimeout(()=>setDemoMsg(""),6000);
   };
 
   const subBadge = () => {
@@ -4391,6 +4885,13 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
           </div>
         </>
       )}
+
+      <div className="sec-ttl" style={{marginTop:28,marginBottom:12}}>🎯 Demo data</div>
+      <div className="card cp">
+        <div style={{fontSize:13,color:"#64748B",marginBottom:12,lineHeight:1.6}}>Vul de app snel met voorbeelddata voor een demo: 3 klanten, 2 offertes, 1 factuur, 1 planningitem en 1 werkbon.</div>
+        <button className="btn btn-outline" onClick={generateDemoData} disabled={demoLoading}>{demoLoading?"Bezig…":"↺ Reset & update demo data"}</button>
+        {demoMsg&&<div style={{marginTop:10,fontSize:13,color:"#15803D",fontWeight:500}}>{demoMsg}</div>}
+      </div>
     </div>
   );
 }
@@ -4481,7 +4982,7 @@ function WerkMateApp({ user, onLogout }) {
 
   const refreshAlles = async () => {
       const ownerId = orgOwnerId || user.id;
-      const [o, k, p, f, w, t, pc, el, ri, ui, ce] = await Promise.all([
+      const [o, k, p, f, w, t, pc, el, ri, ui, ce, pl] = await Promise.all([
         supabase.from("offertes").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
         supabase.from("klanten").select("*").eq("user_id", ownerId).order("created_at", {ascending:false}),
         supabase.from("planning").select("*").eq("user_id", ownerId).order("datum",{ascending:true}).order("tijd",{ascending:true}),
@@ -4493,6 +4994,7 @@ function WerkMateApp({ user, onLogout }) {
         supabase.from("ritten").select("*").eq("user_id", ownerId).order("datum", {ascending:false}),
         supabase.from("uitgaven").select("*").eq("user_id", ownerId).order("datum", {ascending:false}),
         supabase.from("certificaten").select("*").eq("user_id", ownerId).order("vervaldatum", {ascending:true}),
+        supabase.from("prijslijst_items").select("*").eq("user_id", ownerId).order("created_at", {ascending:true}),
       ]);
       setOffertes(o.data || []);
       setKlanten(k.data || []);
@@ -4505,6 +5007,7 @@ function WerkMateApp({ user, onLogout }) {
       setRitten(ri.data || []);
       setUitgaven(ui.data || []);
       setCertificaten(ce.data || []);
+      if (pl.data?.length) setPrijslijst(pl.data);
       const { data: esData } = await supabase.from("email_settings").select("*").eq("user_id", ownerId).maybeSingle();
       if (esData) setEmailSettings(esData);
       const { data: etData } = await supabase.from("email_templates").select("*").eq("user_id", ownerId);
@@ -4515,9 +5018,15 @@ function WerkMateApp({ user, onLogout }) {
       }
     };
 
-  const onDone = (data) => {
+  const onDone = async (data) => {
     setBedrijf(data);
-    setPrijslijst(getPrijslijstTemplate(data.sector));
+    const template = getPrijslijstTemplate(data.sector);
+    setPrijslijst(template);
+    const ownerId = orgOwnerId || user.id;
+    const { data: existing } = await supabase.from("prijslijst_items").select("id").eq("user_id", ownerId).limit(1);
+    if (!existing?.length && template.length) {
+      await supabase.from("prijslijst_items").insert(template.map(({dienst,eenheid,prijs,categorie}) => ({user_id:ownerId,dienst,eenheid,prijs,categorie})));
+    }
     setShowOnboard(false);
     setShowSubscription(true);
   };
@@ -4547,7 +5056,7 @@ function WerkMateApp({ user, onLogout }) {
     switch(tab) {
       case "dashboard":  return <DashboardTab openTab={setTab} bedrijf={bedrijf} offertes={offertes} planning={planning} facturen={facturen} klanten={klanten} certificaten={certificaten} userId={orgOwnerId} userEmail={user.email}/>;
       case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={orgOwnerId} offertes={offertes} klanten={klanten} refresh={refreshAlles} bedrijf={bedrijf} emailTemplates={emailTemplates}/>;
-      case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst}/>;
+      case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst} userId={orgOwnerId}/>;
       case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
       case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} offertes={offertes} facturen={facturen} werkbonnen={werkbonnen} refresh={refreshAlles}/>;
       case "profiel":     return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} certificaten={certificaten} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} />;
@@ -4555,9 +5064,9 @@ function WerkMateApp({ user, onLogout }) {
       case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
       case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings} emailTemplates={emailTemplates}/>;
       case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
-      case "social":     return <SocialTab/>;
+      case "social":     return <SocialTab userId={orgOwnerId}/>;
       case "ritten":     return <RittenTab userId={orgOwnerId} ritten={ritten} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
-      case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles} bedrijf={bedrijf} subscription={subscription} onBedrijfUpdate={(b)=>setBedrijf(b)} openTab={setTab} emailTemplates={emailTemplates} onTemplatesUpdate={setEmailTemplates}/>;
+      case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles} bedrijf={bedrijf} subscription={subscription} onBedrijfUpdate={(b)=>setBedrijf(b)} openTab={setTab} emailTemplates={emailTemplates} onTemplatesUpdate={setEmailTemplates} onPrijslijstUpdate={setPrijslijst}/>;
       default: return PH[tab]?<Placeholder {...PH[tab]}/>:null;
     }
   };
