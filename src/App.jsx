@@ -593,6 +593,26 @@ select.pl-inp{appearance:none;-webkit-appearance:none;background-image:url("data
 .pl-inp.no-spinner::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
 .pl-inp.no-spinner{ -moz-appearance:textfield; }
 .pl-cat{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#94A3B8;padding:3px 7px;background:#F3F4F6;border-radius:5px;white-space:nowrap}
+.f-nr{font-weight:700;color:#6366F1;font-size:13px;white-space:nowrap}
+.f-klant{font-weight:600;color:#0F0F14;max-width:180px}
+.f-date{color:#64748B;font-size:13px;white-space:nowrap}
+.f-overdue{color:#DC2626;font-weight:700}
+.f-amt{font-weight:700;color:#0F0F14;white-space:nowrap}
+.f-actions{display:flex;gap:5px;align-items:center;flex-wrap:nowrap}
+.f-btn{border:1.5px solid #E2E8F0;background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;color:#374151;transition:all .15s;white-space:nowrap;line-height:1}
+.f-btn:hover{border-color:#6366F1;color:#6366F1;background:#F5F3FF}
+.f-btn-remind{border-color:#FDE68A;color:#92400E;background:#FFFBEB}
+.f-btn-remind:hover{border-color:#F59E0B;background:#FEF3C7;color:#78350F}
+.f-btn-del{border-color:#FECACA;color:#EF4444;background:#FFF5F5;padding:5px 8px;font-size:13px;line-height:1}
+.f-btn-del:hover{background:#FEE2E2;border-color:#EF4444}
+.f-status-sel{appearance:none;-webkit-appearance:none;border:1.5px solid #E2E8F0;border-radius:8px;padding:5px 26px 5px 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:#374151;outline:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236366F1' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center;cursor:pointer;transition:border-color .15s,background-color .15s;font-weight:500;min-width:118px}
+.f-status-sel:hover{border-color:#CBD5E1}
+.f-status-sel:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.11)}
+.f-status-concept{border-color:#E2E8F0;color:#6B7280;background-color:#F9FAFB}
+.f-status-verstuurd{border-color:#C7D2FE;color:#3730A3;background-color:#EEF2FF}
+.f-status-herinnering{border-color:#FDE68A;color:#92400E;background-color:#FFFBEB}
+.f-status-betaald{border-color:#A7F3D0;color:#065F46;background-color:#ECFDF5}
+.f-status-verlopen{border-color:#FECACA;color:#B91C1C;background-color:#FEF2F2}
 .mail-tabs{display:flex;gap:6px;margin-bottom:18px}
 .mail-tab{padding:7px 15px;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:#555;transition:all .14s}
 .mail-tab.on{background:#0F0F14;color:#fff;border-color:#0F0F14}
@@ -3351,26 +3371,43 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                 </div>
               );
             })}</div>
-          : <div className="card"><div className="tw"><table><thead><tr>{["Nummer","Klant","Datum","Vervaldatum","Totaal","Status",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+          : <div className="card"><div className="tw"><table>
+              <thead><tr>
+                <th>Nummer</th>
+                <th>Klant</th>
+                <th>Datum</th>
+                <th>Vervaldatum</th>
+                <th>Bedrag</th>
+                <th>Status</th>
+                <th style={{width:200}}>Acties</th>
+              </tr></thead>
               <tbody>{filtered.map(f=>{
                 const st=dispStatus(f), od=isOverdue(f);
+                const statusKey = od ? "verlopen" : (f.status||"concept").toLowerCase();
+                const canRemind = st!=="Betaald" && st!=="Concept";
                 return(<tr key={f.id}>
-                  <td style={{fontWeight:700,color:"#6366F1",fontSize:13}}>{f.nummer||"-"}</td>
-                  <td style={{fontWeight:600,color:"#111"}}>{f.klant}</td>
-                  <td style={{color:"#888",fontSize:13}}>{fmtDate(f.datum)}</td>
-                  <td style={{color:od?"#EF4444":"#888",fontSize:13,fontWeight:od?700:400}}>{fmtDate(f.vervaldatum)}</td>
-                  <td style={{fontWeight:700,color:"#111"}}>{fmtEur(getTotal(f))}</td>
-                  <td><Badge status={st}/></td>
-                  <td><div style={{display:"flex",gap:5,alignItems:"center"}}>
-                    <button className="btn btn-ghost btn-sm" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}>PDF</button>
-                    {st==="Verstuurd"&&<button className="btn btn-ghost btn-sm" style={{color:"#D97706",borderColor:"#FDE68A"}} onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔 Herinnering</button>}
-                    {st!=="Verstuurd"&&st!=="Betaald"&&st!=="Concept"&&<button className="btn btn-ghost btn-sm" title="Herinnering" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔</button>}
-                    <button className="btn btn-ghost btn-sm" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>Verstuur mail</button>
-                    <select value={f.status||"Concept"} onChange={e=>updateStatus(f.id,e.target.value)} className="sel">
+                  <td className="f-nr">{f.nummer||"-"}</td>
+                  <td className="f-klant">{f.klant}</td>
+                  <td className="f-date">{fmtDate(f.datum)}</td>
+                  <td className={`f-date${od?" f-overdue":""}`}>{fmtDate(f.vervaldatum)}</td>
+                  <td className="f-amt">{fmtEur(getTotal(f))}</td>
+                  <td style={{paddingTop:10,paddingBottom:10}}>
+                    <select
+                      value={f.status||"Concept"}
+                      onChange={e=>updateStatus(f.id,e.target.value)}
+                      className={`f-status-sel f-status-${statusKey}`}
+                    >
                       {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
                     </select>
-                    <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}>✕</button>
-                  </div></td>
+                  </td>
+                  <td style={{paddingTop:10,paddingBottom:10}}>
+                    <div className="f-actions">
+                      <button className="f-btn" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}>PDF</button>
+                      {canRemind&&<button className="f-btn f-btn-remind" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>Herinnering</button>}
+                      <button className="f-btn" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>Mail</button>
+                      <button className="f-btn f-btn-del" title="Verwijderen" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}>✕</button>
+                    </div>
+                  </td>
                 </tr>);
               })}</tbody></table></div></div>
       }
