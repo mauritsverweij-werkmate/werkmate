@@ -126,7 +126,7 @@ function Auth({ onLogin }) {
   const berichtStyle = { background:"#EEF2FF", border:"1px solid #C7D2FE", borderRadius:8, padding:"10px 13px", fontSize:12.5, color:"#4338CA", marginBottom:14 };
 
   return (
-    <div style={{ minHeight:"100vh", background:"#0F0F14", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ minHeight:"100vh", background:"#0F0F14", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
       <div style={{ background:"#fff", borderRadius:20, padding:40, width:"100%", maxWidth:400, boxShadow:"0 24px 56px rgba(0,0,0,0.3)" }}>
         <div style={{ textAlign:"center", marginBottom:32 }}>
           <div style={{ fontSize:40, marginBottom:8 }}>⚡</div>
@@ -245,7 +245,7 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#F8FAFC", fontFamily:"'DM Sans',sans-serif" }}>
+        <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#F8FAFC", fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
           <div style={{ background:"#fff", border:"1.5px solid #E8EEF6", borderRadius:20, padding:"48px 40px", maxWidth:480, textAlign:"center", boxShadow:"0 8px 32px rgba(0,0,0,.06)" }}>
             <div style={{ fontSize:48, marginBottom:16 }}>⚠️</div>
             <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:22, color:"#0F172A", marginBottom:10 }}>Er ging iets mis</div>
@@ -420,7 +420,7 @@ const SC = {
 };
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:hidden}
 body{background:#0F0F14}
@@ -437,7 +437,7 @@ body{background:#0F0F14}
 .mob-screen{position:fixed;inset:0;background:#F8FAFC;z-index:150;display:flex;flex-direction:column;overflow:hidden;animation:slideIn .26s cubic-bezier(.25,.46,.45,.94)}
 @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
 .mob-screen-hdr{background:#fff;border-bottom:1px solid #EAECF0;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
-.mob-back{background:none;border:none;color:#6366F1;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:3px;padding:6px 0;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.mob-back{background:none;border:none;color:#6366F1;font-size:15px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:3px;padding:6px 0;-webkit-tap-highlight-color:transparent;white-space:nowrap}
 .mob-screen-ttl{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#0F0F14;flex:1}
 .mob-screen-scroll{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 .mob-det-section{background:#fff;border-radius:16px;border:1px solid #EAECF0;padding:18px;margin-bottom:10px}
@@ -446,7 +446,7 @@ body{background:#0F0F14}
 .mob-det-row:last-child{border-bottom:none}
 .mob-det-lbl{font-size:13px;color:#64748B}
 .mob-det-val{font-size:13.5px;font-weight:600;color:#0F0F14;text-align:right;flex:1;margin-left:10px}
-.mob-det-action-btn{display:flex;align-items:center;gap:14px;width:100%;padding:15px 16px;background:#fff;border-radius:14px;border:1px solid #EAECF0;margin-bottom:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:#0F0F14;-webkit-tap-highlight-color:transparent;min-height:52px;text-align:left;transition:background .1s}
+.mob-det-action-btn{display:flex;align-items:center;gap:14px;width:100%;padding:15px 16px;background:#fff;border-radius:14px;border:1px solid #EAECF0;margin-bottom:8px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;color:#0F0F14;-webkit-tap-highlight-color:transparent;min-height:52px;text-align:left;transition:background .1s}
 .mob-det-action-btn:active{background:#F8FAFF}
 .mob-det-action-btn.danger{color:#EF4444;border-color:#FECACA;background:#FEF2F2}
 .mob-det-action-ic{font-size:20px;width:28px;text-align:center;flex-shrink:0}
@@ -470,7 +470,7 @@ body{background:#0F0F14}
 .mob-day-empty{padding:28px 16px;text-align:center;color:#94A3B8;font-size:13.5px}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
-.shell{display:flex;height:100vh;background:#F1F5F9;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;overflow:hidden}
+.shell{display:flex;height:100vh;background:#F1F5F9;font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden}
 .sidebar{width:220px;min-width:220px;background:#0F0F14;display:flex;flex-direction:column;overflow:hidden}
 .sb-logo{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
 .sb-mark{display:flex;align-items:center;gap:9px;margin-bottom:2px}
@@ -478,7 +478,7 @@ body{background:#0F0F14}
 .sb-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff}
 .sb-sub{font-size:9.5px;color:rgba(255,255,255,.28);letter-spacing:.5px;text-transform:uppercase;margin-left:39px}
 .nav-wrap{flex:1;padding:12px 10px;overflow-y:auto}
-.nb{width:100%;display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;margin-bottom:1px;text-align:left;transition:all .14s;background:transparent;color:rgba(255,255,255,.4);position:relative}
+.nb{width:100%;display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;margin-bottom:1px;text-align:left;transition:all .14s;background:transparent;color:rgba(255,255,255,.4);position:relative}
 .nb:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.78)}
 .nb.on{background:rgba(99,102,241,.18);color:#A5B4FC;font-weight:600}
 .nb.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:#6366F1;border-radius:0 2px 2px 0}
@@ -487,14 +487,14 @@ body{background:#0F0F14}
 .su-role{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.26);margin-bottom:3px}
 .su-name{font-size:13px;font-weight:700;color:#fff}
 .su-plan{font-size:10.5px;color:rgba(255,255,255,.3);margin-top:1px}
-.logout-btn{width:100%;margin-top:8px;background:rgba(255,255,255,.08);border:none;border-radius:7px;padding:7px;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .14s}
+.logout-btn{width:100%;margin-top:8px;background:rgba(255,255,255,.08);border:none;border-radius:7px;padding:7px;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .14s}
 .logout-btn:hover{background:rgba(255,255,255,.14);color:#fff}
 .main{flex:1;overflow-y:auto;padding:28px 32px;background:#F1F5F9}
 .pg-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#0F0F14;letter-spacing:-.4px;margin-bottom:2px}
 .pg-sub{font-size:12.5px;color:#94A3B8}
 .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
 .sec-ttl{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#0F0F14;margin-bottom:10px}
-.btn{border:none;border-radius:10px;padding:9px 17px;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .14s;white-space:nowrap;letter-spacing:.1px}
+.btn{border:none;border-radius:10px;padding:9px 17px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .14s;white-space:nowrap;letter-spacing:.1px}
 .btn-dark{background:#0F0F14;color:#fff}
 .btn-dark:hover{background:#1e1e2e;transform:translateY(-1px)}
 .btn-ai{background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.28)}
@@ -524,13 +524,18 @@ tbody tr:hover{background:#FAFBFC}
 td{padding:12px 14px;font-size:13px;color:#374151}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .bdot{width:5px;height:5px;border-radius:50%}
-.inp{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px 14px;font-family:'Plus Jakarta Sans','DM Sans',sans-serif;font-size:13.5px;color:#0F172A;outline:none;transition:border-color .18s,box-shadow .18s;background:#fff}
-.inp:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-.inp::placeholder{color:#94A3B8}
-select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394A3B8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
-textarea.inp{min-height:100px;resize:vertical;line-height:1.6}
-.ilbl{font-size:11px;font-weight:700;color:#64748B;display:block;margin-bottom:5px;letter-spacing:.2px;text-transform:uppercase}
-.ig{margin-bottom:14px}
+.inp{width:100%;border:1.5px solid #E2E8F0;border-radius:12px;padding:11px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:#0F172A;outline:none;transition:border-color .18s,box-shadow .2s;background:#fff;font-weight:400}
+.inp:hover{border-color:#CBD5E1}
+.inp:focus{border-color:#6366F1;box-shadow:0 0 0 3.5px rgba(99,102,241,.13)}
+.inp::placeholder{color:#CBD5E1}
+select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1.5l6 6 6-6' stroke='%236366F1' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:42px;cursor:pointer}
+select.inp:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1.5l6 6 6-6' stroke='%234F46E5' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+textarea.inp{min-height:100px;resize:vertical;line-height:1.65}
+.ilbl{font-size:11.5px;font-weight:600;color:#64748B;display:block;margin-bottom:6px;letter-spacing:.25px;text-transform:uppercase}
+.ig{margin-bottom:16px}
+.sel{appearance:none;-webkit-appearance:none;border:1.5px solid #E2E8F0;border-radius:9px;padding:6px 30px 6px 11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:#0F172A;outline:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236366F1' stroke-width='1.7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 9px center;cursor:pointer;transition:border-color .16s,box-shadow .18s;font-weight:400}
+.sel:hover{border-color:#CBD5E1}
+.sel:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px)}
 .modal{background:#fff;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 64px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.04)}
 .modal-lg{max-width:720px}
@@ -567,28 +572,32 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.6}
 .off-cell.center{justify-content:center}
 .off-cell.del{justify-content:center}
 .off-cell-totaal{font-size:13px;font-weight:700;color:#111;text-align:right;justify-content:flex-end}
-.off-inp{height:36px;width:100%;box-sizing:border-box;border:1.5px solid #E5E7EB;border-radius:7px;padding:0 9px;font-family:'DM Sans',sans-serif;font-size:13px;color:#111;outline:none;background:#fff;transition:border-color .14s}
-.off-inp-ta{height:auto;min-height:36px;padding:8px 9px;resize:none;overflow:hidden;line-height:1.5;vertical-align:top}
-.off-inp:focus{border-color:#6366F1}
+.off-inp{height:36px;width:100%;box-sizing:border-box;border:1.5px solid #E2E8F0;border-radius:9px;padding:0 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:#0F172A;outline:none;background:#fff;transition:border-color .16s,box-shadow .18s;font-weight:400}
+.off-inp-ta{height:auto;min-height:36px;padding:8px 10px;resize:none;overflow:hidden;line-height:1.5;vertical-align:top}
+.off-inp:hover{border-color:#CBD5E1}
+.off-inp:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.11)}
 .off-inp.right{text-align:right}
 .off-inp.center{text-align:center}
 .off-inp::-webkit-outer-spin-button,.off-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .off-inp{-moz-appearance:textfield}
+select.off-inp{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%236366F1' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px;cursor:pointer}
 .tot-box{text-align:right;font-size:12.5px;color:#555;line-height:2;padding:11px 14px;background:#FAFAFA;border-radius:9px;margin-bottom:12px}
 .modal-act{position:sticky;bottom:0;background:#fff;padding:12px 0 0;margin-top:4px;display:flex;gap:9px}
 .note-box{background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;padding:11px 13px;font-size:12px;color:#78350F;margin-bottom:14px;line-height:1.5}
 .pl-row{display:flex;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid #F5F5F5}
-.pl-inp{border:1.5px solid #E5E7EB;border-radius:7px;padding:6px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:#111;outline:none;transition:border-color .14s;background:#fff}
-.pl-inp:focus{border-color:#6366F1}
+.pl-inp{border:1.5px solid #E2E8F0;border-radius:9px;padding:7px 11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:#0F172A;outline:none;transition:border-color .16s,box-shadow .18s;background:#fff;font-weight:400}
+.pl-inp:hover{border-color:#CBD5E1}
+.pl-inp:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.11)}
+select.pl-inp{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%236366F1' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px;cursor:pointer}
 .pl-inp.no-spinner::-webkit-outer-spin-button,
 .pl-inp.no-spinner::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
 .pl-inp.no-spinner{ -moz-appearance:textfield; }
 .pl-cat{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#94A3B8;padding:3px 7px;background:#F3F4F6;border-radius:5px;white-space:nowrap}
 .mail-tabs{display:flex;gap:6px;margin-bottom:18px}
-.mail-tab{padding:7px 15px;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:#555;transition:all .14s}
+.mail-tab{padding:7px 15px;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:#555;transition:all .14s}
 .mail-tab.on{background:#0F0F14;color:#fff;border-color:#0F0F14}
 .soc-plat{display:flex;gap:8px;margin-bottom:16px}
-.soc-btn{flex:1;padding:9px;border-radius:10px;border:1.5px solid #E5E7EB;background:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;transition:all .14s;color:#555;text-align:center}
+.soc-btn{flex:1;padding:9px;border-radius:10px;border:1.5px solid #E5E7EB;background:#fff;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:600;transition:all .14s;color:#555;text-align:center}
 .soc-btn.on.insta{border-color:#E1306C;background:#FFF0F5;color:#E1306C}
 .soc-btn.on.tik{border-color:#010101;background:#F3F3F3;color:#010101}
 .soc-btn.on.both{border-color:#6366F1;background:#EEF2FF;color:#6366F1}
@@ -632,7 +641,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.6}
 .cal-nav-btn{background:#F1F5F9;border:none;border-radius:8px;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#475569;line-height:1;transition:all .14s}
 .cal-nav-btn:hover{background:#E2E8F0;color:#0F172A}
 .cal-view-toggle{display:flex;background:#F3F4F6;border-radius:9px;padding:3px;gap:2px}
-.cal-vt-btn{background:transparent;border:none;border-radius:7px;padding:5px 14px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;color:#666;transition:all .14s}
+.cal-vt-btn{background:transparent;border:none;border-radius:7px;padding:5px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;color:#666;transition:all .14s}
 .cal-vt-btn.on{background:#fff;color:#0F0F14;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:#F8FAFC;border-bottom:1px solid #E5E7EB}
 .cal-dow-cell{padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px}
@@ -690,7 +699,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.6}
 .cal-herhaal-tag{font-size:9px;opacity:.65;margin-top:1px}
 .cal-filter-bar{display:flex;gap:6px;padding:9px 18px;border-bottom:1px solid #F0F0F0;flex-wrap:wrap;align-items:center}
 .cal-filter-lbl{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
-.cal-fp{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1.5px solid #E5E7EB;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;color:#555;transition:all .14s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.cal-fp{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1.5px solid #E5E7EB;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;color:#555;transition:all .14s;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif}
 .cal-fp:hover{border-color:#6366F1;color:#6366F1}
 .cal-fp.on{background:#0F0F14;color:#fff;border-color:#0F0F14}
 .cal-fp-av{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:700;color:#fff;flex-shrink:0}
@@ -703,14 +712,14 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.6}
 @media(max-width:768px){
   .sidebar{display:none}
   .mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #E5E7EB;z-index:200;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1px 12px rgba(0,0,0,.06)}
-  .mob-nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px 8px;gap:3px;border:none;background:transparent;color:#9CA3AF;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .mob-nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px 8px;gap:3px;border:none;background:transparent;color:#9CA3AF;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent}
   .mob-nb.mob-nb-on{color:#6366F1}
   .mob-nb-ic{font-size:22px;line-height:1}
   .main{padding-bottom:calc(70px + env(safe-area-inset-bottom));padding-left:16px;padding-right:16px;padding-top:0}
   .ph{position:sticky;top:0;z-index:10;background:#F8FAFC;padding:16px 0 14px;margin-bottom:16px;border-bottom:1px solid #EAECF0}
   .ph .pg-title{font-size:20px}
   .mb [style*="1fr"]{grid-template-columns:1fr !important}
-  .inp{font-size:16px;padding:12px 14px}
+  .inp{font-size:16px;padding:13px 16px}
   .off-inp,.off-inp-ta{font-size:16px}
   .off-tbl{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px}
   .off-tbl-grid{min-width:520px}
@@ -1204,7 +1213,7 @@ function OnboardingWizard({ userId, onDone }) {
   const sub = {fontSize:13,color:"#888",marginBottom:16};
 
   return (
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#F0F4FF 0%,#FAF5FF 100%)",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"32px 20px 48px",fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#F0F4FF 0%,#FAF5FF 100%)",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"32px 20px 48px",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
       <div style={cardStyle}>
         {/* Brand */}
         <div style={{textAlign:"center",marginBottom:28}}>
@@ -1831,7 +1840,7 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten,
               </div>
             ))}
           </div>
-          <button onClick={()=>openTab("profiel")} style={{whiteSpace:"nowrap",padding:"6px 14px",borderRadius:8,border:"1.5px solid #F59E0B",background:"#FEF3C7",color:"#92400E",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>Bekijk certificaten</button>
+          <button onClick={()=>openTab("profiel")} style={{whiteSpace:"nowrap",padding:"6px 14px",borderRadius:8,border:"1.5px solid #F59E0B",background:"#FEF3C7",color:"#92400E",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",flexShrink:0}}>Bekijk certificaten</button>
         </div>
       </div>
     )}
@@ -1861,7 +1870,7 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten,
       </div>
       <div><div className="sec-ttl">Snelle acties</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
         {[{icon:"✨",label:"Slimme offerte",tab:"offertes",bg:"#EEF2FF",border:"#C7D2FE",col:"#6366F1"},{icon:"✉️",label:"Mail",tab:"mail",bg:"#F0FDF4",border:"#BBF7D0",col:"#16A34A"},{icon:"📱",label:"Social post",tab:"social",bg:"#FFF7ED",border:"#FED7AA",col:"#EA580C"}]
-          .map(a=><button key={a.tab} onClick={()=>openTab(a.tab)} style={{background:a.bg,border:`1.5px solid ${a.border}`,borderRadius:11,padding:"14px",cursor:"pointer",textAlign:"center",fontFamily:"'DM Sans',sans-serif",transition:"all .14s"}} onMouseOver={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseOut={e=>e.currentTarget.style.transform="none"}>
+          .map(a=><button key={a.tab} onClick={()=>openTab(a.tab)} style={{background:a.bg,border:`1.5px solid ${a.border}`,borderRadius:11,padding:"14px",cursor:"pointer",textAlign:"center",fontFamily:"'Plus Jakarta Sans',sans-serif",transition:"all .14s"}} onMouseOver={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseOut={e=>e.currentTarget.style.transform="none"}>
             <div style={{fontSize:22,marginBottom:5}}>{a.icon}</div><div style={{fontSize:12.5,fontWeight:700,color:a.col}}>{a.label}</div>
           </button>)}
       </div></div>
@@ -2087,7 +2096,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         {mobDetail.portal_token&&<button className="mob-det-action-btn" onClick={()=>waOfferte(mobDetail,klanten,bedrijf)}><span className="mob-det-action-ic">📱</span>Stuur via WhatsApp</button>}
         <div style={{background:"#fff",borderRadius:14,border:"1px solid #EAECF0",padding:"14px 16px",marginBottom:8}}>
           <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
-          <select value={mobDetail.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",mobDetail.id);refresh();setMobDetail({...mobDetail,status:e.target.value});}} style={{width:"100%",border:"1.5px solid #E5E7EB",borderRadius:10,padding:"12px 14px",fontSize:16,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none",background:"#fff",color:"#111"}}>
+          <select value={mobDetail.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",mobDetail.id);refresh();setMobDetail({...mobDetail,status:e.target.value});}} className="inp">
             {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
           </select>
         </div>
@@ -2131,7 +2140,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
                   } catch(err) { alert("Versturen mislukt: "+err.message); }
                 }}>Mail</button>
                 {o.portal_token&&<button className="btn btn-ghost btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}>WA</button>}
-                <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
+                <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} className="sel">
                   {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
                 </select>
                 <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}>✕</button>
@@ -2401,13 +2410,13 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
             Dit is een terugkerende afspraak. Wat wil je verwijderen?
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <button onClick={()=>verwijderEnkel(deleteTaskDialog.id)} style={{background:"#F8FAFC",border:"1.5px solid #E5E7EB",borderRadius:12,padding:"13px 18px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#374151",fontFamily:"'DM Sans',sans-serif",textAlign:"left"}}>
+            <button onClick={()=>verwijderEnkel(deleteTaskDialog.id)} style={{background:"#F8FAFC",border:"1.5px solid #E5E7EB",borderRadius:12,padding:"13px 18px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#374151",fontFamily:"'Plus Jakarta Sans',sans-serif",textAlign:"left"}}>
               📅 Alleen deze afspraak verwijderen
             </button>
-            <button onClick={()=>verwijderGroep(deleteTaskDialog.herhaal_group_id)} style={{background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:12,padding:"13px 18px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#DC2626",fontFamily:"'DM Sans',sans-serif",textAlign:"left"}}>
+            <button onClick={()=>verwijderGroep(deleteTaskDialog.herhaal_group_id)} style={{background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:12,padding:"13px 18px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#DC2626",fontFamily:"'Plus Jakarta Sans',sans-serif",textAlign:"left"}}>
               🗑️ Alle herhalingen verwijderen
             </button>
-            <button onClick={()=>setDeleteTaskDialog(null)} style={{background:"none",border:"none",fontSize:14,color:"#94A3B8",cursor:"pointer",padding:"8px",fontFamily:"'DM Sans',sans-serif"}}>
+            <button onClick={()=>setDeleteTaskDialog(null)} style={{background:"none",border:"none",fontSize:14,color:"#94A3B8",cursor:"pointer",padding:"8px",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
               Annuleren
             </button>
           </div>
@@ -3271,7 +3280,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           </div>
           <div className="mob-det-section" style={{marginBottom:8}}>
             <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
-            <select value={f.status||"Concept"} onChange={async e=>{await updateStatus(f.id,e.target.value);setMobDetail({...f,status:e.target.value});}} style={{width:"100%",border:"1.5px solid #E5E7EB",borderRadius:10,padding:"12px 14px",fontSize:16,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none",background:"#fff",color:"#111"}}>
+            <select value={f.status||"Concept"} onChange={async e=>{await updateStatus(f.id,e.target.value);setMobDetail({...f,status:e.target.value});}} className="inp">
               {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
             </select>
           </div>
@@ -3294,14 +3303,14 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
 
     <div className={mob?"tab-scroll":""}  style={{display:"flex",gap:8,marginBottom:16,flexWrap:mob?"nowrap":"wrap"}}>
       {[["facturen","📄 Facturen"],["uitgaven","🧾 Uitgaven"],["btw","🧾 BTW"],["winst","📊 Winst"],["ai","✨ Assistent"]].map(([id,lbl])=>(
-        <button key={id} onClick={()=>setSubTab(id)} style={{padding:"7px 16px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{lbl}</button>
+        <button key={id} onClick={()=>setSubTab(id)} style={{padding:"7px 16px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{lbl}</button>
       ))}
     </div>
 
     {subTab==="facturen"&&(<>
       <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",overflowX:"hidden"}}>
         {["Alle","Concept","Verstuurd","Herinnering","Betaald","Verlopen"].map(s=>(
-          <button key={s} onClick={()=>setFilterStatus(s)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterStatus===s?"#0F0F14":"#fff",color:filterStatus===s?"#fff":"#555",borderColor:filterStatus===s?"#0F0F14":"#E5E7EB"}}>{s}</button>
+          <button key={s} onClick={()=>setFilterStatus(s)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:filterStatus===s?"#0F0F14":"#fff",color:filterStatus===s?"#fff":"#555",borderColor:filterStatus===s?"#0F0F14":"#E5E7EB"}}>{s}</button>
         ))}
       </div>
       {filtered.length===0
@@ -3336,7 +3345,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                     {st==="Verstuurd"&&<button className="btn btn-ghost btn-sm" style={{color:"#D97706",borderColor:"#FDE68A"}} onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔 Herinnering</button>}
                     {st!=="Verstuurd"&&st!=="Betaald"&&st!=="Concept"&&<button className="btn btn-ghost btn-sm" title="Herinnering" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>🔔</button>}
                     <button className="btn btn-ghost btn-sm" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>Verstuur mail</button>
-                    <select value={f.status||"Concept"} onChange={e=>updateStatus(f.id,e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:7,padding:"4px 8px",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none"}}>
+                    <select value={f.status||"Concept"} onChange={e=>updateStatus(f.id,e.target.value)} className="sel">
                       {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
                     </select>
                     <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}>✕</button>
@@ -3502,7 +3511,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         const rounded = roundUp ? Math.ceil(value) : Math.floor(value);
         const ok = btwCopied === id;
         return (
-          <button onClick={()=>{navigator.clipboard.writeText(String(rounded));setBtwCopied(id);setTimeout(()=>setBtwCopied(c=>c===id?null:c),2000);}} style={{marginLeft:5,padding:"1px 7px",fontSize:11,fontWeight:600,border:"1px solid",borderColor:ok?"#A5B4FC":"#C7D2FE",borderRadius:12,background:ok?"#EEF2FF":"#fff",color:ok?"#4338CA":"#6366F1",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .15s",fontFamily:"'DM Sans',sans-serif"}}>
+          <button onClick={()=>{navigator.clipboard.writeText(String(rounded));setBtwCopied(id);setTimeout(()=>setBtwCopied(c=>c===id?null:c),2000);}} style={{marginLeft:5,padding:"1px 7px",fontSize:11,fontWeight:600,border:"1px solid",borderColor:ok?"#A5B4FC":"#C7D2FE",borderRadius:12,background:ok?"#EEF2FF":"#fff",color:ok?"#4338CA":"#6366F1",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all .15s",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
             {ok?"✓ Gekopieerd!":"kopieer"}
           </button>
         );
@@ -3619,11 +3628,11 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
               {ingediend&&<span style={{fontSize:11.5,fontWeight:700,color:"#059669",background:"#ECFDF5",border:"1px solid #A7F3D0",borderRadius:20,padding:"3px 10px"}}>✓ Ingediend</span>}
             </div>
             <div className={mob?"tab-scroll":""} style={{display:"flex",gap:6,alignItems:"center",flexWrap:mob?"nowrap":"wrap",paddingBottom:mob?4:0}}>
-              <select value={btwJaar} onChange={e=>{setBtwJaar(Number(e.target.value));setBtwStap(0);}} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer",flexShrink:0}}>
+              <select value={btwJaar} onChange={e=>{setBtwJaar(Number(e.target.value));setBtwStap(0);}} className="sel" style={{flexShrink:0}}>
                 {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
               </select>
               {quarters.map((qq,qi)=>(
-                <button key={qq.label} onClick={()=>{setBtwQ(qi);setBtwStap(0);}} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:btwQ===qi?"#0F0F14":"#fff",color:btwQ===qi?"#fff":"#555",borderColor:btwQ===qi?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{qq.label}</button>
+                <button key={qq.label} onClick={()=>{setBtwQ(qi);setBtwStap(0);}} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:btwQ===qi?"#0F0F14":"#fff",color:btwQ===qi?"#fff":"#555",borderColor:btwQ===qi?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{qq.label}</button>
               ))}
             </div>
             {!mob&&<div style={{fontSize:12,color:"#94A3B8",marginTop:6}}>{fInQ.length} betaalde factuur{fInQ.length!==1?"en":""} · {uInQ.length} uitgave{uInQ.length!==1?"n":""} · {q.naam} {btwJaar}</div>}
@@ -3633,7 +3642,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           <div className={mob?"tab-scroll":""} style={{display:"flex",alignItems:"center",gap:0,marginBottom:24,overflowX:"auto",paddingBottom:mob?4:0}}>
             {stappen.map((s,i)=>(
               <Fragment key={s}>
-                <button onClick={()=>setBtwStap(i)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:20,border:`1.5px solid ${btwStap===i?"#6366F1":"#E5E7EB"}`,background:btwStap===i?"#EEF2FF":"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:12.5,fontWeight:600,color:btwStap===i?"#4338CA":"#64748B",whiteSpace:"nowrap"}}>
+                <button onClick={()=>setBtwStap(i)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:20,border:`1.5px solid ${btwStap===i?"#6366F1":"#E5E7EB"}`,background:btwStap===i?"#EEF2FF":"#fff",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:12.5,fontWeight:600,color:btwStap===i?"#4338CA":"#64748B",whiteSpace:"nowrap"}}>
                   <span style={{width:20,height:20,borderRadius:"50%",background:btwStap===i?"#6366F1":btwStap>i?"#10B981":"#E5E7EB",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{btwStap>i?"✓":i+1}</span>
                   {s}
                 </button>
@@ -3771,7 +3780,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
               {/* Acties */}
               <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
                 <button onClick={exportBtwPdf} className="btn btn-outline">⬇ Sla op als PDF</button>
-                <a href="https://mijn.belastingdienst.nl" target="_blank" rel="noopener noreferrer" style={{padding:"8px 18px",background:"#1C4CC3",color:"#fff",borderRadius:9,fontSize:13,fontWeight:700,textDecoration:"none",fontFamily:"'DM Sans',sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>Ga naar Belastingdienst ↗</a>
+                <a href="https://mijn.belastingdienst.nl" target="_blank" rel="noopener noreferrer" style={{padding:"8px 18px",background:"#1C4CC3",color:"#fff",borderRadius:9,fontSize:13,fontWeight:700,textDecoration:"none",fontFamily:"'Plus Jakarta Sans',sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>Ga naar Belastingdienst ↗</a>
               </div>
 
               {ingediend
@@ -3779,7 +3788,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                     <span style={{fontSize:22}}>✅</span>
                     <div>
                       <div style={{fontWeight:700,fontSize:14,color:"#065F46"}}>{q.naam} {btwJaar} is ingediend</div>
-                      <button onClick={()=>{localStorage.removeItem(ingKey);setBtwStap(2);}} style={{background:"none",border:"none",color:"#6B7280",fontSize:12,cursor:"pointer",padding:0,marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>Ongedaan maken</button>
+                      <button onClick={()=>{localStorage.removeItem(ingKey);setBtwStap(2);}} style={{background:"none",border:"none",color:"#6B7280",fontSize:12,cursor:"pointer",padding:0,marginTop:2,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Ongedaan maken</button>
                     </div>
                   </div>
                 : <div style={{background:"#FFF7ED",border:"1.5px solid #FED7AA",borderRadius:12,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
@@ -3787,7 +3796,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                       <div style={{fontWeight:700,fontSize:14,color:"#92400E"}}>Aangifte gedaan?</div>
                       <div style={{fontSize:13,color:"#78350F",marginTop:2}}>Bevestig dat je {q.naam} {btwJaar} hebt ingediend bij de Belastingdienst.</div>
                     </div>
-                    <button onClick={()=>{localStorage.setItem(ingKey,"1");setBtwStap(2);}} style={{padding:"9px 20px",background:"#D97706",color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>✓ Markeer als ingediend</button>
+                    <button onClick={()=>{localStorage.setItem(ingKey,"1");setBtwStap(2);}} style={{padding:"9px 20px",background:"#D97706",color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",whiteSpace:"nowrap"}}>✓ Markeer als ingediend</button>
                   </div>
               }
 
@@ -3873,9 +3882,9 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
             <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
               <div style={{fontWeight:700,fontSize:16,color:"#111"}}>Winst & verlies</div>
               {["maand","jaar"].map(p=>(
-                <button key={p} onClick={()=>setWinstPeriode(p)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:winstPeriode===p?"#0F0F14":"#fff",color:winstPeriode===p?"#fff":"#555",borderColor:winstPeriode===p?"#0F0F14":"#E5E7EB"}}>{p.charAt(0).toUpperCase()+p.slice(1)}</button>
+                <button key={p} onClick={()=>setWinstPeriode(p)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:winstPeriode===p?"#0F0F14":"#fff",color:winstPeriode===p?"#fff":"#555",borderColor:winstPeriode===p?"#0F0F14":"#E5E7EB"}}>{p.charAt(0).toUpperCase()+p.slice(1)}</button>
               ))}
-              {winstPeriode==="maand"&&<select value={winstJaar} onChange={e=>setWinstJaar(Number(e.target.value))} style={{border:"1.5px solid #E5E7EB",borderRadius:8,padding:"5px 10px",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer"}}>
+              {winstPeriode==="maand"&&<select value={winstJaar} onChange={e=>setWinstJaar(Number(e.target.value))} className="sel">
                 {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
               </select>}
             </div>
@@ -4245,7 +4254,7 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
         />
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {["Alle","Offerte","Factuur","Herinnering","Review","Certificaat","Team","Handmatig"].map(t=>(
-            <button key={t} onClick={()=>setFilterType(t)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterType===t?"#0F0F14":"#fff",color:filterType===t?"#fff":"#555",borderColor:filterType===t?"#0F0F14":"#E5E7EB"}}>{t}</button>
+            <button key={t} onClick={()=>setFilterType(t)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:filterType===t?"#0F0F14":"#fff",color:filterType===t?"#fff":"#555",borderColor:filterType===t?"#0F0F14":"#E5E7EB"}}>{t}</button>
           ))}
         </div>
       </div>
@@ -4427,7 +4436,7 @@ function SubscriptieScherm({ bedrijfsnaam, onSkip, blocked, onLogout }) {
     { icon:"👷", label:"Teambeheer", desc:"Medewerkers uitnodigen en taken toewijzen" },
   ];
   return (
-    <div style={{minHeight:"100vh",background:"#0F0F14",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',sans-serif",padding:"24px",boxSizing:"border-box"}}>
+    <div style={{minHeight:"100vh",background:"#0F0F14",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Plus Jakarta Sans',sans-serif",padding:"24px",boxSizing:"border-box"}}>
       <div style={{background:"#fff",borderRadius:24,padding:"40px 36px",width:"100%",maxWidth:520,boxShadow:"0 32px 80px rgba(0,0,0,0.4)"}}>
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{fontSize:36,marginBottom:10}}>⚡</div>
@@ -4468,18 +4477,18 @@ function SubscriptieScherm({ bedrijfsnaam, onSkip, blocked, onLogout }) {
         </div>
 
         <a href={STRIPE_URL} target="_blank" rel="noopener noreferrer"
-          style={{display:"block",width:"100%",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"center",textDecoration:"none",boxSizing:"border-box",marginBottom:10}}>
+          style={{display:"block",width:"100%",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",textAlign:"center",textDecoration:"none",boxSizing:"border-box",marginBottom:10}}>
           {blocked ? "Abonnement kiezen" : "🚀 Start 14 dagen gratis"}
         </a>
         {!blocked && onSkip && (
           <button onClick={onSkip}
-            style={{display:"block",width:"100%",background:"none",border:"none",color:"#94A3B8",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",padding:"8px"}}>
+            style={{display:"block",width:"100%",background:"none",border:"none",color:"#94A3B8",fontSize:13,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",padding:"8px"}}>
             Misschien later
           </button>
         )}
         {blocked && onLogout && (
           <button onClick={onLogout}
-            style={{display:"block",width:"100%",background:"none",border:"none",color:"#94A3B8",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",padding:"8px"}}>
+            style={{display:"block",width:"100%",background:"none",border:"none",color:"#94A3B8",fontSize:13,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",padding:"8px"}}>
             Uitloggen
           </button>
         )}
@@ -4562,7 +4571,7 @@ function EmailTemplatesSection({ userId, bedrijf, emailTemplates, onTemplatesUpd
     <div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
         {TEMPLATE_TYPES.map(t => (
-          <button key={t.key} onClick={()=>{setOpenKey(t.key);setShowPreview(false);}} style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:openKey===t.key?"#0F0F14":"#fff",color:openKey===t.key?"#fff":"#555",borderColor:openKey===t.key?"#0F0F14":"#E5E7EB"}}>
+          <button key={t.key} onClick={()=>{setOpenKey(t.key);setShowPreview(false);}} style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:openKey===t.key?"#0F0F14":"#fff",color:openKey===t.key?"#fff":"#555",borderColor:openKey===t.key?"#0F0F14":"#E5E7EB"}}>
             {t.label}
           </button>
         ))}
@@ -4583,7 +4592,7 @@ function EmailTemplatesSection({ userId, bedrijf, emailTemplates, onTemplatesUpd
           </div>
 
           <div>
-            <button onClick={()=>setShowPreview(p=>!p)} style={{background:"none",border:"none",padding:0,fontSize:13,color:"#6366F1",fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+            <button onClick={()=>setShowPreview(p=>!p)} style={{background:"none",border:"none",padding:0,fontSize:13,color:"#6366F1",fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
               {showPreview ? "▲ Verberg preview" : "▼ Preview (met voorbeeldgegevens)"}
             </button>
             {showPreview && (
@@ -5172,11 +5181,11 @@ function WerkMateApp({ user, onLogout }) {
         {mobMore && (
           <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,borderTop:"1px solid #E5E7EB",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
             {MOB_MORE.map(item => (
-              <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:tab===item.id?"#EEF2FF":"#F8FAFC",border:`1.5px solid ${tab===item.id?"#C7D2FE":"#E5E7EB"}`,borderRadius:12,color:tab===item.id?"#6366F1":"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+              <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:tab===item.id?"#EEF2FF":"#F8FAFC",border:`1.5px solid ${tab===item.id?"#C7D2FE":"#E5E7EB"}`,borderRadius:12,color:tab===item.id?"#6366F1":"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
                 <span style={{fontSize:18}}>{item.icon}</span>{item.label}
               </button>
             ))}
-            <button onClick={() => { setMobMore(false); onLogout(); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:12,color:"#EF4444",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",gridColumn:"1/-1"}}>
+            <button onClick={() => { setMobMore(false); onLogout(); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:12,color:"#EF4444",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",gridColumn:"1/-1"}}>
               <span style={{fontSize:18}}>🚪</span>Uitloggen
             </button>
           </div>
@@ -5233,7 +5242,7 @@ function PortalPage({ token }) {
   const btw = offerte?.btw ?? (btw9p + btw21p || subtotaal * 0.21);
   const totaal = offerte?.totaal ?? subtotaal + btw;
 
-  const portalStyle = {fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:"#F8FAFC",color:"#111"};
+  const portalStyle = {fontFamily:"'Plus Jakarta Sans',sans-serif",minHeight:"100vh",background:"#F8FAFC",color:"#111"};
   const headStyle = {background:"#0F0F14",padding:"20px 24px",display:"flex",alignItems:"center",gap:16};
 
   if (loading) return <div style={{...portalStyle,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{color:"#64748B"}}>Laden…</div></div></div>;
@@ -5313,9 +5322,9 @@ function PortalPage({ token }) {
                   Gaat u akkoord met deze offerte? Vul uw e-mailadres in en zet uw digitale handtekening.
                 </div>
                 <label style={{display:"block",fontSize:12,fontWeight:600,color:"#6B7280",marginBottom:6,textTransform:"uppercase",letterSpacing:".5px"}}>E-mailadres</label>
-                <input value={klantEmail} onChange={e=>{setKlantEmail(e.target.value);setSignErr("");}} placeholder="uw@email.nl" style={{width:"100%",border:`1.5px solid ${signErr?"#EF4444":"#E5E7EB"}`,borderRadius:9,padding:"11px 13px",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",marginBottom:signErr?6:14,boxSizing:"border-box",color:"#111"}}/>
+                <input value={klantEmail} onChange={e=>{setKlantEmail(e.target.value);setSignErr("");}} placeholder="uw@email.nl" style={{width:"100%",border:`1.5px solid ${signErr?"#EF4444":"#E5E7EB"}`,borderRadius:9,padding:"11px 13px",fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",outline:"none",marginBottom:signErr?6:14,boxSizing:"border-box",color:"#111"}}/>
                 {signErr&&<div style={{color:"#EF4444",fontSize:12,marginBottom:14}}>{signErr}</div>}
-                <button onClick={()=>{if(!klantEmail||!klantEmail.includes("@")){setSignErr("Vul een geldig e-mailadres in.");return;}setStep("sign");}} style={{background:"#0F0F14",color:"#fff",border:"none",borderRadius:9,padding:"11px 22px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                <button onClick={()=>{if(!klantEmail||!klantEmail.includes("@")){setSignErr("Vul een geldig e-mailadres in.");return;}setStep("sign");}} style={{background:"#0F0F14",color:"#fff",border:"none",borderRadius:9,padding:"11px 22px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
                   Offerte ondertekenen
                 </button>
                 <div style={{marginTop:12,fontSize:12,color:"#94A3B8",lineHeight:1.5}}>Door te ondertekenen accepteert u de offerte en de daarin vermelde bedragen.</div>
@@ -5329,7 +5338,7 @@ function PortalPage({ token }) {
                 <SignatureCanvas onSave={handleSign} label="Teken hier"/>
                 {signing && <div style={{textAlign:"center",marginTop:12,color:"#6366F1",fontWeight:600}}>Verwerken…</div>}
                 {signErr && <div style={{color:"#EF4444",marginTop:12,fontSize:13}}>{signErr}</div>}
-                <button onClick={()=>setStep("view")} style={{marginTop:14,background:"none",border:"none",color:"#64748B",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",padding:0}}>← Terug</button>
+                <button onClick={()=>setStep("view")} style={{marginTop:14,background:"none",border:"none",color:"#64748B",fontSize:13,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",padding:0}}>← Terug</button>
               </div>
             )}
           </>
@@ -5402,7 +5411,7 @@ function AdminPage() {
   if (!user) return <div style={{minHeight:"100vh",background:"#0F0F14",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontFamily:"sans-serif",textAlign:"center"}}><div><div style={{fontSize:40,marginBottom:16}}>🔒</div><div>Toegang geweigerd</div></div></div>;
 
   return (
-    <div style={{fontFamily:"'Plus Jakarta Sans','DM Sans',sans-serif",minHeight:"100vh",background:"#F1F5F9"}}>
+    <div style={{fontFamily:"'Plus Jakarta Sans',sans-serif",minHeight:"100vh",background:"#F1F5F9"}}>
       <div style={{background:"#0F0F14",padding:"20px 32px",display:"flex",alignItems:"center",gap:12}}>
         <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:20,color:"#fff"}}>⚡ WerkMate Admin</div>
         <span style={{marginLeft:"auto",fontSize:12,color:"rgba(255,255,255,.4)"}}>{user.email}</span>
@@ -5582,7 +5591,7 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
   };
 
   const maanden = [...new Set(ritten.map(r=>(r.datum||"").slice(0,7)))].sort().reverse();
-  const doelStyle = (d) => ({padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",background:filterDoel===d?"#0F0F14":"#fff",color:filterDoel===d?"#fff":"#555",borderColor:filterDoel===d?"#0F0F14":"#E5E7EB"});
+  const doelStyle = (d) => ({padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:filterDoel===d?"#0F0F14":"#fff",color:filterDoel===d?"#fff":"#555",borderColor:filterDoel===d?"#0F0F14":"#E5E7EB"});
 
   return (<div>
     <div className="ph">
@@ -5601,7 +5610,7 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
 
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
       {["Alle","zakelijk","privé"].map(d=><button key={d} onClick={()=>setFilterDoel(d)} style={doelStyle(d)}>{d==="Alle"?"Alle":d.charAt(0).toUpperCase()+d.slice(1)}</button>)}
-      <select value={filterMaand} onChange={e=>setFilterMaand(e.target.value)} style={{border:"1.5px solid #E5E7EB",borderRadius:20,padding:"4px 14px",fontSize:12.5,fontWeight:600,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",outline:"none",background:"#fff",color:"#555"}}>
+      <select value={filterMaand} onChange={e=>setFilterMaand(e.target.value)} className="sel" style={{borderRadius:20,padding:"5px 32px 5px 14px",fontWeight:600}}>
         <option value="">Alle maanden</option>
         {maanden.map(m=><option key={m} value={m}>{new Date(m+"-01").toLocaleDateString("nl-NL",{month:"long",year:"numeric"})}</option>)}
       </select>
@@ -5649,7 +5658,7 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
             <label className="ilbl">Doel</label>
             <div style={{display:"flex",borderRadius:9,overflow:"hidden",border:"1.5px solid #E5E7EB"}}>
               {["zakelijk","privé"].map(d=>(
-                <button key={d} type="button" onClick={()=>setNieuw({...nieuw,doel:d})} style={{flex:1,padding:"10px 0",border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,background:nieuw.doel===d?"#0F0F14":"#fff",color:nieuw.doel===d?"#fff":"#555",transition:"background .15s",borderRight:d==="zakelijk"?"1px solid #E5E7EB":"none"}}>
+                <button key={d} type="button" onClick={()=>setNieuw({...nieuw,doel:d})} style={{flex:1,padding:"10px 0",border:"none",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:14,fontWeight:600,background:nieuw.doel===d?"#0F0F14":"#fff",color:nieuw.doel===d?"#fff":"#555",transition:"background .15s",borderRight:d==="zakelijk"?"1px solid #E5E7EB":"none"}}>
                   {d.charAt(0).toUpperCase()+d.slice(1)}
                 </button>
               ))}
