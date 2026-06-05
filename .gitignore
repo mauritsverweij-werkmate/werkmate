@@ -30,3 +30,12 @@ dist-ssr
 .vercel
 supabase/.temp/
 landing-deploy/
+
+# Playwright
+e2e/.auth/
+test-results/
+playwright-report/
+.playwright-mcp/
+
+# Claude Code
+.claude/
