@@ -1801,15 +1801,29 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten,
   });
 
   useEffect(() => {
-    if (!expiringCerts.length) return;
+    if (!userId) return;
     const toEmail = bedrijf?.email || userEmail;
     if (!toEmail) return;
     (async () => {
       const { data: { session: s } } = await supabase.auth.getSession();
       const token = s?.access_token || import.meta.env.VITE_SUPABASE_KEY;
-      for (const c of expiringCerts) {
-        const key = `cert_notif_${userId}_${c.id}_${todayStr}`;
-        if (localStorage.getItem(key)) continue;
+
+      // Only consider certs where today is a 5-day notification boundary:
+      // day 30, 25, 20, 15, 10, 5 or 0 before expiry.
+      const certsToNotify = expiringCerts.filter(c => c.daysLeft % 5 === 0);
+      if (!certsToNotify.length) return;
+
+      for (const c of certsToNotify) {
+        // Check Supabase — never send more than once per day per cert
+        const { data: alreadySent } = await supabase
+          .from("cert_notifications")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("cert_id", c.id)
+          .eq("sent_at", todayStr)
+          .maybeSingle();
+        if (alreadySent) continue;
+
         const datumStr = new Date(c.vervaldatum).toLocaleDateString("nl-NL", { day:"numeric", month:"long", year:"numeric" });
         const subject = `Certificaat verloopt binnenkort: ${c.naam}`;
         const message = `Goedendag,\n\nJe certificaat "${c.naam}" verloopt op ${datumStr} (nog ${c.daysLeft} dag${c.daysLeft !== 1 ? "en" : ""}).\n\nZorg dat je het op tijd verlengt zodat je werk niet stil komt te liggen.\n\nBekijk je certificaten via: https://app.werkmate.tech\n\nMet vriendelijke groet,\nHet WerkMate team`;
@@ -1820,13 +1834,20 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten,
             body: JSON.stringify({ action: "send-compose-email", to_email: toEmail, subject, message }),
           });
           if (res.ok) {
-            localStorage.setItem(key, "1");
+            // Record in Supabase — UNIQUE constraint prevents duplicates even under race conditions
+            await supabase.from("cert_notifications").insert({
+              user_id: userId,
+              cert_id: c.id,
+              cert_naam: c.naam,
+              sent_at: todayStr,
+              days_left: c.daysLeft,
+            });
             await logEmail(userId, toEmail, subject, "certificaat", message, "verzonden");
           }
         } catch(e) { /* silent — non-critical */ }
       }
     })();
-  }, []);
+  }, [userId]);
 
   return(<div>
     {expiringCerts.length > 0 && (
