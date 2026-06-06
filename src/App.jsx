@@ -8,7 +8,7 @@ import {
   MoreHorizontal, X, Pencil, FileDown, Send, MessageCircle, Trash2,
   Phone, Camera, Image, Bell, Check, Sparkles, LogOut, Zap,
   AlertTriangle, Info, Link, Plus, ChevronDown, Star, RefreshCw,
-  Eye, Download, Wrench, BarChart2, ScanLine, Tag as TagIcon,
+  Eye, Download, Wrench, BarChart2, ScanLine, Tag as TagIcon, Save,
 } from "lucide-react";
 
 const supabase = createClient(
@@ -514,6 +514,14 @@ body{background:#0F0F14}
 .btn-danger:hover{background:#FECACA}
 .btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
 .btn-full{width:100%;justify-content:center}
+.btn-blue{background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE}
+.btn-blue:hover{background:#DBEAFE;border-color:#60A5FA}
+.btn-green{background:#F0FDF4;color:#15803D;border:1.5px solid #BBF7D0}
+.btn-green:hover{background:#DCFCE7;border-color:#4ADE80}
+.btn-amber{background:#FFFBEB;color:#92400E;border:1.5px solid #FDE68A}
+.btn-amber:hover{background:#FEF3C7;border-color:#FCD34D}
+.btn-indigo{background:#EEF2FF;color:#4338CA;border:1.5px solid #C7D2FE}
+.btn-indigo:hover{background:#E0E7FF;border-color:#818CF8}
 .card{background:#fff;border-radius:14px;border:1px solid #E2E8F0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .cp{padding:20px 22px}
 .sg{display:grid;gap:12px;margin-bottom:20px}
@@ -606,12 +614,16 @@ select.pl-inp{appearance:none;-webkit-appearance:none;background-image:url("data
 .f-overdue{color:#DC2626;font-weight:700}
 .f-amt{font-weight:700;color:#0F0F14;white-space:nowrap}
 .f-actions{display:flex;gap:5px;align-items:center;flex-wrap:nowrap}
-.f-btn{border:1.5px solid #E2E8F0;background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;color:#374151;transition:all .15s;white-space:nowrap;line-height:1}
+.f-btn{display:inline-flex;align-items:center;gap:4px;border:1.5px solid #E2E8F0;background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;color:#374151;transition:all .15s;white-space:nowrap;line-height:1}
 .f-btn:hover{border-color:#6366F1;color:#6366F1;background:#F5F3FF}
 .f-btn-remind{border-color:#FDE68A;color:#92400E;background:#FFFBEB}
 .f-btn-remind:hover{border-color:#F59E0B;background:#FEF3C7;color:#78350F}
 .f-btn-del{border-color:#FECACA;color:#EF4444;background:#FFF5F5;padding:5px 8px;font-size:13px;line-height:1}
 .f-btn-del:hover{background:#FEE2E2;border-color:#EF4444}
+.f-btn-mail{border-color:#BFDBFE;color:#1D4ED8;background:#EFF6FF}
+.f-btn-mail:hover{background:#DBEAFE;border-color:#60A5FA}
+.f-btn-pdf{border-color:#E2E8F0;color:#374151;background:#fff}
+.f-btn-pdf:hover{border-color:#9CA3AF;background:#F9FAFB}
 .f-status-sel{appearance:none;-webkit-appearance:none;border:1.5px solid #E2E8F0;border-radius:8px;padding:5px 26px 5px 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:#374151;outline:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236366F1' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center;cursor:pointer;transition:border-color .15s,background-color .15s;font-weight:500;min-width:118px}
 .f-status-sel:hover{border-color:#CBD5E1}
 .f-status-sel:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.11)}
@@ -1172,7 +1184,7 @@ function EmailConfirmModal({ toEmail, toName, onConfirm, onCancel, sending, sent
               {error && <div style={{color:"#EF4444",fontSize:13,marginBottom:10}}>{error}</div>}
               <div className="modal-act">
                 <button className="btn btn-ghost" onClick={onCancel}>Annuleren</button>
-                <button className="btn btn-dark btn-full" onClick={onConfirm} disabled={sending}>{sending?"Versturen…":"Verstuur"}</button>
+                <button className="btn btn-dark btn-full" onClick={onConfirm} disabled={sending}>{sending?"Versturen…":<><Mail size={14} strokeWidth={1.8}/> Verstuur</>}</button>
               </div>
             </>
         }
@@ -1542,7 +1554,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
       <div className="sec-ttl" style={{marginTop:28}}>📜 Documenten & Certificaten</div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
         <div style={{fontSize:13,color:"#64748B"}}>{(certificaten||[]).length} certificaten — {(certificaten||[]).filter(c=>{if(!c.vervaldatum)return false;const d=new Date(c.vervaldatum);const now=new Date();const days=(d-now)/86400000;return days>=0&&days<=30;}).length} verlopen binnenkort</div>
-        <button className="btn btn-outline" onClick={()=>{setNieuwCert({naam:"",type:"",vervaldatum:"",notitie:""});setShowAddCert(true);}}>+ Certificaat</button>
+        <button className="btn btn-outline" onClick={()=>{setNieuwCert({naam:"",type:"",vervaldatum:"",notitie:""});setShowAddCert(true);}}><Plus size={14} strokeWidth={2}/> Certificaat</button>
       </div>
       {(certificaten||[]).length===0
         ?<div className="card cp" style={{textAlign:"center",color:"#94A3B8",padding:32,fontSize:14}}>Nog geen certificaten. Voeg je eerste VCA, NEN of diploma toe.</div>
@@ -1586,7 +1598,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
             await supabase.from("certificaten").insert({user_id:userId,naam:nieuwCert.naam,type:nieuwCert.type||"Overig",vervaldatum:nieuwCert.vervaldatum||null,notitie:nieuwCert.notitie||null});
             setSavingCert(false); setShowAddCert(false);
             onSaved&&onSaved(bedrijf);
-          }}>{savingCert?"Opslaan…":"Opslaan"}</button>
+          }}><Save size={14} strokeWidth={1.8}/>{savingCert?"Opslaan…":"Opslaan"}</button>
         </div>
       </div></div></div>}
     </div>
@@ -2116,7 +2128,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
             }
           </div>
         ) : (
-          <div className="modal-act"><button className="btn btn-ghost" onClick={closeEdit}>Annuleren</button><button className="btn btn-dark btn-full" onClick={saveEdit} disabled={editSaving}>{editSaving?"Opslaan…":"Opslaan"}</button></div>
+          <div className="modal-act"><button className="btn btn-ghost" onClick={closeEdit}>Annuleren</button><button className="btn btn-dark btn-full" onClick={saveEdit} disabled={editSaving}><Save size={14} strokeWidth={1.8}/>{editSaving?"Opslaan…":"Opslaan"}</button></div>
         )}
       </div>
     </div></div>}
@@ -2177,21 +2189,21 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
               <td style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                <button className="btn btn-outline btn-sm" style={{fontWeight:600}} onClick={()=>openEdit(o)}><Pencil size={14} strokeWidth={1.8}/> Bewerken</button>
-                <button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}>PDF</button>
-                <button className="btn btn-ghost btn-sm" onClick={async()=>{
+                <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(o)}><Pencil size={14} strokeWidth={1.8}/> Bewerken</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}><FileText size={14} strokeWidth={1.8}/> PDF</button>
+                <button className="btn btn-blue btn-sm" onClick={async()=>{
                   try {
                     const email = await resendOfferEmail(o);
                     if (!email) return;
                     await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
                     alert("Verstuurd naar "+email);
                   } catch(err) { alert("Versturen mislukt: "+err.message); }
-                }}>Mail</button>
-                {o.portal_token&&<button className="btn btn-ghost btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}>WA</button>}
+                }}><Mail size={14} strokeWidth={1.8}/> Mail</button>
+                {o.portal_token&&<button className="btn btn-green btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}><MessageCircle size={14} strokeWidth={1.8}/> WhatsApp</button>}
                 <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} className="sel">
                   {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
                 </select>
-                <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}><X size={14}/></button>
+                <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}><Trash2 size={14} strokeWidth={1.8}/></button>
               </td>
             </tr>)}</tbody>
           </table></div></div>
@@ -2298,7 +2310,7 @@ function PrijslijstTab({ initialItems, onSaveItems, userId }) {
     });
   };
   return(<div>
-    <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — de slimme generator gebruikt deze als basis</div></div><div style={{display:"flex",gap:8,alignItems:"center"}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}>+ Dienst</button><button className="btn btn-outline" onClick={()=>fileInputRef.current?.click()}>Excel importeren</button><button className="btn btn-dark" onClick={save} disabled={saving}>{saving?"Opslaan…":saved?"✓ Opgeslagen!":"Opslaan"}</button><input ref={fileInputRef} type="file" accept=".xlsx,.csv" style={{display:"none"}} onChange={importFile} /></div></div>
+    <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — de slimme generator gebruikt deze als basis</div></div><div style={{display:"flex",gap:8,alignItems:"center"}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}><Plus size={14} strokeWidth={2}/> Dienst</button><button className="btn btn-outline" onClick={()=>fileInputRef.current?.click()}>Excel importeren</button><button className="btn btn-dark" onClick={save} disabled={saving}>{saving?"Opslaan…":saved?"✓ Opgeslagen!":"Opslaan"}</button><input ref={fileInputRef} type="file" accept=".xlsx,.csv" style={{display:"none"}} onChange={importFile} /></div></div>
     <div className="card cp">
       <div style={{background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:9,padding:"10px 13px",marginBottom:18,fontSize:12.5,color:"#4338CA"}}>💡 De slimme offerte generator gebruikt jouw tarieven automatisch als basis.</div>
       {importError&&<div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:9,padding:"14px 16px",marginBottom:18,fontSize:13,color:"#B91C1C",lineHeight:1.6}}>
@@ -2479,7 +2491,7 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
           <button className={`cal-vt-btn${view==="week"?" on":""}`} onClick={()=>setView("week")}>Week</button>
         </div>}
         {!mob&&<button className="btn btn-ghost" onClick={()=>setShowCats(true)} title="Categorieën beheren"><TagIcon size={16} strokeWidth={1.8}/></button>}
-        <button className="btn btn-dark" onClick={()=>openAdd(mob?mobDayStr:todayStr)}>+ Opdracht</button>
+        <button className="btn btn-dark" onClick={()=>openAdd(mob?mobDayStr:todayStr)}><Plus size={14} strokeWidth={2}/> Opdracht</button>
       </div>
     </div>
     {mob
@@ -2632,7 +2644,7 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
       <div className="ig"><label className="ilbl">Dienst</label><input className="inp" value={nieuw.dienst} onChange={e=>setNieuw({...nieuw,dienst:e.target.value})} placeholder="Wat ga je doen?"/></div>
       <div className="ig"><label className="ilbl">Adres</label><input className="inp" value={nieuw.adres} onChange={e=>setNieuw({...nieuw,adres:e.target.value})} placeholder="Straat, Stad"/></div>
       {saveErr&&<div style={{color:"#991B1B",background:"#FEE2E2",borderRadius:7,padding:"8px 12px",fontSize:12,marginBottom:12}}>{saveErr}</div>}
-      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.klant||!nieuw.dienst}>{nieuw.herhaal?"Herhaling aanmaken":"Toevoegen"}</button></div>
+      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.klant||!nieuw.dienst}><Plus size={14} strokeWidth={2}/>{nieuw.herhaal?"Herhaling aanmaken":"Toevoegen"}</button></div>
     </div></div></div>}
 
     {showCats&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Categorieën</div><div className="ms">Kleurcodering voor taken in de kalender</div></div><button className="mc" onClick={()=>setShowCats(false)}><X size={14}/></button></div><div className="mb">
@@ -2645,7 +2657,7 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
       <div style={{display:"flex",gap:8,marginTop:16,alignItems:"center"}}>
         <input type="color" value={newCat.kleur} onChange={e=>setNewCat({...newCat,kleur:e.target.value})} className="cat-inp-color" title="Kies kleur"/>
         <input className="inp" style={{flex:1}} value={newCat.naam} onChange={e=>setNewCat({...newCat,naam:e.target.value})} placeholder="Naam (bijv. Installatie, Onderhoud…)" onKeyDown={e=>e.key==="Enter"&&addCat()}/>
-        <button className="btn btn-dark" onClick={addCat} disabled={!newCat.naam.trim()}>+ Toevoegen</button>
+        <button className="btn btn-dark" onClick={addCat} disabled={!newCat.naam.trim()}><Plus size={14} strokeWidth={2}/> Toevoegen</button>
       </div>
     </div></div></div>}
   </div>);
@@ -2746,7 +2758,7 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
         <button className="mob-det-action-btn danger" onClick={async()=>{if(await verwijder(mobDetail.id,mobDetail.naam))setMobDetail(null);}}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8}/></span>Verwijderen</button>
       </MobDetailScreen>
     )}
-    <div className="ph"><div><div className="pg-title">Klantenbeheer</div><div className="pg-sub">{klanten.length} klanten</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Klant</button></div>
+    <div className="ph"><div><div className="pg-title">Klantenbeheer</div><div className="pg-sub">{klanten.length} klanten</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}><Plus size={14} strokeWidth={2}/> Klant</button></div>
     <input className="inp" style={{marginBottom:14}} placeholder="🔍  Zoek op naam, telefoon, e-mail, adres…" value={q} onChange={e=>setQ(e.target.value)}/>
     {klanten.length===0
       ? <LeegScherm icon={<Users size={36} strokeWidth={1.3} color="#A5B4FC"/>} titel="Nog geen klanten" sub="Voeg je eerste klant toe" actie="+ Klant toevoegen" onActie={()=>setShowAdd(true)}/>
@@ -2765,7 +2777,7 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
             </div>
           ))}</div>
         : <div style={{display:"flex",flexDirection:"column",gap:9}}>
-            {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-outline btn-sm" onClick={()=>startEdit(k)}><Pencil size={14} strokeWidth={1.8}/></button><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id,k.naam)}><X size={14}/></button></div>)}
+            {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-ghost btn-sm" onClick={()=>startEdit(k)}><Pencil size={14} strokeWidth={1.8}/> Bewerken</button><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id,k.naam)}><Trash2 size={14} strokeWidth={1.8}/></button></div>)}
           </div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}><X size={14}/></button></div><div className="mb">
@@ -2776,7 +2788,7 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
       </div>
       <div className="ig"><label className="ilbl">Status</label><select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Actief","Potentiële klant","Geïnteresseerd","Offerte verstuurd","Vaste klant","Inactief","Verloren"].map(s=><option key={s}>{s}</option>)}</select></div>
       {crmErr&&<div style={{color:"#B91C1C",fontSize:13,marginBottom:8,padding:"8px 12px",background:"#FEE2E2",borderRadius:6}}>{crmErr}</div>}
-      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setCrmErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.naam}>Toevoegen</button></div>
+      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setCrmErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={!nieuw.naam}><Plus size={14} strokeWidth={2}/> Toevoegen</button></div>
     </div></div></div>}
     {showEdit&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant bewerken</div></div><button className="mc" onClick={()=>setShowEdit(false)}><X size={14}/></button></div><div className="mb">
       <div className="ig"><label className="ilbl">Naam</label><input className="inp" maxLength={100} value={bewerkt.naam} onChange={e=>setBewerkt({...bewerkt,naam:e.target.value})} placeholder="Bedrijf of naam"/></div>
@@ -2786,7 +2798,7 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
       </div>
       <div className="ig"><label className="ilbl">Status</label><select className="inp" value={bewerkt.status} onChange={e=>setBewerkt({...bewerkt,status:e.target.value})}>{["Actief","Potentiële klant","Geïnteresseerd","Offerte verstuurd","Vaste klant","Inactief","Verloren"].map(s=><option key={s}>{s}</option>)}</select></div>
       {crmErr&&<div style={{color:"#B91C1C",fontSize:13,marginBottom:8,padding:"8px 12px",background:"#FEE2E2",borderRadius:6}}>{crmErr}</div>}
-      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowEdit(false);setCrmErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={saveEdit} disabled={!bewerkt.naam}>Opslaan</button></div>
+      <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowEdit(false);setCrmErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={saveEdit} disabled={!bewerkt.naam}><Save size={14} strokeWidth={1.8}/> Opslaan</button></div>
     </div></div></div>}
   </div>);
 }
@@ -2963,7 +2975,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
   };
 
   return(<div>
-    <div className="ph"><div><div className="pg-title">Werkbonnen</div><div className="pg-sub">Maak werkbonnen voor klant, uren, materialen en foto</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Werkbon</button></div>
+    <div className="ph"><div><div className="pg-title">Werkbonnen</div><div className="pg-sub">Maak werkbonnen voor klant, uren, materialen en foto</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}><Plus size={14} strokeWidth={2}/> Werkbon</button></div>
     {mob && mobDetail && (
       <MobDetailScreen title={mobDetail.klant} onBack={()=>setMobDetail(null)}>
         <div className="mob-det-section">
@@ -3006,7 +3018,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
             </div>
           ))}</div>
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Datum","Uren","Status","Materialen","Foto","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());const bFotos=getWerkbonFotos(b);return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{bFotos.length>0?<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{bFotos.slice(0,3).map((url,i)=><img key={i} src={url} alt="" style={{width:56,height:44,objectFit:"cover",borderRadius:8,cursor:"pointer"}} onClick={()=>openLightbox(bFotos,i)}/>)}{bFotos.length>3&&<div style={{width:56,height:44,borderRadius:8,background:"#F1F5F9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#64748B",cursor:"pointer"}} onClick={()=>openLightbox(bFotos,3)}>+{bFotos.length-3}</div>}</div>:"-"}</td><td style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}><Pencil size={14} strokeWidth={1.8}/> Bewerken</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>{setReviewErr("");setReviewSent(false);setReviewConfirm({email:bKlant.email,name:bKlant.naam,omschrijving:b.omschrijving});}}><Star size={14} strokeWidth={1.8}/> Review verzoek</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}><X size={14}/></button></td></tr>);})}
+            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());const bFotos=getWerkbonFotos(b);return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{bFotos.length>0?<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{bFotos.slice(0,3).map((url,i)=><img key={i} src={url} alt="" style={{width:56,height:44,objectFit:"cover",borderRadius:8,cursor:"pointer"}} onClick={()=>openLightbox(bFotos,i)}/>)}{bFotos.length>3&&<div style={{width:56,height:44,borderRadius:8,background:"#F1F5F9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#64748B",cursor:"pointer"}} onClick={()=>openLightbox(bFotos,3)}>+{bFotos.length-3}</div>}</div>:"-"}</td><td style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}><Pencil size={14} strokeWidth={1.8}/> Bewerken</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>{setReviewErr("");setReviewSent(false);setReviewConfirm({email:bKlant.email,name:bKlant.naam,omschrijving:b.omschrijving});}}><Star size={14} strokeWidth={1.8}/> Review verzoek</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}><Trash2 size={14} strokeWidth={1.8}/></button></td></tr>);})}
 </tbody>
           </table></div></div>
     }
@@ -3024,7 +3036,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
         {nieuw.handtekening?<div><img src={nieuw.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB",marginBottom:8}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setNieuw({...nieuw,handtekening:""})}>Wissen</button></div>:<SignatureCanvas onSave={sig=>setNieuw({...nieuw,handtekening:sig})}/>}
       </div>
       {error && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{error}</div>}
-      <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowAdd(false);setError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={add} disabled={saving||!nieuw.klant||!nieuw.datum}>{saving?"Opslaan…":"Opslaan"}</button></div>
+      <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowAdd(false);setError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={add} disabled={saving||!nieuw.klant||!nieuw.datum}><Save size={14} strokeWidth={1.8}/>{saving?"Opslaan…":"Opslaan"}</button></div>
     </div></div></div>}
     {showEdit&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Werkbon bewerken</div></div><button className="mc" onClick={()=>setShowEdit(false)}><X size={14}/></button></div><div className="mb">
       <div className="ig"><label className="ilbl">Klant</label><select className="inp" value={bewerkt.klant} onChange={e=>setBewerkt({...bewerkt,klant:e.target.value})}><option value="">-- Kies klant --</option>{(klanten||[]).map(k=><option key={k.id} value={k.naam}>{k.naam}</option>)}</select></div>
@@ -3040,7 +3052,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
         {bewerkt.handtekening?<div><img src={bewerkt.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB",marginBottom:8}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setBewerkt({...bewerkt,handtekening:""})}>Wissen</button></div>:<SignatureCanvas onSave={sig=>setBewerkt({...bewerkt,handtekening:sig})}/>}
       </div>
       {editError && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{editError}</div>}
-      <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowEdit(false);setEditError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={saveEdit} disabled={editSaving||!bewerkt.klant||!bewerkt.datum}>{editSaving?"Opslaan…":"Opslaan"}</button></div>
+      <div style={{display:"flex",gap:9}}><button type="button" className="btn btn-ghost" onClick={()=>{setShowEdit(false);setEditError("");}}>Annuleren</button><button type="button" className="btn btn-dark btn-full" onClick={saveEdit} disabled={editSaving||!bewerkt.klant||!bewerkt.datum}><Save size={14} strokeWidth={1.8}/>{editSaving?"Opslaan…":"Opslaan"}</button></div>
     </div></div></div>}
     {lightboxFotos.length>0&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightboxFotos([])}>
       {lightboxFotos.length>1&&<button onClick={e=>{e.stopPropagation();setLightboxIdx(i=>(i-1+lightboxFotos.length)%lightboxFotos.length);}} style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:28,cursor:"pointer",borderRadius:"50%",width:48,height:48,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>}
@@ -3339,7 +3351,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         </MobDetailScreen>
       );
     })()}
-    <div className="ph"><div><div className="pg-title">Financiën</div><div className="pg-sub">Facturen & boekhouding</div></div><button className="btn btn-dark" onClick={openCreate}>+ Nieuwe factuur</button></div>
+    <div className="ph"><div><div className="pg-title">Financiën</div><div className="pg-sub">Facturen & boekhouding</div></div><button className="btn btn-dark" onClick={openCreate}><Plus size={14} strokeWidth={2}/> Nieuwe factuur</button></div>
     <div className="sg" style={{gridTemplateColumns:"repeat(4,1fr)"}}>
       {[
         {label:"Omzet deze maand",val:fmtEur(monthRevenue),sub:"betaald",color:"#10B981"},
@@ -3415,10 +3427,10 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                   </td>
                   <td style={{paddingTop:10,paddingBottom:10}}>
                     <div className="f-actions">
-                      <button className="f-btn" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}>PDF</button>
-                      {canRemind&&<button className="f-btn f-btn-remind" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}>Herinnering</button>}
-                      <button className="f-btn" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}>Mail</button>
-                      <button className="f-btn f-btn-del" title="Verwijderen" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}><X size={14}/></button>
+                      <button className="f-btn f-btn-pdf" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}><FileText size={12} strokeWidth={1.8}/> PDF</button>
+                      {canRemind&&<button className="f-btn f-btn-remind" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}><Bell size={12} strokeWidth={1.8}/> Herinnering</button>}
+                      <button className="f-btn f-btn-mail" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}><Mail size={12} strokeWidth={1.8}/> Mail</button>
+                      <button className="f-btn f-btn-del" title="Verwijderen" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}><Trash2 size={12} strokeWidth={1.8}/></button>
                     </div>
                   </td>
                 </tr>);
@@ -3455,7 +3467,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
             } catch(err){alert("Scan mislukt: "+err.message);}
             setScanningBon(false);
           }}/>
-          <button className="btn btn-dark" onClick={()=>{setNieuweUitgave({datum:localToday(),categorie:"",omschrijving:"",bedrag:"",btw_percentage:21,foto:""});setUitgaveFotoPreview("");setUitgaveErr("");setShowAddUitgave(true);}}>+ Uitgave</button>
+          <button className="btn btn-dark" onClick={()=>{setNieuweUitgave({datum:localToday(),categorie:"",omschrijving:"",bedrag:"",btw_percentage:21,foto:""});setUitgaveFotoPreview("");setUitgaveErr("");setShowAddUitgave(true);}}><Plus size={14} strokeWidth={2}/> Uitgave</button>
         </div>
       </div>
       {(uitgaven||[]).length===0
@@ -3471,7 +3483,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                 <div className="mob-card-sub">{u.datum} · BTW {u.btw_percentage}%{u.foto&&" · 📷"}</div>
                 <div className="mob-card-actions">
                   {u.foto&&<button className="btn btn-ghost btn-sm" onClick={()=>window.open(u.foto)}><Camera size={14} strokeWidth={1.8}/> Bon</button>}
-                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Uitgave verwijderen?"))supabase.from("uitgaven").delete().eq("id",u.id).then(()=>refresh());}}>Verwijderen</button>
+                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Uitgave verwijderen?"))supabase.from("uitgaven").delete().eq("id",u.id).then(()=>refresh());}}><Trash2 size={14} strokeWidth={1.8}/> Verwijderen</button>
                 </div>
               </div>
             ))}</div>
@@ -3526,7 +3538,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
             setSavingUitgave(false);
             if(error){setUitgaveErr(error.message);return;}
             setShowAddUitgave(false); refresh();
-          }}>{savingUitgave?"Opslaan…":"Opslaan"}</button>
+          }}><Save size={14} strokeWidth={1.8}/>{savingUitgave?"Opslaan…":"Opslaan"}</button>
         </div>
       </div></div></div>}
     </>)}
@@ -4080,7 +4092,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         {saveErr&&<div style={{color:"#EF4444",fontSize:12.5,marginTop:8}}>{saveErr}</div>}
         <div style={{display:"flex",gap:9,marginTop:12}}>
           <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>Annuleren</button>
-          <button className="btn btn-dark btn-full" onClick={saveFactuur} disabled={saving||!nieuw.klant}>{saving?"Opslaan…":"Factuur aanmaken"}</button>
+          <button className="btn btn-dark btn-full" onClick={saveFactuur} disabled={saving||!nieuw.klant}><Plus size={14} strokeWidth={2}/>{saving?"Opslaan…":"Factuur aanmaken"}</button>
         </div>
       </div>
     </div></div>}
@@ -4100,7 +4112,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
               </p>
               <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={emailAddr} onChange={e=>setEmailAddr(e.target.value)} placeholder="klant@email.nl" autoFocus/></div>
               {emailMsg&&<div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{emailMsg}</div>}
-              <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setShowEmail(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={sendInvoiceEmail} disabled={!emailAddr||emailSending}>{emailSending?"Versturen…":"Factuur versturen"}</button></div>
+              <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setShowEmail(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-blue btn-full" onClick={sendInvoiceEmail} disabled={!emailAddr||emailSending}><Mail size={14} strokeWidth={1.8}/>{emailSending?"Versturen…":"Factuur versturen"}</button></div>
             </>
         }
       </div>
@@ -4121,7 +4133,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
               </p>
               <div className="ig"><label className="ilbl">E-mailadres</label><input className="inp" type="email" value={emailAddr} onChange={e=>setEmailAddr(e.target.value)} placeholder="klant@email.nl" autoFocus/></div>
               {emailMsg&&<div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{emailMsg}</div>}
-              <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setShowReminder(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={sendReminder} disabled={!emailAddr||emailSending}>{emailSending?"Versturen…":"Herinnering versturen"}</button></div>
+              <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setShowReminder(null);setEmailMsg("");}}>Annuleren</button><button className="btn btn-amber btn-full" onClick={sendReminder} disabled={!emailAddr||emailSending}><Bell size={14} strokeWidth={1.8}/>{emailSending?"Versturen…":"Herinnering versturen"}</button></div>
             </>
         }
       </div>
@@ -4202,7 +4214,7 @@ function TeamTab({ ownerId, teamMembers, refresh, bedrijf }) {
   };
 
   return(<div>
-    <div className="ph"><div><div className="pg-title">Team</div><div className="pg-sub">Nodig teamleden uit en beheer rollen</div></div><button className="btn btn-dark" onClick={()=>setShowInvite(true)}>+ Teamlid uitnodigen</button></div>
+    <div className="ph"><div><div className="pg-title">Team</div><div className="pg-sub">Nodig teamleden uit en beheer rollen</div></div><button className="btn btn-dark" onClick={()=>setShowInvite(true)}><Plus size={14} strokeWidth={2}/> Teamlid uitnodigen</button></div>
     {teamMembers.length===0
       ? <LeegScherm icon={<Users size={36} strokeWidth={1.3} color="#A5B4FC"/>} titel="Nog geen teamleden" sub="Nodig iemand uit om samen te werken" actie="+ Uitnodigen" onActie={()=>setShowInvite(true)}/>
       : <div className="card"><div className="tw"><table><thead><tr>{["E-mail","Rol","Uitgenodigd","Acties"].map(h=><th key={h} className={h==="Uitgenodigd"?"mob-hide":undefined}>{h}</th>)}</tr></thead>
@@ -4215,7 +4227,7 @@ function TeamTab({ ownerId, teamMembers, refresh, bedrijf }) {
       {error && <div style={{color:'#B91C1C',marginBottom:12,fontSize:13}}>{error}</div>}
       <div style={{display:"flex",gap:9}}>
         <button type="button" className="btn btn-ghost" onClick={()=>{setShowInvite(false);setError("");}}>Annuleren</button>
-        <button type="button" className="btn btn-dark btn-full" onClick={inviteMember} disabled={saving||!invite.email||!invite.role}>{saving?"Uitnodigen…":"Uitnodigen"}</button>
+        <button type="button" className="btn btn-dark btn-full" onClick={inviteMember} disabled={saving||!invite.email||!invite.role}><Send size={14} strokeWidth={1.8}/>{saving?"Uitnodigen…":"Uitnodigen"}</button>
       </div>
     </div></div></div>}
   </div>);
@@ -4312,7 +4324,7 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
     <div>
       <div className="ph">
         <div><div className="pg-title">Mail</div><div className="pg-sub">Overzicht verzonden e-mails</div></div>
-        <button className="btn btn-dark" onClick={()=>{setShowCompose(true);setComposeSent(false);setComposeErr("");setCompose({klantId:"",to:"",subject:"",body:""});}}>+ Nieuwe email</button>
+        <button className="btn btn-dark" onClick={()=>{setShowCompose(true);setComposeSent(false);setComposeErr("");setCompose({klantId:"",to:"",subject:"",body:""});}}><Plus size={14} strokeWidth={2}/> Nieuwe email</button>
       </div>
 
       <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
@@ -4425,7 +4437,7 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
                 {composeErr&&<div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{composeErr}</div>}
                 <div className="modal-act">
                   <button className="btn btn-ghost" onClick={()=>{setShowCompose(false);setComposeErr("");}}>Annuleren</button>
-                  <button className="btn btn-dark btn-full" onClick={sendCompose} disabled={composeSending||!compose.to||!compose.subject||!compose.body}>{composeSending?"Versturen…":"Verstuur email"}</button>
+                  <button className="btn btn-blue btn-full" onClick={sendCompose} disabled={composeSending||!compose.to||!compose.subject||!compose.body}><Mail size={14} strokeWidth={1.8}/>{composeSending?"Versturen…":"Verstuur email"}</button>
                 </div>
               </>
           }
@@ -4460,16 +4472,16 @@ function SocialTab({ userId }) {
       <div>
         <div className="sec-ttl">🔗 Mijn accounts</div>
         <div className="card cp" style={{marginBottom:16}}>
-          <div className="ig"><label className="ilbl">📘 Facebook pagina URL</label><input className="inp" value={links.facebook||""} onChange={e=>setLinks({...links,facebook:e.target.value})} placeholder="https://facebook.com/jouwpagina"/></div>
+          <div className="ig"><label className="ilbl">Facebook pagina URL</label><input className="inp" value={links.facebook||""} onChange={e=>setLinks({...links,facebook:e.target.value})} placeholder="https://facebook.com/jouwpagina"/></div>
           <div className="ig"><label className="ilbl"><Image size={13} strokeWidth={1.8} style={{marginRight:5}}/> Instagram profiel URL</label><input className="inp" value={links.instagram||""} onChange={e=>setLinks({...links,instagram:e.target.value})} placeholder="https://instagram.com/jouwprofiel"/></div>
           <div className="ig" style={{marginBottom:12}}><label className="ilbl"><Star size={13} strokeWidth={1.8} style={{marginRight:5}}/> Google Business URL</label><input className="inp" value={links.google||""} onChange={e=>setLinks({...links,google:e.target.value})} placeholder="https://g.page/jouwbedrijf"/></div>
-          <button className="btn btn-outline btn-full" onClick={()=>saveLinks(links)}>{linksSaved?"✓ Opgeslagen!":"Links opslaan"}</button>
+          <button className="btn btn-outline btn-full" onClick={()=>saveLinks(links)}><Save size={14} strokeWidth={1.8}/>{linksSaved?"✓ Opgeslagen!":"Links opslaan"}</button>
         </div>
         <div className="sec-ttl"><Settings size={14} strokeWidth={1.8} style={{marginRight:5}}/> Instellingen</div><div className="card cp">
         <div className="ig"><label className="ilbl">Platform</label><div className="soc-plat" style={{flexWrap:"wrap"}}>
           <button className={`soc-btn ${plat==="insta"?"on insta":""}`} onClick={()=>setPlat("insta")}><Image size={14} strokeWidth={1.8}/> Insta</button>
-          <button className={`soc-btn ${plat==="tiktok"?"on tik":""}`} onClick={()=>setPlat("tiktok")}>🎵 TikTok</button>
-          <button className={`soc-btn ${plat==="facebook"?"on fb":""}`} onClick={()=>setPlat("facebook")} style={plat==="facebook"?{borderColor:"#1877F2",background:"#EBF5FB",color:"#1877F2"}:{}}>📘 Facebook</button>
+          <button className={`soc-btn ${plat==="tiktok"?"on tik":""}`} onClick={()=>setPlat("tiktok")}>TikTok</button>
+          <button className={`soc-btn ${plat==="facebook"?"on fb":""}`} onClick={()=>setPlat("facebook")} style={plat==="facebook"?{borderColor:"#1877F2",background:"#EBF5FB",color:"#1877F2"}:{}}>Facebook</button>
           <button className={`soc-btn ${plat==="beide"?"on both":""}`} onClick={()=>setPlat("beide")}><Sparkles size={14} strokeWidth={1.8}/> Beide</button>
           <button className={`soc-btn ${plat==="alle"?"on both":""}`} onClick={()=>setPlat("alle")}>🌐 Alle</button>
         </div></div>
@@ -4480,13 +4492,13 @@ function SocialTab({ userId }) {
         </div>
         <button className="btn btn-ai btn-full" onClick={gen} disabled={!ond.trim()||loading} style={{opacity:ond.trim()?1:.5}}>{loading?<><Sparkles size={14} strokeWidth={1.8}/><span className="dot">…</span></>:"Maak posts"}</button>
       </div></div>
-      <div><div className="sec-ttl">📲 Posts</div>
+      <div><div className="sec-ttl">Posts</div>
         {!posts&&!loading&&<div style={{background:"#fff",border:"1px dashed #D1D5DB",borderRadius:13,padding:"48px 24px",textAlign:"center",color:"#94A3B8"}}><div style={{fontSize:32,marginBottom:10}}>📱</div><div style={{fontSize:14,fontWeight:600,color:"#555",marginBottom:5}}>Nog geen posts</div><div style={{fontSize:12.5}}>Vul links in en klik op maak posts</div></div>}
         {loading&&<div style={{background:"#fff",border:"1px solid #EAECF0",borderRadius:13,padding:"48px 24px",textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>⚡</div><div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15}}>Bezig<span className="dot">…</span></div></div>}
         {posts&&<>
-          {posts.instagram&&(plat==="insta"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar insta">📸 Instagram</div><div className="post-body">{posts.instagram}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.instagram)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={()=>{copy(posts.instagram);window.open(links.instagram||"https://instagram.com","_blank");}}>📸 Open Instagram</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
-          {posts.tiktok&&(plat==="tiktok"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar tik">🎵 TikTok</div><div className="post-body">{posts.tiktok}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.tiktok)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" onClick={()=>{copy(posts.tiktok);window.open("https://tiktok.com","_blank");}}>🎵 Open TikTok</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
-          {posts.facebook&&(plat==="facebook"||plat==="alle")&&<div className="post-card"><div className="post-bar" style={{background:"#EBF5FB",color:"#1877F2",borderBottom:"1px solid #C9E6F8"}}>📘 Facebook</div><div className="post-body">{posts.facebook}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.facebook)}>📋 Kopiëren</button><button className="btn btn-outline btn-sm" style={{color:"#1877F2",borderColor:"#1877F2"}} onClick={()=>{copy(posts.facebook);window.open(links.facebook||"https://facebook.com","_blank");}}>📘 Open Facebook</button><button className="btn btn-outline btn-sm" onClick={gen}>🔄</button></div></div>}
+          {posts.instagram&&(plat==="insta"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar insta"><Image size={13} strokeWidth={1.8} style={{marginRight:4}}/> Instagram</div><div className="post-body">{posts.instagram}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.instagram)}><ClipboardList size={13} strokeWidth={1.8}/> Kopiëren</button><button className="btn btn-outline btn-sm" onClick={()=>{copy(posts.instagram);window.open(links.instagram||"https://instagram.com","_blank");}}>Open Instagram</button><button className="btn btn-outline btn-sm" onClick={gen}><RefreshCw size={13} strokeWidth={1.8}/></button></div></div>}
+          {posts.tiktok&&(plat==="tiktok"||plat==="beide"||plat==="alle")&&<div className="post-card"><div className="post-bar tik">TikTok</div><div className="post-body">{posts.tiktok}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.tiktok)}><ClipboardList size={13} strokeWidth={1.8}/> Kopiëren</button><button className="btn btn-outline btn-sm" onClick={()=>{copy(posts.tiktok);window.open("https://tiktok.com","_blank");}}>Open TikTok</button><button className="btn btn-outline btn-sm" onClick={gen}><RefreshCw size={13} strokeWidth={1.8}/></button></div></div>}
+          {posts.facebook&&(plat==="facebook"||plat==="alle")&&<div className="post-card"><div className="post-bar" style={{background:"#EBF5FB",color:"#1877F2",borderBottom:"1px solid #C9E6F8"}}>Facebook</div><div className="post-body">{posts.facebook}</div><div className="post-actions"><button className="btn btn-ghost btn-sm" onClick={()=>copy(posts.facebook)}><ClipboardList size={13} strokeWidth={1.8}/> Kopiëren</button><button className="btn btn-outline btn-sm" style={{color:"#1877F2",borderColor:"#1877F2"}} onClick={()=>{copy(posts.facebook);window.open(links.facebook||"https://facebook.com","_blank");}}>Open Facebook</button><button className="btn btn-outline btn-sm" onClick={gen}><RefreshCw size={13} strokeWidth={1.8}/></button></div></div>}
         </>}
       </div>
     </div>
@@ -4677,7 +4689,7 @@ function EmailTemplatesSection({ userId, bedrijf, emailTemplates, onTemplatesUpd
           </div>
 
           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-            <button className="btn btn-dark" onClick={()=>saveTemplate(t.key)} disabled={saving[t.key]}>{saving[t.key]?"Opslaan…":"Opslaan"}</button>
+            <button className="btn btn-dark" onClick={()=>saveTemplate(t.key)} disabled={saving[t.key]}><Save size={14} strokeWidth={1.8}/>{saving[t.key]?"Opslaan…":"Opslaan"}</button>
             <button className="btn btn-ghost btn-sm" onClick={()=>resetTemplate(t.key)}>Standaard herstellen</button>
             {msgs[t.key] && <span style={{fontSize:13,fontWeight:600,color:msgs[t.key].startsWith("Opgeslagen")?"#15803D":"#B91C1C"}}>{msgs[t.key]}</span>}
           </div>
@@ -4940,7 +4952,7 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
       </div>
       {msg.text && <div style={{marginTop:12,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500,background:msg.type==="ok"?"#DCFCE7":"#FEE2E2",color:msg.type==="ok"?"#15803D":"#B91C1C"}}>{msg.text}</div>}
       <div style={{display:"flex",justifyContent:"flex-end",marginTop:16,marginBottom:28}}>
-        <button className="btn btn-dark" onClick={save} disabled={saving}>{saving?"Opslaan…":"Opslaan"}</button>
+        <button className="btn btn-dark" onClick={save} disabled={saving}><Save size={14} strokeWidth={1.8}/>{saving?"Opslaan…":"Opslaan"}</button>
       </div>
 
       <div className="sec-ttl" style={{marginBottom:12}}><Mail size={14} strokeWidth={1.8} style={{marginRight:6}}/> E-mail templates</div>
@@ -4955,7 +4967,7 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
             <label className="ilbl">KM-vergoeding (€/km)</label>
             <input className="inp" type="number" step="0.01" min="0" max="10" value={kmRate} onChange={e=>setKmRate(parseFloat(e.target.value)||0.23)} placeholder="0.23"/>
           </div>
-          <button className="btn btn-dark" onClick={saveKmRate} disabled={kmSaving}>{kmSaving?"Opslaan…":"Opslaan"}</button>
+          <button className="btn btn-dark" onClick={saveKmRate} disabled={kmSaving}><Save size={14} strokeWidth={1.8}/>{kmSaving?"Opslaan…":"Opslaan"}</button>
         </div>
         {kmMsg.text && <div style={{marginTop:12,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500,background:kmMsg.type==="ok"?"#DCFCE7":"#FEE2E2",color:kmMsg.type==="ok"?"#15803D":"#B91C1C"}}>{kmMsg.text}</div>}
         <div style={{marginTop:10,fontSize:13,color:"#64748B"}}>De wettelijke standaard is €0,23/km. Pas aan naar je eigen tarief.</div>
@@ -5674,7 +5686,7 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
       <div><div className="pg-title">Rittenregistratie</div><div className="pg-sub">{ritten.length} ritten geregistreerd · €{kmRate.toFixed(2)}/km</div></div>
       <div style={{display:"flex",gap:8}}>
         <button className="btn btn-ghost" onClick={exportXlsx}><Download size={14} strokeWidth={1.8}/> Export</button>
-        <button className="btn btn-dark" onClick={()=>setShowAdd(true)}>+ Rit</button>
+        <button className="btn btn-dark" onClick={()=>setShowAdd(true)}><Plus size={14} strokeWidth={2}/> Rit</button>
       </div>
     </div>
 
@@ -5745,7 +5757,7 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
         {nieuw.km && nieuw.doel==="zakelijk" && <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:9,padding:"10px 13px",fontSize:13,color:"#15803D",marginBottom:12}}>Vergoeding: <strong>€{(Number(nieuw.km)*kmRate).toFixed(2)}</strong> ({kmRate.toFixed(2)}/km)</div>}
         {nieuw.km && nieuw.doel==="privé" && <div style={{background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:9,padding:"10px 13px",fontSize:13,color:"#64748B",marginBottom:12}}>Privérit — geen zakelijke vergoeding</div>}
         {saveErr && <div style={{marginBottom:10,padding:"9px 13px",borderRadius:8,fontSize:13,fontWeight:500,background:"#FEE2E2",color:"#B91C1C"}}>{saveErr}</div>}
-        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setSaveErr("");setKmErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={saving||kmLoading||!nieuw.vertrek||!nieuw.bestemming||!nieuw.km}>{saving?"Opslaan…":kmLoading?"Berekenen…":"Opslaan"}</button></div>
+        <div style={{display:"flex",gap:9}}><button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setSaveErr("");setKmErr("");}}>Annuleren</button><button className="btn btn-dark btn-full" onClick={add} disabled={saving||kmLoading||!nieuw.vertrek||!nieuw.bestemming||!nieuw.km}><Save size={14} strokeWidth={1.8}/>{saving?"Opslaan…":kmLoading?"Berekenen…":"Opslaan"}</button></div>
       </div>
     </div></div>}
   </div>);
