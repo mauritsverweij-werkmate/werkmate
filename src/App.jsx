@@ -584,7 +584,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.65}
 .off-dienst{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}
 .off-omschr{font-size:12px;opacity:.85;line-height:1.5}
 .off-tbl{border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;margin-bottom:12px}
-.off-tbl-grid{display:grid;grid-template-columns:1fr 60px 72px 84px 58px 68px 36px;align-items:center;gap:0}
+.off-tbl-grid{display:grid;grid-template-columns:1fr 60px 90px 84px 75px 68px 36px;align-items:center;gap:0}
 .off-tbl-hdr{background:#F8FAFC;border-bottom:1px solid #E5E7EB}
 .off-tbl-hdr .off-cell{padding:9px 10px;color:#475569;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .off-tbl-row{border-bottom:1px solid #F0F0F0}
@@ -2285,6 +2285,15 @@ function PrijslijstTab({ initialItems, onSaveItems, userId }) {
   const add=()=>{if(!nieuw.dienst||!nieuw.prijs)return;setItems(p=>[...p,{...nieuw,id:Date.now(),prijs:parseFloat(nieuw.prijs)}]);setNieuw({dienst:"",eenheid:"uur",prijs:"",categorie:"Arbeid"});setShowAdd(false);};
   const cats=[...new Set(items.map(i=>i.categorie))];
 
+  const CAT_STYLE = {
+    Arbeid:      { bg:"#F0FDF4", border:"#86EFAC", badge:"#DCFCE7", text:"#15803D" },
+    Materiaal:   { bg:"#EFF6FF", border:"#93C5FD", badge:"#DBEAFE", text:"#1D4ED8" },
+    Onderhoud:   { bg:"#FFFBEB", border:"#FCD34D", badge:"#FEF3C7", text:"#B45309" },
+    Installatie: { bg:"#F5F3FF", border:"#C4B5FD", badge:"#EDE9FE", text:"#6D28D9" },
+    Overig:      { bg:"#F8FAFC", border:"#CBD5E1", badge:"#F1F5F9", text:"#475569" },
+  };
+  const catStyle = cat => CAT_STYLE[cat] || { bg:"#F8FAFC", border:"#CBD5E1", badge:"#F1F5F9", text:"#475569" };
+
   const parsePrice = (value) => {
     const parsed = parseFloat(String(value || "").toString().replace(/,/g, ".").replace(/[^0-9.\-]/g, ""));
     return isNaN(parsed) ? 0 : parsed;
@@ -2348,17 +2357,18 @@ function PrijslijstTab({ initialItems, onSaveItems, userId }) {
           <button onClick={()=>setImportError(null)} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:"#B91C1C",flexShrink:0,padding:"0 2px"}}><X size={14}/></button>
         </div>
       </div>}
-      {cats.map(cat=><div key={cat} style={{marginBottom:20}}>
-        <div style={{fontSize:10.5,fontWeight:700,letterSpacing:".7px",textTransform:"uppercase",color:"#94A3B8",marginBottom:8}}>{cat}</div>
+      {cats.map(cat=>{const cs=catStyle(cat);return(<div key={cat} style={{marginBottom:16,background:cs.bg,borderLeft:`3px solid ${cs.border}`,borderRadius:10,padding:"12px 14px"}}>
+        <div style={{marginBottom:10}}>
+          <span style={{background:cs.badge,color:cs.text,borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700,letterSpacing:".5px",textTransform:"uppercase",display:"inline-block"}}>{cat}</span>
+        </div>
         {items.filter(i=>i.categorie===cat).map(item=><div key={item.id} className="pl-row">
           <input className="pl-inp" style={{flex:2}} value={item.dienst} onChange={e=>upd(item.id,"dienst",e.target.value)}/>
           <div style={{display:"flex",alignItems:"center",gap:5}}><span style={{fontSize:14,color:"#555",fontWeight:600}}>€</span><input className="pl-inp" style={{width:86,textAlign:"right"}} type="number" value={item.prijs} onChange={e=>upd(item.id,"prijs",parseFloat(e.target.value))}/></div>
           <span style={{fontSize:12,color:"#94A3B8"}}>per</span>
           <select className="pl-inp" style={{width:76}} value={item.eenheid} onChange={e=>upd(item.id,"eenheid",e.target.value)}>{["uur","st","m²","m","rit","dag"].map(u=><option key={u}>{u}</option>)}</select>
-          <span className="pl-cat">{item.categorie}</span>
           <button className="btn btn-danger btn-sm" onClick={()=>del(item.id)}><X size={14}/></button>
         </div>)}
-      </div>)}
+      </div>);})}
     </div>
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Dienst toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}><X size={14}/></button></div><div className="mb">
       <div className="ig"><label className="ilbl">Dienst omschrijving</label><input className="inp" value={nieuw.dienst} onChange={e=>setNieuw({...nieuw,dienst:e.target.value})}/></div>
