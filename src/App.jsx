@@ -1568,7 +1568,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
       )}
       </>}
 
-      <div className="sec-ttl" style={{marginTop:28}}>📜 Documenten & Certificaten</div>
+      {certOnly&&<><div className="sec-ttl" style={{marginTop:28}}>📜 Documenten & Certificaten</div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
         <div style={{fontSize:13,color:"#64748B"}}>{(certificaten||[]).length} certificaten — {(certificaten||[]).filter(c=>{if(!c.vervaldatum)return false;const d=new Date(c.vervaldatum);const now=new Date();const days=(d-now)/86400000;return days>=0&&days<=30;}).length} verlopen binnenkort</div>
         <button className="btn btn-outline" onClick={()=>{setNieuwCert({naam:"",type:"",vervaldatum:"",notitie:""});setShowAddCert(true);}}><Plus size={14} strokeWidth={2}/> Certificaat</button>
@@ -1618,6 +1618,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
           }}><Save size={14} strokeWidth={1.8}/>{savingCert?"Opslaan…":"Opslaan"}</button>
         </div>
       </div></div></div>}
+      </>}
     </div>
   );
 }
