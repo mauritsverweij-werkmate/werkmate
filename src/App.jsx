@@ -2035,6 +2035,8 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
   const [showAI,setShowAI]=useState(false);
   const [mobDetail,setMobDetail]=useState(null);
   const [editOff,setEditOff]=useState(null);
+  const [statusFilter,setStatusFilter]=useState("Alle");
+  const [sortOrder,setSortOrder]=useState("nieuwste");
   const [editSaving,setEditSaving]=useState(false);
   const [editSaved,setEditSaved]=useState(false);
   const [editSavedData,setEditSavedData]=useState(null);
@@ -2142,6 +2144,21 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
     return email;
   };
 
+  const parseDatum = d => {
+    if (!d) return 0;
+    // "12 jan. 2026" (nl-NL toLocaleDateString long) or ISO "2026-01-12"
+    if (/^\d{4}-\d{2}-\d{2}/.test(d)) return new Date(d).getTime();
+    const maanden = {jan:0,feb:1,mrt:2,apr:3,mei:4,jun:5,jul:6,aug:7,sep:8,okt:9,nov:10,dec:11};
+    const [day, mon, year] = d.replace(".","").toLowerCase().split(/\s+/);
+    return new Date(year, maanden[mon?.slice(0,3)] ?? 0, parseInt(day)||1).getTime();
+  };
+
+  const visibleOffertes = offertes
+    .filter(o => statusFilter === "Alle" || o.status === statusFilter)
+    .sort((a, b) => sortOrder === "nieuwste"
+      ? parseDatum(b.datum) - parseDatum(a.datum)
+      : parseDatum(a.datum) - parseDatum(b.datum));
+
   return(<div>
     {showAI&&<AIOfferte onClose={()=>setShowAI(false)} prijslijst={prijslijst} userId={userId} klanten={klanten} onSaved={refresh} bedrijf={bedrijf} emailTemplates={emailTemplates}/>}
 
@@ -2239,7 +2256,18 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8} color="#EF4444"/></span>Verwijderen</button>
       </MobDetailScreen>
     )}
-    <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><div className="ph-btns" style={{display:"flex",gap:8}}>{openTab&&<button className="btn btn-outline mob-hide" onClick={()=>openTab("prijslijst")}><TagIcon size={14} strokeWidth={1.8}/> Prijslijst</button>}<button className="btn btn-ai" onClick={()=>setShowAI(true)}><Sparkles size={14} strokeWidth={1.8}/> Slimme offerte</button></div></div>
+    <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{visibleOffertes.length}{statusFilter!=="Alle"?` van ${offertes.length}`:""} offertes</div></div><div className="ph-btns" style={{display:"flex",gap:8,alignItems:"center"}}>{openTab&&<button className="btn btn-outline mob-hide" onClick={()=>openTab("prijslijst")}><TagIcon size={14} strokeWidth={1.8}/> Prijslijst</button>}<button className="btn btn-ai" onClick={()=>setShowAI(true)}><Sparkles size={14} strokeWidth={1.8}/> Slimme offerte</button></div></div>
+    <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+        {["Alle","In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=>(
+          <button key={s} onClick={()=>setStatusFilter(s)} style={{padding:"5px 13px",borderRadius:20,border:`1.5px solid ${statusFilter===s?"#6366F1":"#E5E7EB"}`,background:statusFilter===s?"#6366F1":"#fff",color:statusFilter===s?"#fff":"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",whiteSpace:"nowrap",transition:"all .12s"}}>{s}</button>
+        ))}
+      </div>
+      <select value={sortOrder} onChange={e=>setSortOrder(e.target.value)} className="inp" style={{width:"auto",padding:"5px 10px",fontSize:13,marginLeft:"auto"}}>
+        <option value="nieuwste">Nieuwste eerst</option>
+        <option value="oudste">Oudste eerst</option>
+      </select>
+    </div>
     <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr 1fr"}}>
       {[
         {label:"In afwachting",val:offertes.filter(o=>o.status==="In afwachting").length,color:"#F59E0B"},
@@ -2250,8 +2278,10 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
     </div>
     {offertes.length===0
       ? <LeegScherm icon={<ClipboardList size={36} strokeWidth={1.3} color="#A5B4FC"/>} titel="Nog geen offertes" sub="Maak je eerste offerte met de slimme generator" actie="Slimme offerte maken" onActie={()=>setShowAI(true)}/>
+      : visibleOffertes.length===0
+        ? <div style={{padding:"40px 0",textAlign:"center",color:"#9CA3AF",fontSize:14}}>Geen offertes met status <strong>{statusFilter}</strong>.</div>
       : mob
-        ? <div className="mob-card-list">{offertes.map(o=>(
+        ? <div className="mob-card-list">{visibleOffertes.map(o=>(
             <div className="mob-card" key={o.id} onClick={()=>setMobDetail(o)}>
               <div className="mob-card-top">
                 <div className="mob-card-name">{o.klant}</div>
@@ -2263,7 +2293,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
             </div>
           ))}</div>
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-            <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
+            <tbody>{visibleOffertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
               <td style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(o)}><Pencil size={14} strokeWidth={1.8} color="#6B7280"/> Bewerken</button>
                 <button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}><FileText size={14} strokeWidth={1.8} color="#EF4444"/> PDF</button>
