@@ -294,29 +294,29 @@ export default function App() {
 
 // ── Nav items ─────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { id:"dashboard",       icon: LayoutDashboard, label:"Dashboard" },
-  { id:"offertes",        icon: FileText,         label:"Offertes" },
-  { id:"prijslijst",      icon: Tag,              label:"Prijslijst" },
-  { id:"planning",        icon: Calendar,         label:"Planning" },
-  { id:"crm",             icon: Users,            label:"Klanten" },
-  { id:"profiel",         icon: Building2,        label:"Profiel" },
-  { id:"facturen",        icon: CreditCard,       label:"Financiën" },
-  { id:"mail",            icon: Mail,             label:"Mail" },
-  { id:"social",          icon: Share2,           label:"Social Media" },
-  { id:"werkregistratie", icon: ClipboardList,    label:"Werkbonnen" },
-  { id:"team",            icon: Users2,           label:"Team" },
-  { id:"ritten",          icon: Car,              label:"Ritten" },
-  { id:"instellingen",    icon: Settings,         label:"Instellingen" },
+  { id:"dashboard",       icon: LayoutDashboard, label:"Dashboard",    color:"#64748B" },
+  { id:"offertes",        icon: FileText,         label:"Offertes",    color:"#8B5CF6" },
+  { id:"prijslijst",      icon: Tag,              label:"Prijslijst",  color:"#F59E0B" },
+  { id:"planning",        icon: Calendar,         label:"Planning",    color:"#3B82F6" },
+  { id:"crm",             icon: Users,            label:"Klanten",     color:"#14B8A6" },
+  { id:"profiel",         icon: Building2,        label:"Profiel",     color:"#6B7280" },
+  { id:"facturen",        icon: CreditCard,       label:"Financiën",   color:"#22C55E" },
+  { id:"mail",            icon: Mail,             label:"Mail",        color:"#3B82F6" },
+  { id:"social",          icon: Share2,           label:"Social Media",color:"#EC4899" },
+  { id:"werkregistratie", icon: ClipboardList,    label:"Werkbonnen",  color:"#F97316" },
+  { id:"team",            icon: Users2,           label:"Team",        color:"#6366F1" },
+  { id:"ritten",          icon: Car,              label:"Ritten",      color:"#EF4444" },
+  { id:"instellingen",    icon: Settings,         label:"Instellingen",color:"#9CA3AF" },
 ];
 
 const MOB_PRIMARY = ["dashboard","offertes","planning","crm","facturen"];
 const MOB_NAV = [
-  { id:"dashboard", icon: LayoutDashboard, label:"Dashboard" },
-  { id:"offertes",  icon: FileText,         label:"Offertes"  },
-  { id:"planning",  icon: Calendar,         label:"Planning"  },
-  { id:"crm",       icon: Users,            label:"Klanten"   },
-  { id:"facturen",  icon: CreditCard,       label:"Financiën" },
-  { id:"meer",      icon: MoreHorizontal,   label:"Meer"      },
+  { id:"dashboard", icon: LayoutDashboard, label:"Dashboard",  color:"#64748B" },
+  { id:"offertes",  icon: FileText,         label:"Offertes",  color:"#8B5CF6" },
+  { id:"planning",  icon: Calendar,         label:"Planning",  color:"#3B82F6" },
+  { id:"crm",       icon: Users,            label:"Klanten",   color:"#14B8A6" },
+  { id:"facturen",  icon: CreditCard,       label:"Financiën", color:"#22C55E" },
+  { id:"meer",      icon: MoreHorizontal,   label:"Meer",      color:"#9CA3AF" },
 ];
 const MOB_MORE = NAV_ITEMS.filter(i => !MOB_PRIMARY.includes(i.id));
 
@@ -485,10 +485,10 @@ body{background:#0F0F14}
 .sb-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff}
 .sb-sub{font-size:9.5px;color:rgba(255,255,255,.28);letter-spacing:.5px;text-transform:uppercase;margin-left:39px}
 .nav-wrap{flex:1;padding:12px 10px;overflow-y:auto}
-.nb{width:100%;display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;margin-bottom:1px;text-align:left;transition:all .14s;background:transparent;color:rgba(255,255,255,.4);position:relative}
-.nb:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.78)}
-.nb.on{background:rgba(99,102,241,.18);color:#A5B4FC;font-weight:600}
-.nb.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:#6366F1;border-radius:0 2px 2px 0}
+.nb{width:100%;display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;margin-bottom:1px;text-align:left;transition:all .14s;background:transparent;color:rgba(255,255,255,.45);position:relative}
+.nb:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.8)}
+.nb.on{background:rgba(255,255,255,.1);color:#fff;font-weight:600}
+.nb.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:#fff;border-radius:0 2px 2px 0;opacity:.5}
 .nb-ic{display:flex;align-items:center;justify-content:center;width:18px;flex-shrink:0}
 .sb-user{margin:10px;padding:11px 13px;background:rgba(255,255,255,.05);border-radius:10px;border:1px solid rgba(255,255,255,.06)}
 .su-role{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.26);margin-bottom:3px}
@@ -2142,8 +2142,8 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
           <div className="mob-det-row"><span className="mob-det-lbl">Datum</span><span className="mob-det-val">{mobDetail.datum||"—"}</span></div>
           <div className="mob-det-row"><span className="mob-det-lbl">Klant</span><span className="mob-det-val">{mobDetail.klant}</span></div>
         </div>
-        <button className="mob-det-action-btn" onClick={()=>{openEdit(mobDetail);setMobDetail(null);}}><span className="mob-det-action-ic"><Pencil size={18} strokeWidth={1.8}/></span>Bewerken</button>
-        <button className="mob-det-action-btn" onClick={()=>exportOfferPdf(mobDetail)}><span className="mob-det-action-ic"><FileDown size={18} strokeWidth={1.8}/></span>PDF downloaden</button>
+        <button className="mob-det-action-btn" onClick={()=>{openEdit(mobDetail);setMobDetail(null);}}><span className="mob-det-action-ic"><Pencil size={18} strokeWidth={1.8} color="#6B7280"/></span>Bewerken</button>
+        <button className="mob-det-action-btn" onClick={()=>exportOfferPdf(mobDetail)}><span className="mob-det-action-ic"><FileDown size={18} strokeWidth={1.8} color="#EF4444"/></span>PDF downloaden</button>
         <button className="mob-det-action-btn" onClick={async()=>{
           try {
             const email = await resendOfferEmail(mobDetail);
@@ -2152,7 +2152,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
             refresh(); setMobDetail({...mobDetail,status:"Verstuurd"});
             alert("Offerte verstuurd naar "+email);
           } catch(err) { alert("Versturen mislukt: "+err.message); }
-        }}><span className="mob-det-action-ic"><Send size={18} strokeWidth={1.8}/></span>Stuur naar klant</button>
+        }}><span className="mob-det-action-ic"><Send size={18} strokeWidth={1.8} color="#3B82F6"/></span>Stuur naar klant</button>
         {mobDetail.portal_token&&<button className="mob-det-action-btn" onClick={()=>waOfferte(mobDetail,klanten,bedrijf)}><span className="mob-det-action-ic"><MessageCircle size={18} strokeWidth={1.8}/></span>Stuur via WhatsApp</button>}
         <div style={{background:"#fff",borderRadius:14,border:"1px solid #EAECF0",padding:"14px 16px",marginBottom:8}}>
           <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
@@ -2160,7 +2160,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
             {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
           </select>
         </div>
-        <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8}/></span>Verwijderen</button>
+        <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8} color="#EF4444"/></span>Verwijderen</button>
       </MobDetailScreen>
     )}
     <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><button className="btn btn-ai" onClick={()=>setShowAI(true)}><Sparkles size={14} strokeWidth={1.8}/> Slimme offerte</button></div>
@@ -2189,8 +2189,8 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Dienst","Bedrag","Status","Datum","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
             <tbody>{offertes.map(o=><tr key={o.id}><td style={{fontWeight:700,color:"#111"}}>{o.klant}</td><td>{o.dienst}</td><td style={{fontWeight:700,color:"#111"}}>{o.bedrag}</td><td><Badge status={o.status}/></td><td style={{color:"#888"}}>{o.datum}</td>
               <td style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(o)}><Pencil size={14} strokeWidth={1.8}/> Bewerken</button>
-                <button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}><FileText size={14} strokeWidth={1.8}/> PDF</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(o)}><Pencil size={14} strokeWidth={1.8} color="#6B7280"/> Bewerken</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}><FileText size={14} strokeWidth={1.8} color="#EF4444"/> PDF</button>
                 <button className="btn btn-blue btn-sm" onClick={async()=>{
                   try {
                     const email = await resendOfferEmail(o);
@@ -2199,11 +2199,11 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
                     alert("Verstuurd naar "+email);
                   } catch(err) { alert("Versturen mislukt: "+err.message); }
                 }}><Mail size={14} strokeWidth={1.8}/> Mail</button>
-                {o.portal_token&&<button className="btn btn-green btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}><MessageCircle size={14} strokeWidth={1.8}/> WhatsApp</button>}
+                {o.portal_token&&<button className="btn btn-green btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}><MessageCircle size={14} strokeWidth={1.8} color="#22C55E"/> WhatsApp</button>}
                 <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} className="sel">
                   {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
                 </select>
-                <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}><Trash2 size={14} strokeWidth={1.8}/></button>
+                <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}><Trash2 size={14} strokeWidth={1.8} color="#EF4444"/></button>
               </td>
             </tr>)}</tbody>
           </table></div></div>
@@ -2752,10 +2752,10 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
           {mobDetail.email&&<div className="mob-det-row"><span className="mob-det-lbl">E-mail</span><a href={`mailto:${mobDetail.email}`} style={{color:"#6366F1",fontWeight:600,fontSize:13.5,textDecoration:"none"}}>{mobDetail.email}</a></div>}
           {mobDetail.adres&&<div className="mob-det-row"><span className="mob-det-lbl">Adres</span><span className="mob-det-val">{mobDetail.adres}</span></div>}
         </div>
-        {mobDetail.tel&&<a href={`tel:${mobDetail.tel}`} className="mob-det-action-btn" style={{textDecoration:"none"}}><span className="mob-det-action-ic"><Phone size={18} strokeWidth={1.8}/></span>Bellen</a>}
-        {mobDetail.email&&<a href={`mailto:${mobDetail.email}`} className="mob-det-action-btn" style={{textDecoration:"none"}}><span className="mob-det-action-ic"><Mail size={18} strokeWidth={1.8}/></span>E-mailen</a>}
-        <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic"><Pencil size={18} strokeWidth={1.8}/></span>Bewerken</button>
-        <button className="mob-det-action-btn danger" onClick={async()=>{if(await verwijder(mobDetail.id,mobDetail.naam))setMobDetail(null);}}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8}/></span>Verwijderen</button>
+        {mobDetail.tel&&<a href={`tel:${mobDetail.tel}`} className="mob-det-action-btn" style={{textDecoration:"none"}}><span className="mob-det-action-ic"><Phone size={18} strokeWidth={1.8} color="#14B8A6"/></span>Bellen</a>}
+        {mobDetail.email&&<a href={`mailto:${mobDetail.email}`} className="mob-det-action-btn" style={{textDecoration:"none"}}><span className="mob-det-action-ic"><Mail size={18} strokeWidth={1.8} color="#3B82F6"/></span>E-mailen</a>}
+        <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic"><Pencil size={18} strokeWidth={1.8} color="#6B7280"/></span>Bewerken</button>
+        <button className="mob-det-action-btn danger" onClick={async()=>{if(await verwijder(mobDetail.id,mobDetail.naam))setMobDetail(null);}}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8} color="#EF4444"/></span>Verwijderen</button>
       </MobDetailScreen>
     )}
     <div className="ph"><div><div className="pg-title">Klantenbeheer</div><div className="pg-sub">{klanten.length} klanten</div></div><button className="btn btn-dark" onClick={()=>setShowAdd(true)}><Plus size={14} strokeWidth={2}/> Klant</button></div>
@@ -2777,7 +2777,7 @@ function CRMTab({ userId, klanten, offertes, facturen, werkbonnen, refresh }) {
             </div>
           ))}</div>
         : <div style={{display:"flex",flexDirection:"column",gap:9}}>
-            {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-ghost btn-sm" onClick={()=>startEdit(k)}><Pencil size={14} strokeWidth={1.8}/> Bewerken</button><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id,k.naam)}><Trash2 size={14} strokeWidth={1.8}/></button></div>)}
+            {list.map(k=><div className="pc" key={k.id}><div className="av">{k.naam[0]}</div><div style={{flex:1}}><div style={{fontWeight:700,color:"#111",fontSize:15}}>{k.naam}</div><div style={{fontSize:12,color:"#888",marginTop:2}}>{k.tel}{k.tel&&k.email?" · ":""}{k.email}</div></div><Badge status={k.status}/><button className="btn btn-ghost btn-sm" onClick={()=>startEdit(k)}><Pencil size={14} strokeWidth={1.8} color="#6B7280"/> Bewerken</button><button className="btn btn-danger btn-sm" onClick={()=>verwijder(k.id,k.naam)}><Trash2 size={14} strokeWidth={1.8} color="#EF4444"/></button></div>)}
           </div>
     }
     {showAdd&&<div className="overlay"><div className="modal"><div className="mh"><div><div className="mt">Klant toevoegen</div></div><button className="mc" onClick={()=>setShowAdd(false)}><X size={14}/></button></div><div className="mb">
@@ -2998,9 +2998,9 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
           <div style={{fontSize:13,color:"#64748B",fontWeight:600,marginBottom:8}}>Handtekening klant</div>
           <img src={mobDetail.handtekening} alt="Handtekening" style={{width:"100%",maxHeight:120,objectFit:"contain",background:"#FAFAFA",borderRadius:10,border:"1px solid #E5E7EB"}}/>
         </div>}
-        <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic"><Pencil size={18} strokeWidth={1.8}/></span>Werkbon bewerken</button>
-        {mobDetail.status==="Afgerond"&&klanten?.find(k=>k.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase())?.email&&<button className="mob-det-action-btn" onClick={()=>{const k=klanten.find(kl=>kl.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase());setMobDetail(null);setReviewErr("");setReviewSent(false);setReviewConfirm({email:k.email,name:k.naam,omschrijving:mobDetail.omschrijving});}}><span className="mob-det-action-ic"><Star size={18} strokeWidth={1.8}/></span>Review verzoek sturen</button>}
-        <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8}/></span>Verwijderen</button>
+        <button className="mob-det-action-btn" onClick={()=>{setMobDetail(null);startEdit(mobDetail);}}><span className="mob-det-action-ic"><Pencil size={18} strokeWidth={1.8} color="#6B7280"/></span>Werkbon bewerken</button>
+        {mobDetail.status==="Afgerond"&&klanten?.find(k=>k.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase())?.email&&<button className="mob-det-action-btn" onClick={()=>{const k=klanten.find(kl=>kl.naam.toLowerCase()===(mobDetail.klant||"").toLowerCase());setMobDetail(null);setReviewErr("");setReviewSent(false);setReviewConfirm({email:k.email,name:k.naam,omschrijving:mobDetail.omschrijving});}}><span className="mob-det-action-ic"><Star size={18} strokeWidth={1.8} color="#F59E0B"/></span>Review verzoek sturen</button>}
+        <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8} color="#EF4444"/></span>Verwijderen</button>
       </MobDetailScreen>
     )}
     {werkbonnen.length===0
@@ -3018,7 +3018,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
             </div>
           ))}</div>
         : <div className="card"><div className="tw"><table><thead><tr>{["Klant","Datum","Uren","Status","Materialen","Foto","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());const bFotos=getWerkbonFotos(b);return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{bFotos.length>0?<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{bFotos.slice(0,3).map((url,i)=><img key={i} src={url} alt="" style={{width:56,height:44,objectFit:"cover",borderRadius:8,cursor:"pointer"}} onClick={()=>openLightbox(bFotos,i)}/>)}{bFotos.length>3&&<div style={{width:56,height:44,borderRadius:8,background:"#F1F5F9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#64748B",cursor:"pointer"}} onClick={()=>openLightbox(bFotos,3)}>+{bFotos.length-3}</div>}</div>:"-"}</td><td style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}><Pencil size={14} strokeWidth={1.8}/> Bewerken</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>{setReviewErr("");setReviewSent(false);setReviewConfirm({email:bKlant.email,name:bKlant.naam,omschrijving:b.omschrijving});}}><Star size={14} strokeWidth={1.8}/> Review verzoek</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}><Trash2 size={14} strokeWidth={1.8}/></button></td></tr>);})}
+            <tbody>{werkbonnen.map(b=>{const bKlant=klanten?.find(k=>k.naam.toLowerCase()===(b.klant||"").toLowerCase());const bFotos=getWerkbonFotos(b);return(<tr key={b.id}><td style={{fontWeight:700,color:"#111"}}>{b.klant}<div style={{fontSize:13,color:"#555",marginTop:4}}>{b.omschrijving}</div></td><td style={{color:"#888"}}>{b.datum}</td><td style={{fontWeight:700,color:"#111"}}>{b.uren||"-"}</td><td><Badge status={b.status||"Nieuw"}/></td><td style={{color:"#555"}}>{b.materialen||"-"}</td><td>{bFotos.length>0?<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{bFotos.slice(0,3).map((url,i)=><img key={i} src={url} alt="" style={{width:56,height:44,objectFit:"cover",borderRadius:8,cursor:"pointer"}} onClick={()=>openLightbox(bFotos,i)}/>)}{bFotos.length>3&&<div style={{width:56,height:44,borderRadius:8,background:"#F1F5F9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#64748B",cursor:"pointer"}} onClick={()=>openLightbox(bFotos,3)}>+{bFotos.length-3}</div>}</div>:"-"}</td><td style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><button type="button" className="btn btn-outline btn-sm" onClick={()=>startEdit(b)}><Pencil size={14} strokeWidth={1.8} color="#6B7280"/> Bewerken</button>{b.status==="Afgerond"&&bKlant?.email&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>{setReviewErr("");setReviewSent(false);setReviewConfirm({email:bKlant.email,name:bKlant.naam,omschrijving:b.omschrijving});}}><Star size={14} strokeWidth={1.8} color="#F59E0B"/> Review verzoek</button>}<button type="button" className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Werkbon verwijderen?")) { supabase.from("werkbonnen").delete().eq("id",b.id).then(()=>refresh()); } }}><Trash2 size={14} strokeWidth={1.8} color="#EF4444"/></button></td></tr>);})}
 </tbody>
           </table></div></div>
     }
@@ -3344,10 +3344,10 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
               {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
             </select>
           </div>
-          <button className="mob-det-action-btn" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}><span className="mob-det-action-ic"><FileDown size={18} strokeWidth={1.8}/></span>PDF downloaden</button>
-          <button className="mob-det-action-btn" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}><span className="mob-det-action-ic"><Mail size={18} strokeWidth={1.8}/></span>Factuur e-mailen</button>
-          {st!=="Betaald"&&st!=="Concept"&&<button className="mob-det-action-btn" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}><span className="mob-det-action-ic"><Bell size={18} strokeWidth={1.8}/></span>Herinnering sturen</button>}
-          <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8}/></span>Verwijderen</button>
+          <button className="mob-det-action-btn" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}><span className="mob-det-action-ic"><FileDown size={18} strokeWidth={1.8} color="#EF4444"/></span>PDF downloaden</button>
+          <button className="mob-det-action-btn" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}><span className="mob-det-action-ic"><Mail size={18} strokeWidth={1.8} color="#3B82F6"/></span>Factuur e-mailen</button>
+          {st!=="Betaald"&&st!=="Concept"&&<button className="mob-det-action-btn" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}><span className="mob-det-action-ic"><Bell size={18} strokeWidth={1.8} color="#F59E0B"/></span>Herinnering sturen</button>}
+          <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8} color="#EF4444"/></span>Verwijderen</button>
         </MobDetailScreen>
       );
     })()}
@@ -3427,10 +3427,10 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                   </td>
                   <td style={{paddingTop:10,paddingBottom:10}}>
                     <div className="f-actions">
-                      <button className="f-btn f-btn-pdf" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}><FileText size={12} strokeWidth={1.8}/> PDF</button>
-                      {canRemind&&<button className="f-btn f-btn-remind" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}><Bell size={12} strokeWidth={1.8}/> Herinnering</button>}
-                      <button className="f-btn f-btn-mail" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}><Mail size={12} strokeWidth={1.8}/> Mail</button>
-                      <button className="f-btn f-btn-del" title="Verwijderen" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}><Trash2 size={12} strokeWidth={1.8}/></button>
+                      <button className="f-btn f-btn-pdf" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}><FileText size={12} strokeWidth={1.8} color="#EF4444"/> PDF</button>
+                      {canRemind&&<button className="f-btn f-btn-remind" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}><Bell size={12} strokeWidth={1.8} color="#F59E0B"/> Herinnering</button>}
+                      <button className="f-btn f-btn-mail" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}><Mail size={12} strokeWidth={1.8} color="#3B82F6"/> Mail</button>
+                      <button className="f-btn f-btn-del" title="Verwijderen" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}><Trash2 size={12} strokeWidth={1.8} color="#EF4444"/></button>
                     </div>
                   </td>
                 </tr>);
@@ -3483,7 +3483,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
                 <div className="mob-card-sub">{u.datum} · BTW {u.btw_percentage}%{u.foto&&" · 📷"}</div>
                 <div className="mob-card-actions">
                   {u.foto&&<button className="btn btn-ghost btn-sm" onClick={()=>window.open(u.foto)}><Camera size={14} strokeWidth={1.8}/> Bon</button>}
-                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Uitgave verwijderen?"))supabase.from("uitgaven").delete().eq("id",u.id).then(()=>refresh());}}><Trash2 size={14} strokeWidth={1.8}/> Verwijderen</button>
+                  <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm("Uitgave verwijderen?"))supabase.from("uitgaven").delete().eq("id",u.id).then(()=>refresh());}}><Trash2 size={14} strokeWidth={1.8} color="#EF4444"/> Verwijderen</button>
                 </div>
               </div>
             ))}</div>
@@ -4930,7 +4930,7 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
     <div>
       <div className="ph"><div><div className="pg-title">Instellingen</div><div className="pg-sub">Automatisering, e-mail templates, reiskosten en abonnement</div></div></div>
 
-      <div className="sec-ttl" style={{marginBottom:12}}><Mail size={14} strokeWidth={1.8} style={{marginRight:6}}/> E-mail automatisering</div>
+      <div className="sec-ttl" style={{marginBottom:12}}><Mail size={14} strokeWidth={1.8} color="#3B82F6" style={{marginRight:6}}/> E-mail automatisering</div>
       <div className="card cp" style={{display:"flex",flexDirection:"column",gap:20}}>
         <Toggle label="Automatische review e-mail" desc="Stuur automatisch een review-verzoek als een werkbon op 'Afgerond' wordt gezet" value={settings.auto_review_email} onChange={v=>setSettings({...settings,auto_review_email:v})}/>
         <div style={{borderTop:"1px solid #F1F5F9"}}/>
@@ -4955,12 +4955,12 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
         <button className="btn btn-dark" onClick={save} disabled={saving}><Save size={14} strokeWidth={1.8}/>{saving?"Opslaan…":"Opslaan"}</button>
       </div>
 
-      <div className="sec-ttl" style={{marginBottom:12}}><Mail size={14} strokeWidth={1.8} style={{marginRight:6}}/> E-mail templates</div>
+      <div className="sec-ttl" style={{marginBottom:12}}><Mail size={14} strokeWidth={1.8} color="#3B82F6" style={{marginRight:6}}/> E-mail templates</div>
       <EmailTemplatesSection userId={userId} bedrijf={bedrijf} emailTemplates={emailTemplates} onTemplatesUpdate={onTemplatesUpdate}/>
 
       <div style={{marginBottom:28}}/>
 
-      <div className="sec-ttl" style={{marginBottom:12}}><Car size={14} strokeWidth={1.8} style={{marginRight:6}}/> Reiskosten</div>
+      <div className="sec-ttl" style={{marginBottom:12}}><Car size={14} strokeWidth={1.8} color="#EF4444" style={{marginRight:6}}/> Reiskosten</div>
       <div className="card cp">
         <div style={{display:"flex",alignItems:"flex-end",gap:12,flexWrap:"wrap"}}>
           <div className="ig" style={{maxWidth:200,marginBottom:0}}>
@@ -5233,11 +5233,14 @@ function WerkMateApp({ user, onLogout }) {
             <div className="sb-sub">Bedrijfsbeheer platform</div>
           </div>
           <div className="nav-wrap">
-            {NAV_ITEMS.map(({id, icon: NavIcon, label})=>(
-              <button key={id} className={`nb ${tab===id?"on":""}`} onClick={()=>handleTabSwitch(id)}>
-                <span className="nb-ic"><NavIcon size={15} strokeWidth={1.8}/></span>{label}
-              </button>
-            ))}
+            {NAV_ITEMS.map(({id, icon: NavIcon, label, color})=>{
+              const active = tab===id;
+              return (
+                <button key={id} className={`nb ${active?"on":""}`} onClick={()=>handleTabSwitch(id)}>
+                  <span className="nb-ic"><NavIcon size={15} strokeWidth={1.8} color={active?"#fff":color}/></span>{label}
+                </button>
+              );
+            })}
           </div>
           <div className="sb-user">
             <div className="su-role">Ingelogd als</div>
@@ -5251,13 +5254,16 @@ function WerkMateApp({ user, onLogout }) {
         <nav className="mob-nav">
           {MOB_NAV.map(item => {
             const MobIcon = item.icon;
+            const mobActive = tab === item.id && !mobMore;
+            const moreActive = item.id === "meer" && mobMore;
+            const iconColor = (mobActive || moreActive) ? item.color : "#9CA3AF";
             return item.id === "meer"
-              ? <button key="meer" className={`mob-nb${mobMore ? " mob-nb-on" : ""}`} onClick={() => setMobMore(m => !m)}>
-                  <span className="mob-nb-ic"><MobIcon size={20} strokeWidth={1.8}/></span>
+              ? <button key="meer" className={`mob-nb${mobMore ? " mob-nb-on" : ""}`} style={mobMore?{color:item.color}:{}} onClick={() => setMobMore(m => !m)}>
+                  <span className="mob-nb-ic"><MobIcon size={20} strokeWidth={1.8} color={iconColor}/></span>
                   <span>{item.label}</span>
                 </button>
-              : <button key={item.id} className={`mob-nb${tab === item.id && !mobMore ? " mob-nb-on" : ""}`} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }}>
-                  <span className="mob-nb-ic"><MobIcon size={20} strokeWidth={1.8}/></span>
+              : <button key={item.id} className={`mob-nb${mobActive ? " mob-nb-on" : ""}`} style={mobActive?{color:item.color}:{}} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }}>
+                  <span className="mob-nb-ic"><MobIcon size={20} strokeWidth={1.8} color={iconColor}/></span>
                   <span>{item.label}</span>
                 </button>;
           })}
@@ -5267,9 +5273,10 @@ function WerkMateApp({ user, onLogout }) {
           <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,borderTop:"1px solid #E5E7EB",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
             {MOB_MORE.map(item => {
               const MoreIcon = item.icon;
+              const moreItemActive = tab === item.id;
               return (
-                <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:tab===item.id?"#EEF2FF":"#F8FAFC",border:`1.5px solid ${tab===item.id?"#C7D2FE":"#E5E7EB"}`,borderRadius:12,color:tab===item.id?"#6366F1":"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-                  <MoreIcon size={18} strokeWidth={1.8}/>{item.label}
+                <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:moreItemActive?"#F8FAFC":"#F8FAFC",border:`1.5px solid ${moreItemActive?item.color+"44":"#E5E7EB"}`,borderRadius:12,color:moreItemActive?item.color:"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                  <MoreIcon size={18} strokeWidth={1.8} color={item.color}/>{item.label}
                 </button>
               );
             })}
