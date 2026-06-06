@@ -497,8 +497,8 @@ body{background:#0F0F14}
 .logout-btn{width:100%;margin-top:8px;background:rgba(255,255,255,.08);border:none;border-radius:7px;padding:7px;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .14s}
 .logout-btn:hover{background:rgba(255,255,255,.14);color:#fff}
 .main{flex:1;overflow-y:auto;padding:28px 32px;background:#F1F5F9}
-.pg-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#0F0F14;letter-spacing:-.4px;margin-bottom:2px}
-.pg-sub{font-size:12.5px;color:#94A3B8}
+.pg-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#0F0F14;letter-spacing:-0.02em;margin-bottom:2px}
+.pg-sub{font-size:0.95rem;color:#6b7280}
 .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
 .sec-ttl{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#0F0F14;margin-bottom:10px}
 .btn{border:none;border-radius:10px;padding:9px 17px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .14s;white-space:nowrap;letter-spacing:.1px}
