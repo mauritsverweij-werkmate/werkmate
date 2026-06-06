@@ -3181,11 +3181,12 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   };
   const dispStatus = (f) => isOverdue(f) ? "Verlopen" : (f.status||"Concept");
 
-  const monthRevenue = facturen.filter(f=>f.status==="Betaald"&&(f.datum||"").startsWith(thisMonth)).reduce((s,f)=>s+getTotal(f),0);
+  const betaaldDatum = (f) => f.betaald_op || f.datum || "";
+  const monthRevenue = facturen.filter(f=>f.status==="Betaald"&&betaaldDatum(f).startsWith(thisMonth)).reduce((s,f)=>s+getTotal(f),0);
   const openFacturen2 = facturen.filter(f=>{const s=dispStatus(f);return s!=="Betaald"&&s!=="Concept";});
   const openAmount = openFacturen2.reduce((s,f)=>s+getTotal(f),0);
-  const yearRevenue = facturen.filter(f=>f.status==="Betaald"&&(f.datum||"").startsWith(String(now.getFullYear()))).reduce((s,f)=>s+getTotal(f),0);
-  const btwKwartaal = facturen.filter(f=>f.status==="Betaald"&&f.datum&&new Date(f.datum)>=qStart&&new Date(f.datum)<=now).reduce((s,f)=>s+(getTotal(f)/1.21*0.21),0);
+  const yearRevenue = facturen.filter(f=>f.status==="Betaald"&&betaaldDatum(f).startsWith(String(now.getFullYear()))).reduce((s,f)=>s+getTotal(f),0);
+  const btwKwartaal = facturen.filter(f=>{if(f.status!=="Betaald")return false;const d=betaaldDatum(f);return d&&new Date(d)>=qStart&&new Date(d)<=now;}).reduce((s,f)=>s+(getTotal(f)/1.21*0.21),0);
 
   const nextNummer = () => {
     const yr = now.getFullYear();
@@ -3246,7 +3247,13 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
     setShowCreate(false); refresh();
   };
 
-  const updateStatus = async (id, status) => { const {error}=await supabase.from("facturen").update({status}).eq("id",id); if(!error)refresh(); };
+  const updateStatus = async (id, status) => {
+    const extra = status === "Betaald"
+      ? { betaald_op: new Date().toISOString().slice(0,10) }
+      : { betaald_op: null };
+    const {error}=await supabase.from("facturen").update({status,...extra}).eq("id",id);
+    if(!error)refresh();
+  };
 
   const sendInvoiceEmail = async () => {
     if(!emailAddr) return;
@@ -3556,8 +3563,10 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       const ingediend = !!localStorage.getItem(ingKey);
 
       const fInQ = facturen.filter(f => {
-        if(f.status!=="Betaald"||!f.datum)return false;
-        const d=new Date(f.datum);
+        if(f.status!=="Betaald")return false;
+        const dateStr=f.betaald_op||f.datum;
+        if(!dateStr)return false;
+        const d=new Date(dateStr);
         return d.getFullYear()===btwJaar&&d.getMonth()>=q.start&&d.getMonth()<=q.end;
       });
       const uInQ = (uitgaven||[]).filter(u => {
@@ -3897,7 +3906,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       const maanden = ["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 
       const monthData = maanden.map((m, mi) => {
-        const ink = facturen.filter(f => f.status==="Betaald" && f.datum && new Date(f.datum).getFullYear()===winstJaar && new Date(f.datum).getMonth()===mi).reduce((s,f)=>s+getTotal(f),0);
+        const ink = facturen.filter(f => { if(f.status!=="Betaald")return false; const ds=f.betaald_op||f.datum; return ds&&new Date(ds).getFullYear()===winstJaar&&new Date(ds).getMonth()===mi; }).reduce((s,f)=>s+getTotal(f),0);
         const uit = (uitgaven||[]).filter(u => u.datum && new Date(u.datum).getFullYear()===winstJaar && new Date(u.datum).getMonth()===mi).reduce((s,u)=>s+Number(u.bedrag||0),0);
         return { label:m, inkomsten:ink, uitgaven:uit, netto:ink-uit };
       });
@@ -3909,7 +3918,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       ])).sort((a,b)=>b-a);
 
       const yearData = allYears.map(y => {
-        const ink = facturen.filter(f => f.status==="Betaald" && f.datum && new Date(f.datum).getFullYear()===y).reduce((s,f)=>s+getTotal(f),0);
+        const ink = facturen.filter(f => { if(f.status!=="Betaald")return false; const ds=f.betaald_op||f.datum; return ds&&new Date(ds).getFullYear()===y; }).reduce((s,f)=>s+getTotal(f),0);
         const uit = (uitgaven||[]).filter(u => u.datum && new Date(u.datum).getFullYear()===y).reduce((s,u)=>s+Number(u.bedrag||0),0);
         return { label:String(y), inkomsten:ink, uitgaven:uit, netto:ink-uit };
       });
