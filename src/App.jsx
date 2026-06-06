@@ -1943,7 +1943,7 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten,
         }
       </div>
       <div><div className="sec-ttl">Snelle acties</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-        {[{icon: Sparkles, label:"Slimme offerte",tab:"offertes",bg:"#EEF2FF",border:"#C7D2FE",col:"#6366F1"},{icon: Mail, label:"Mail",tab:"mail",bg:"#F0FDF4",border:"#BBF7D0",col:"#16A34A"},{icon: Share2, label:"Social post",tab:"social",bg:"#FFF7ED",border:"#FED7AA",col:"#EA580C"}]
+        {[{icon: Sparkles, label:"Slimme offerte",tab:"offertes",bg:"#EEF2FF",border:"#C7D2FE",col:"#6366F1"},{icon: Mail, label:"Mail",tab:"mail",bg:"#F0FDF4",border:"#BBF7D0",col:"#16A34A"}]
           .map(({icon: QIcon, tab, bg, border, col, label})=><button key={tab} onClick={()=>openTab(tab)} style={{background:bg,border:`1.5px solid ${border}`,borderRadius:11,padding:"14px",cursor:"pointer",textAlign:"center",fontFamily:"'Plus Jakarta Sans',sans-serif",transition:"all .14s"}} onMouseOver={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseOut={e=>e.currentTarget.style.transform="none"}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",marginBottom:5,color:col}}><QIcon size={22} strokeWidth={1.8}/></div><div style={{fontSize:12.5,fontWeight:700,color:col}}>{label}</div>
           </button>)}
@@ -1970,7 +1970,7 @@ function waOfferte(o, klanten, bedrijf) {
   window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
-function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, emailTemplates = {} }) {
+function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, emailTemplates = {}, openTab }) {
   const mob = useMobile();
   const [showAI,setShowAI]=useState(false);
   const [mobDetail,setMobDetail]=useState(null);
@@ -2179,7 +2179,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8} color="#EF4444"/></span>Verwijderen</button>
       </MobDetailScreen>
     )}
-    <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><button className="btn btn-ai" onClick={()=>setShowAI(true)}><Sparkles size={14} strokeWidth={1.8}/> Slimme offerte</button></div>
+    <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><div style={{display:"flex",gap:8}}>{openTab&&<button className="btn btn-outline" onClick={()=>openTab("prijslijst")}><TagIcon size={14} strokeWidth={1.8}/> Prijslijst</button>}<button className="btn btn-ai" onClick={()=>setShowAI(true)}><Sparkles size={14} strokeWidth={1.8}/> Slimme offerte</button></div></div>
     <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr 1fr"}}>
       {[
         {label:"In afwachting",val:offertes.filter(o=>o.status==="In afwachting").length,color:"#F59E0B"},
@@ -5221,7 +5221,7 @@ function WerkMateApp({ user, onLogout }) {
   const render = () => {
     switch(tab) {
       case "dashboard":  return <DashboardTab openTab={setTab} bedrijf={bedrijf} offertes={offertes} planning={planning} facturen={facturen} klanten={klanten} certificaten={certificaten} userId={orgOwnerId} userEmail={user.email}/>;
-      case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={orgOwnerId} offertes={offertes} klanten={klanten} refresh={refreshAlles} bedrijf={bedrijf} emailTemplates={emailTemplates}/>;
+      case "offertes":   return <OfferteTab prijslijst={prijslijst} userId={orgOwnerId} offertes={offertes} klanten={klanten} refresh={refreshAlles} bedrijf={bedrijf} emailTemplates={emailTemplates} openTab={setTab}/>;
       case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst} userId={orgOwnerId}/>;
       case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
       case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} offertes={offertes} facturen={facturen} werkbonnen={werkbonnen} refresh={refreshAlles}/>;
