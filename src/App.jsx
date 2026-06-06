@@ -759,9 +759,9 @@ select.pl-inp{appearance:none;-webkit-appearance:none;background-image:url("data
 @media(max-width:768px){
   .sidebar{display:none}
   .mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #E5E7EB;z-index:200;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1px 12px rgba(0,0,0,.06)}
-  .mob-nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px 8px;gap:3px;border:none;background:transparent;color:#9CA3AF;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .mob-nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:70px;gap:4px;padding:0 2px;border:none;background:transparent;color:#9CA3AF;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .15s}
   .mob-nb.mob-nb-on{color:#6366F1}
-  .mob-nb-ic{display:flex;align-items:center;justify-content:center;line-height:1}
+  .mob-nb-ic{display:flex;align-items:center;justify-content:center;font-size:26px;line-height:1}
   .main{padding-bottom:calc(70px + env(safe-area-inset-bottom));padding-left:16px;padding-right:16px;padding-top:0}
   .ph{position:sticky;top:0;z-index:10;background:#F8FAFC;padding:16px 0 14px;margin-bottom:16px;border-bottom:1px solid #EAECF0}
   .ph .pg-title{font-size:20px}
@@ -5360,29 +5360,37 @@ function WerkMateApp({ user, onLogout }) {
           })}
         </nav>
         {/* Meer panel – mobile only */}
-        {mobMore && (
-          <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,borderTop:"1px solid #E5E7EB",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
-            {MOB_MORE.map(item => {
-              const moreItemActive = tab === item.id;
-              return (
-                <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#F8FAFC",border:`1.5px solid ${moreItemActive?item.color+"44":"#E5E7EB"}`,borderRadius:12,color:moreItemActive?item.color:"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-                  <span style={{fontSize:18}}>{item.icon}</span>{item.label}
+        {mobMore && <>
+          <div onClick={() => setMobMore(false)} style={{position:"fixed",inset:0,zIndex:198}}/>
+          <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,boxShadow:"0 -4px 24px rgba(0,0,0,.10)",maxHeight:"70dvh",overflowY:"auto",borderTop:"1px solid #E5E7EB"}}>
+            {MOB_MORE.map(item=>{
+              const active=tab===item.id;
+              return(
+                <button key={item.id} onClick={()=>{handleTabSwitch(item.id);setMobMore(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"14px 20px",background:active?"#F5F3FF":"none",border:"none",borderBottom:"1px solid #F3F4F6",color:active?item.color:"#374151",fontSize:15,fontWeight:active?700:500,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",textAlign:"left",WebkitTapHighlightColor:"transparent"}}>
+                  <span style={{fontSize:22,width:28,textAlign:"center",flexShrink:0}}>{item.icon}</span>
+                  <span style={{flex:1}}>{item.label}</span>
+                  {active&&<span style={{width:7,height:7,borderRadius:"50%",background:item.color,flexShrink:0}}/>}
                 </button>
               );
             })}
-            <div style={{gridColumn:"1/-1",borderTop:"1px solid #F1F5F9",paddingTop:8,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {[["profiel","🏢","Bedrijfsprofiel"],["prijslijst","🏷️","Prijslijst"],["certificaten","📜","Certificaten"],["instellingen","⚙️","Instellingen"]].map(([id,icon,label])=>(
-                <button key={id} onClick={()=>{setTab(id);setMobMore(false);}} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"#F8FAFC",border:"1.5px solid #E5E7EB",borderRadius:12,color:tab===id?"#6366F1":"#374151",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-                  <span style={{fontSize:16}}>{icon}</span>{label}
+            <div style={{height:1,background:"#E5E7EB",margin:"2px 0"}}/>
+            {[["profiel","🏢","Bedrijfsprofiel"],["prijslijst","🏷️","Prijslijst"],["certificaten","📜","Certificaten"],["instellingen","⚙️","Instellingen"]].map(([id,icon,label])=>{
+              const active=tab===id;
+              return(
+                <button key={id} onClick={()=>{setTab(id);setMobMore(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"13px 20px",background:active?"#F5F3FF":"none",border:"none",borderBottom:"1px solid #F3F4F6",color:active?"#6366F1":"#6B7280",fontSize:14,fontWeight:active?700:500,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",textAlign:"left",WebkitTapHighlightColor:"transparent"}}>
+                  <span style={{fontSize:20,width:28,textAlign:"center",flexShrink:0}}>{icon}</span>
+                  <span style={{flex:1}}>{label}</span>
+                  {active&&<span style={{width:7,height:7,borderRadius:"50%",background:"#6366F1",flexShrink:0}}/>}
                 </button>
-              ))}
-            </div>
-            <button onClick={() => { setMobMore(false); onLogout(); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:12,color:"#EF4444",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",gridColumn:"1/-1"}}>
-              <LogOut size={18} strokeWidth={1.8}/>Uitloggen
+              );
+            })}
+            <div style={{height:1,background:"#E5E7EB",margin:"2px 0"}}/>
+            <button onClick={()=>{setMobMore(false);onLogout();}} style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"14px 20px",background:"none",border:"none",color:"#EF4444",fontSize:15,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",WebkitTapHighlightColor:"transparent"}}>
+              <span style={{display:"flex",alignItems:"center",justifyContent:"center",width:28,flexShrink:0}}><LogOut size={20} strokeWidth={1.8}/></span>
+              Uitloggen
             </button>
           </div>
-        )}
-        {mobMore && <div onClick={() => setMobMore(false)} style={{position:"fixed",inset:0,zIndex:198}} />}
+        </>}
       </div>
     </>
   );
