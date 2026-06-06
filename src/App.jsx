@@ -296,17 +296,12 @@ export default function App() {
 const NAV_ITEMS = [
   { id:"dashboard",       icon:"⊞",  label:"Dashboard",    color:"#64748B" },
   { id:"offertes",        icon:"📋", label:"Offertes",     color:"#8B5CF6" },
-  { id:"prijslijst",      icon:"🏷️", label:"Prijslijst",  color:"#F59E0B" },
-  { id:"planning",        icon:"📅", label:"Planning",     color:"#3B82F6" },
   { id:"crm",             icon:"👥", label:"Klanten",      color:"#14B8A6" },
-  { id:"profiel",         icon:"🏢", label:"Profiel",      color:"#6B7280" },
-  { id:"facturen",        icon:"💶", label:"Financiën",    color:"#22C55E" },
-  { id:"mail",            icon:"✉️", label:"Mail",         color:"#3B82F6" },
-  { id:"social",          icon:"📱", label:"Social Media", color:"#EC4899" },
+  { id:"planning",        icon:"📅", label:"Planning",     color:"#3B82F6" },
   { id:"werkregistratie", icon:"🔧", label:"Werkbonnen",   color:"#F97316" },
+  { id:"facturen",        icon:"💶", label:"Financiën",    color:"#22C55E" },
   { id:"team",            icon:"👷", label:"Team",         color:"#6366F1" },
-  { id:"ritten",          icon:"🚗", label:"Ritten",       color:"#EF4444" },
-  { id:"instellingen",    icon:"⚙️", label:"Instellingen", color:"#9CA3AF" },
+  { id:"mail",            icon:"✉️", label:"Mail",         color:"#3B82F6" },
 ];
 
 const MOB_PRIMARY = ["dashboard","offertes","planning","crm","facturen"];
@@ -496,6 +491,17 @@ body{background:#0F0F14}
 .su-plan{font-size:10.5px;color:rgba(255,255,255,.3);margin-top:1px}
 .logout-btn{width:100%;margin-top:8px;background:rgba(255,255,255,.08);border:none;border-radius:7px;padding:7px;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .14s}
 .logout-btn:hover{background:rgba(255,255,255,.14);color:#fff}
+.sb-acct{margin:10px;position:relative}
+.sb-acct-btn{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:10px;cursor:pointer;transition:background .14s}
+.sb-acct-btn:hover{background:rgba(255,255,255,.11)}
+.sb-acct-av{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0}
+.sb-acct-name{font-size:12.5px;font-weight:700;color:#fff;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.sb-acct-sub{font-size:10px;color:rgba(255,255,255,.35);text-align:left}
+.sb-acct-chevron{margin-left:auto;font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0}
+.sb-acct-dd{position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #E5E7EB;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:6px;z-index:200;min-width:180px}
+.sb-dd-item{width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;background:none;border:none;border-radius:8px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;text-align:left;transition:background .1s}
+.sb-dd-item:hover{background:#F3F4F6}
+.sb-dd-sep{border:none;border-top:1px solid #F1F5F9;margin:4px 0}
 .main{flex:1;overflow-y:auto;padding:28px 32px;background:#F1F5F9}
 .pg-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#0F0F14;letter-spacing:-0.02em;margin-bottom:2px}
 .pg-sub{font-size:0.95rem;color:#6b7280}
@@ -1388,7 +1394,7 @@ function OnboardingWizard({ userId, onDone }) {
   );
 }
 
-function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
+function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) {
   const [profile, setProfile] = useState({
     bedrijfsnaam: bedrijf?.bedrijfsnaam || "",
     sector: bedrijf?.sector || "",
@@ -1479,8 +1485,11 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
 
   return (
     <div>
-      <div className="ph"><div><div className="pg-title">Bedrijfsprofiel</div><div className="pg-sub">Bewerk je bedrijfsgegevens en logo</div></div></div>
-      <div className="card cp">
+      {certOnly
+        ? <div className="ph"><div><div className="pg-title">Certificaten</div><div className="pg-sub">Jouw VCA, NEN diploma's en andere certificaten</div></div></div>
+        : <div className="ph"><div><div className="pg-title">Bedrijfsprofiel</div><div className="pg-sub">Bewerk je bedrijfsgegevens en logo</div></div></div>
+      }
+      {!certOnly&&<><div className="card cp">
         {profile.logo && (
           <div style={{marginBottom:18,textAlign:"center"}}>
             <img
@@ -1554,6 +1563,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved }) {
           ><X size={14}/></button>
         </div>
       )}
+      </>}
 
       <div className="sec-ttl" style={{marginTop:28}}>📜 Documenten & Certificaten</div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
@@ -3087,7 +3097,7 @@ function WerkbonnenTab({ userId, klanten, werkbonnen, refresh, bedrijf, emailSet
 }
 
 // ── Financiën ─────────────────────────────────────────────────
-function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, bedrijf, emailSettings, emailTemplates = {} }) {
+function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, offertes, bedrijf, emailSettings, emailTemplates = {} }) {
   const mob = useMobile();
   const [mobDetail,setMobDetail]=useState(null);
   const getTotal = (f) => f.totaal != null ? Number(f.totaal) : parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."))||0;
@@ -3385,6 +3395,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         ["uitgaven", "💳 Uitgaven"],
         ["btw",      "📊 BTW"],
         ["winst",    "📈 Winst"],
+        ["ritten",   "🚗 Ritten"],
         ["ai",       "✨ Assistent"],
       ].map(([id,lbl])=>(
         <button key={id} onClick={()=>setSubTab(id)} style={{display:"flex",alignItems:"center",padding:"7px 16px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{lbl}</button>
@@ -3573,6 +3584,8 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
         </div>
       </div></div></div>}
     </>);})()}
+
+    {subTab==="ritten"&&<RittenTab userId={userId} ritten={ritten||[]} refresh={refresh} klanten={klanten} bedrijf={bedrijf}/>}
 
     {subTab==="btw"&&(()=>{
       const fE = n => `€ ${Number(n||0).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
@@ -5046,6 +5059,7 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
 // ── WerkMate App ──────────────────────────────────────────────
 function WerkMateApp({ user, onLogout }) {
   const [tab, setTab] = useState("dashboard");
+  const [accountDd, setAccountDd] = useState(false);
   const [bedrijf, setBedrijf] = useState(null);
   const [prijslijst, setPrijslijst] = useState([]);
   const [showOnboard, setShowOnboard] = useState(false);
@@ -5212,12 +5226,14 @@ function WerkMateApp({ user, onLogout }) {
       case "planning":   return <PlanningTab userId={orgOwnerId} planning={planning} refresh={refreshAlles} klanten={klanten||[]} teamMembers={teamMembers||[]} planningCats={planningCats||[]}/>;
       case "crm":        return <CRMTab userId={orgOwnerId} klanten={klanten} offertes={offertes} facturen={facturen} werkbonnen={werkbonnen} refresh={refreshAlles}/>;
       case "profiel":     return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} certificaten={certificaten} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} />;
-      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf} emailSettings={emailSettings} emailTemplates={emailTemplates}/>;
+      case "facturen":   return <FinancienTab userId={orgOwnerId} facturen={facturen} uitgaven={uitgaven} ritten={ritten} refresh={refreshAlles} klanten={klanten} offertes={offertes} bedrijf={bedrijf} emailSettings={emailSettings} emailTemplates={emailTemplates}/>;
       case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
       case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings} emailTemplates={emailTemplates}/>;
       case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
       case "social":     return false&&<SocialTab userId={orgOwnerId}/>;
       case "ritten":     return <RittenTab userId={orgOwnerId} ritten={ritten} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
+      case "prijslijst": return <PrijslijstTab initialItems={prijslijst} onSaveItems={setPrijslijst} userId={orgOwnerId}/>;
+      case "certificaten": return <ProfielTab userId={orgOwnerId} bedrijf={bedrijf} certificaten={certificaten} onSaved={async (updated)=>{setBedrijf(updated); await refreshAlles();}} certOnly={true}/>;
       case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles} bedrijf={bedrijf} subscription={subscription} onBedrijfUpdate={(b)=>setBedrijf(b)} openTab={setTab} emailTemplates={emailTemplates} onTemplatesUpdate={setEmailTemplates} onPrijslijstUpdate={setPrijslijst}/>;
       default: return PH[tab]?<Placeholder {...PH[tab]}/>:null;
     }
@@ -5266,17 +5282,30 @@ function WerkMateApp({ user, onLogout }) {
             <div className="sb-sub">Bedrijfsbeheer platform</div>
           </div>
           <div className="nav-wrap">
-            {NAV_ITEMS.filter(i=>i.id!=="social").map(({id, icon, label})=>(
+            {NAV_ITEMS.map(({id, icon, label})=>(
               <button key={id} className={`nb ${tab===id?"on":""}`} onClick={()=>handleTabSwitch(id)}>
                 <span className="nb-ic">{icon}</span>{label}
               </button>
             ))}
           </div>
-          <div className="sb-user">
-            <div className="su-role">Ingelogd als</div>
-            <div className="su-name">{bedrijf?.bedrijfsnaam||user?.email||"Gebruiker"}</div>
-            <div className="su-plan">Pro plan</div>
-            <button className="logout-btn" onClick={onLogout}>Uitloggen</button>
+          <div className="sb-acct">
+            {accountDd&&<div style={{position:"fixed",inset:0,zIndex:99}} onClick={()=>setAccountDd(false)}/>}
+            <button className="sb-acct-btn" onClick={()=>setAccountDd(d=>!d)}>
+              <div className="sb-acct-av">{(bedrijf?.bedrijfsnaam||user?.email||"?")[0].toUpperCase()}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div className="sb-acct-name">{bedrijf?.bedrijfsnaam||user?.email||"Bedrijf"}</div>
+                <div className="sb-acct-sub">Account</div>
+              </div>
+              <span className="sb-acct-chevron">▾</span>
+            </button>
+            {accountDd&&<div className="sb-acct-dd">
+              <button className="sb-dd-item" onClick={()=>{setTab("profiel");setAccountDd(false);}}>🏢 Bedrijfsprofiel</button>
+              <button className="sb-dd-item" onClick={()=>{setTab("prijslijst");setAccountDd(false);}}>🏷️ Prijslijst</button>
+              <button className="sb-dd-item" onClick={()=>{setTab("certificaten");setAccountDd(false);}}>📜 Certificaten</button>
+              <button className="sb-dd-item" onClick={()=>{setTab("instellingen");setAccountDd(false);}}>⚙️ Instellingen</button>
+              <hr className="sb-dd-sep"/>
+              <button className="sb-dd-item" style={{color:"#EF4444"}} onClick={onLogout}>Uitloggen</button>
+            </div>}
           </div>
         </div>
         <div className="main">{render()}</div>
@@ -5299,7 +5328,7 @@ function WerkMateApp({ user, onLogout }) {
         {/* Meer panel – mobile only */}
         {mobMore && (
           <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,borderTop:"1px solid #E5E7EB",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
-            {MOB_MORE.filter(i=>i.id!=="social").map(item => {
+            {MOB_MORE.map(item => {
               const moreItemActive = tab === item.id;
               return (
                 <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#F8FAFC",border:`1.5px solid ${moreItemActive?item.color+"44":"#E5E7EB"}`,borderRadius:12,color:moreItemActive?item.color:"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
@@ -5307,6 +5336,13 @@ function WerkMateApp({ user, onLogout }) {
                 </button>
               );
             })}
+            <div style={{gridColumn:"1/-1",borderTop:"1px solid #F1F5F9",paddingTop:8,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {[["profiel","🏢","Bedrijfsprofiel"],["prijslijst","🏷️","Prijslijst"],["certificaten","📜","Certificaten"],["instellingen","⚙️","Instellingen"]].map(([id,icon,label])=>(
+                <button key={id} onClick={()=>{setTab(id);setMobMore(false);}} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"#F8FAFC",border:"1.5px solid #E5E7EB",borderRadius:12,color:tab===id?"#6366F1":"#374151",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                  <span style={{fontSize:16}}>{icon}</span>{label}
+                </button>
+              ))}
+            </div>
             <button onClick={() => { setMobMore(false); onLogout(); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#FEF2F2",border:"1.5px solid #FECACA",borderRadius:12,color:"#EF4444",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",gridColumn:"1/-1"}}>
               <LogOut size={18} strokeWidth={1.8}/>Uitloggen
             </button>
