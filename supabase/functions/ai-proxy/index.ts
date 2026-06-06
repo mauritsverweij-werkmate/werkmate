@@ -32,7 +32,7 @@ type Profiel = {
   website?: string | null;
   logo?: string | null;
   email?: string | null;
-  kleur?: string | null;
+  primaire_kleur?: string | null;
 };
 
 function buildSignature(profiel: Profiel | null): string {
@@ -72,7 +72,7 @@ async function fetchProfiel(userId: string): Promise<Profiel | null> {
   );
   const { data } = await admin
     .from("bedrijfsprofiel")
-    .select("bedrijfsnaam,telefoon,website,logo,email,kleur")
+    .select("bedrijfsnaam,telefoon,website,logo,email,primaire_kleur")
     .eq("user_id", userId)
     .single();
   return data ?? null;
@@ -197,7 +197,7 @@ serve(async (req: Request) => {
           emailWrapper(companyName,
             `<p style="margin:0 0 16px;font-size:16px;">Beste ${safeKlant},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bedankt voor het accepteren van de offerte. Uw factuur (<strong>${safeNummer}</strong>) is aangemaakt en wordt zo spoedig mogelijk verstuurd.</p>`,
-            sig, profiel?.kleur || undefined, profiel?.logo || undefined)
+            sig, profiel?.primaire_kleur || undefined, profiel?.logo || undefined)
         );
       }
       // Internal notification to company (no customer signature needed)
@@ -247,7 +247,7 @@ serve(async (req: Request) => {
   <a href="${safeUrl}" style="background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">📋 Offerte bekijken &amp; ondertekenen</a>
 </p>
 <p style="margin:0 0 16px;font-size:14px;color:#9ca3af;">Of kopieer deze link: <a href="${safeUrl}" style="color:#6366F1;">${safeUrl}</a></p>`,
-      sig, profiel?.kleur || undefined, profiel?.logo || undefined);
+      sig, profiel?.primaire_kleur || undefined, profiel?.logo || undefined);
 
     const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
     const finalSubject = customSubject || `Offerte van ${rawCn} — bekijk en onderteken`;
@@ -364,7 +364,7 @@ serve(async (req: Request) => {
 </p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Als de knop niet werkt, kopieer dan deze link in je browser:</p>
 <p style="font-size:13px;color:#6b7280;word-break:break-all;">${esc(acceptLink)}</p>`,
-        sig, profiel?.kleur || undefined, profiel?.logo || undefined);
+        sig, profiel?.primaire_kleur || undefined, profiel?.logo || undefined);
 
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const payload: Record<string, unknown> = {
@@ -413,7 +413,7 @@ serve(async (req: Request) => {
         : `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u uw offerte in de bijlage.</p>${portalBlock}`;
 
-      const html = emailWrapper(companyName, mainContent, sig, profiel?.kleur || undefined, profiel?.logo || undefined);
+      const html = emailWrapper(companyName, mainContent, sig, profiel?.primaire_kleur || undefined, profiel?.logo || undefined);
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
@@ -463,7 +463,7 @@ serve(async (req: Request) => {
 <p style="margin:0 0 4px;font-size:15px;color:#4b5563;">Zou u even 1 minuut nemen om een review achter te laten? Dat helpt ons enorm.</p>
 ${reviewBtn}`;
 
-      const html = emailWrapper(companyName, mainContent, sig, profiel?.kleur || undefined, profiel?.logo || undefined);
+      const html = emailWrapper(companyName, mainContent, sig, profiel?.primaire_kleur || undefined, profiel?.logo || undefined);
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
@@ -499,7 +499,7 @@ ${reviewBtn}`;
 
       const html = emailWrapper(companyName,
         `<div style="font-size:15px;color:#374151;line-height:1.7;white-space:pre-line;">${safeMsg}</div>`,
-        sig, profiel?.kleur || undefined, profiel?.logo || undefined);
+        sig, profiel?.primaire_kleur || undefined, profiel?.logo || undefined);
 
       const r = await sendViaResend(resendKey, {
         from: `${rawCompanyName} <info@werkmate.tech>`,
@@ -537,7 +537,7 @@ ${reviewBtn}`;
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u factuur <strong>${safeNummer}</strong> in de bijlage.</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bij vragen kunt u altijd contact met ons opnemen.</p>`;
 
-      const html = emailWrapper(companyName, bodyContent, sig, profiel?.kleur || undefined, profiel?.logo || undefined);
+      const html = emailWrapper(companyName, bodyContent, sig, profiel?.primaire_kleur || undefined, profiel?.logo || undefined);
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const textInv = customBody
@@ -585,7 +585,7 @@ ${reviewBtn}`;
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Wij willen u vriendelijk herinneren aan openstaande factuur <strong>${safeNummer}</strong>${totaalFmt ? ` van <strong>${esc(totaalFmt)}</strong>` : ""}.</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Gelieve het bedrag zo spoedig mogelijk over te maken.</p>`;
 
-      const html = emailWrapper(companyName, bodyContent, sig, profiel?.kleur || undefined, profiel?.logo || undefined);
+      const html = emailWrapper(companyName, bodyContent, sig, profiel?.primaire_kleur || undefined, profiel?.logo || undefined);
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       // Avoid spam-trigger words ("betalingsherinnering") and Unicode em-dashes in subject

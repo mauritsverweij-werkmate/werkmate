@@ -955,7 +955,7 @@ const createOfferPdfDocument = (offer, bedrijf) => {
   const total = offer.totaal != null ? Number(offer.totaal) : subtotal + btw;
   const today = new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const accentRgb = hexToRgb(bedrijf?.kleur) || [99, 102, 241];
+  const accentRgb = hexToRgb(bedrijf?.primaire_kleur) || [99, 102, 241];
   const pageW = 210;
   const margin = 20;
 
@@ -1104,7 +1104,7 @@ const createFactuurPdf = (factuur, bedrijf) => {
   const company = bedrijf || {};
   const margin = 20;
   const pageW = 210;
-  const accentRgb = hexToRgb(bedrijf?.kleur) || [17, 24, 39];
+  const accentRgb = hexToRgb(bedrijf?.primaire_kleur) || [17, 24, 39];
 
   doc.setFillColor(...accentRgb);
   doc.rect(0, 0, pageW, 38, "F");
@@ -1466,7 +1466,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
     iban: bedrijf?.iban || "",
     km_vergoeding: bedrijf?.km_vergoeding ?? 0.23,
     google_review_url: bedrijf?.google_review_url || "",
-    kleur: bedrijf?.kleur || "",
+    primaire_kleur: bedrijf?.primaire_kleur || "",
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
@@ -1490,7 +1490,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
       iban: bedrijf?.iban || "",
       km_vergoeding: bedrijf?.km_vergoeding ?? 0.23,
       google_review_url: bedrijf?.google_review_url || "",
-      kleur: bedrijf?.kleur || "",
+      primaire_kleur: bedrijf?.primaire_kleur || "",
     });
   }, [bedrijf]);
 
@@ -1501,7 +1501,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
     setSaving(true);
     setSaveMsg({ type: "", text: "" });
     const payload = { ...profile, user_id: userId };
-    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban", "km_vergoeding", "google_review_url", "kleur"];
+    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban", "km_vergoeding", "google_review_url", "primaire_kleur"];
     const filteredPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => allowedColumns.includes(key)));
     console.log("[saveProfile] payload", filteredPayload);
     console.log("[saveProfile] bedrijf", bedrijf);
@@ -1576,7 +1576,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
           <div className="ig"><label className="ilbl">Google review link</label><input className="inp" value={profile.google_review_url} onChange={e=>setProfile({...profile,google_review_url:e.target.value})} placeholder="https://g.page/r/..."/></div>
           <div className="ig"><label className="ilbl">Diensten</label><input className="inp" value={profile.diensten} onChange={e=>setProfile({...profile,diensten:e.target.value})} /></div>
           <div className="ig"><label className="ilbl">KM-vergoeding (€/km)</label><input className="inp" type="number" step="0.01" min="0" max="10" value={profile.km_vergoeding} onChange={e=>setProfile({...profile,km_vergoeding:parseFloat(e.target.value)||0.23})} placeholder="0.23"/></div>
-          <div className="ig"><label className="ilbl">Merkkleur (PDF &amp; e-mail)</label><div style={{display:"flex",alignItems:"center",gap:10}}><input type="color" value={profile.kleur||"#6366F1"} onChange={e=>setProfile({...profile,kleur:e.target.value})} style={{width:44,height:36,padding:2,border:"1px solid #E5E7EB",borderRadius:6,cursor:"pointer",background:"none"}}/><input className="inp" value={profile.kleur} onChange={e=>setProfile({...profile,kleur:e.target.value})} placeholder="#6366F1" style={{flex:1}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setProfile({...profile,kleur:""})} title="Standaard kleur">✕</button></div></div>
+          <div className="ig"><label className="ilbl">Merkkleur (PDF &amp; e-mail)</label><div style={{display:"flex",alignItems:"center",gap:10}}><input type="color" value={profile.primaire_kleur||"#6366F1"} onChange={e=>setProfile({...profile,primaire_kleur:e.target.value})} style={{width:44,height:36,padding:2,border:"1px solid #E5E7EB",borderRadius:6,cursor:"pointer",background:"none"}}/><input className="inp" value={profile.primaire_kleur} onChange={e=>setProfile({...profile,primaire_kleur:e.target.value})} placeholder="#6366F1" style={{flex:1}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setProfile({...profile,primaire_kleur:""})} title="Standaard kleur">✕</button></div></div>
           <div className="ig"><label className="ilbl">Logo upload</label><input className="inp" type="file" accept="image/*" onChange={async(e)=>{
             const file = e.target.files?.[0];
             if (!file) return;
