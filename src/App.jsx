@@ -2496,7 +2496,7 @@ function PlanningTab({ userId, planning, refresh, klanten, teamMembers, planning
           <button className={`cal-vt-btn${view==="month"?" on":""}`} onClick={()=>setView("month")}>Maand</button>
           <button className={`cal-vt-btn${view==="week"?" on":""}`} onClick={()=>setView("week")}>Week</button>
         </div>}
-        {!mob&&<button className="btn btn-ghost" onClick={()=>setShowCats(true)} title="Categorieën beheren"><TagIcon size={16} strokeWidth={1.8}/></button>}
+        {!mob&&<button className="btn btn-ghost" onClick={()=>setShowCats(true)} title="Categorieën beheren">🏷️</button>}
         <button className="btn btn-dark" onClick={()=>openAdd(mob?mobDayStr:todayStr)}><Plus size={14} strokeWidth={2}/> Opdracht</button>
       </div>
     </div>
@@ -3380,11 +3380,11 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
 
     <div className={mob?"tab-scroll":""}  style={{display:"flex",gap:8,marginBottom:16,flexWrap:mob?"nowrap":"wrap"}}>
       {[
-        ["facturen", <><FileText size={13} strokeWidth={1.8} style={{verticalAlign:"middle",marginRight:4}}/> Facturen</>],
-        ["uitgaven", <><CreditCard size={13} strokeWidth={1.8} style={{verticalAlign:"middle",marginRight:4}}/> Uitgaven</>],
-        ["btw",      <><BarChart2 size={13} strokeWidth={1.8} style={{verticalAlign:"middle",marginRight:4}}/> BTW</>],
-        ["winst",    <><BarChart2 size={13} strokeWidth={1.8} style={{verticalAlign:"middle",marginRight:4}}/> Winst</>],
-        ["ai",       <><Sparkles size={13} strokeWidth={1.8} style={{verticalAlign:"middle",marginRight:4}}/> Assistent</>],
+        ["facturen", "📄 Facturen"],
+        ["uitgaven", "💳 Uitgaven"],
+        ["btw",      "📊 BTW"],
+        ["winst",    "📈 Winst"],
+        ["ai",       "✨ Assistent"],
       ].map(([id,lbl])=>(
         <button key={id} onClick={()=>setSubTab(id)} style={{display:"flex",alignItems:"center",padding:"7px 16px",borderRadius:20,border:"1.5px solid",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:subTab===id?"#0F0F14":"#fff",color:subTab===id?"#fff":"#555",borderColor:subTab===id?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{lbl}</button>
       ))}
