@@ -294,29 +294,29 @@ export default function App() {
 
 // ── Nav items ─────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { id:"dashboard",       icon: LayoutDashboard, label:"Dashboard",    color:"#64748B" },
-  { id:"offertes",        icon: FileText,         label:"Offertes",    color:"#8B5CF6" },
-  { id:"prijslijst",      icon: Tag,              label:"Prijslijst",  color:"#F59E0B" },
-  { id:"planning",        icon: Calendar,         label:"Planning",    color:"#3B82F6" },
-  { id:"crm",             icon: Users,            label:"Klanten",     color:"#14B8A6" },
-  { id:"profiel",         icon: Building2,        label:"Profiel",     color:"#6B7280" },
-  { id:"facturen",        icon: CreditCard,       label:"Financiën",   color:"#22C55E" },
-  { id:"mail",            icon: Mail,             label:"Mail",        color:"#3B82F6" },
-  { id:"social",          icon: Share2,           label:"Social Media",color:"#EC4899" },
-  { id:"werkregistratie", icon: ClipboardList,    label:"Werkbonnen",  color:"#F97316" },
-  { id:"team",            icon: Users2,           label:"Team",        color:"#6366F1" },
-  { id:"ritten",          icon: Car,              label:"Ritten",      color:"#EF4444" },
-  { id:"instellingen",    icon: Settings,         label:"Instellingen",color:"#9CA3AF" },
+  { id:"dashboard",       icon:"⊞",  label:"Dashboard",    color:"#64748B" },
+  { id:"offertes",        icon:"📋", label:"Offertes",     color:"#8B5CF6" },
+  { id:"prijslijst",      icon:"🏷️", label:"Prijslijst",  color:"#F59E0B" },
+  { id:"planning",        icon:"📅", label:"Planning",     color:"#3B82F6" },
+  { id:"crm",             icon:"👥", label:"Klanten",      color:"#14B8A6" },
+  { id:"profiel",         icon:"🏢", label:"Profiel",      color:"#6B7280" },
+  { id:"facturen",        icon:"💶", label:"Financiën",    color:"#22C55E" },
+  { id:"mail",            icon:"✉️", label:"Mail",         color:"#3B82F6" },
+  { id:"social",          icon:"📱", label:"Social Media", color:"#EC4899" },
+  { id:"werkregistratie", icon:"🔧", label:"Werkbonnen",   color:"#F97316" },
+  { id:"team",            icon:"👷", label:"Team",         color:"#6366F1" },
+  { id:"ritten",          icon:"🚗", label:"Ritten",       color:"#EF4444" },
+  { id:"instellingen",    icon:"⚙️", label:"Instellingen", color:"#9CA3AF" },
 ];
 
 const MOB_PRIMARY = ["dashboard","offertes","planning","crm","facturen"];
 const MOB_NAV = [
-  { id:"dashboard", icon: LayoutDashboard, label:"Dashboard",  color:"#64748B" },
-  { id:"offertes",  icon: FileText,         label:"Offertes",  color:"#8B5CF6" },
-  { id:"planning",  icon: Calendar,         label:"Planning",  color:"#3B82F6" },
-  { id:"crm",       icon: Users,            label:"Klanten",   color:"#14B8A6" },
-  { id:"facturen",  icon: CreditCard,       label:"Financiën", color:"#22C55E" },
-  { id:"meer",      icon: MoreHorizontal,   label:"Meer",      color:"#9CA3AF" },
+  { id:"dashboard", icon:"⊞",  label:"Dashboard",  color:"#64748B" },
+  { id:"offertes",  icon:"📋", label:"Offertes",   color:"#8B5CF6" },
+  { id:"planning",  icon:"📅", label:"Planning",   color:"#3B82F6" },
+  { id:"crm",       icon:"👥", label:"Klanten",    color:"#14B8A6" },
+  { id:"facturen",  icon:"💶", label:"Financiën",  color:"#22C55E" },
+  { id:"meer",      icon:"☰",  label:"Meer",       color:"#9CA3AF" },
 ];
 const MOB_MORE = NAV_ITEMS.filter(i => !MOB_PRIMARY.includes(i.id));
 
@@ -489,7 +489,7 @@ body{background:#0F0F14}
 .nb:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.8)}
 .nb.on{background:rgba(255,255,255,.1);color:#fff;font-weight:600}
 .nb.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:#fff;border-radius:0 2px 2px 0;opacity:.5}
-.nb-ic{display:flex;align-items:center;justify-content:center;width:18px;flex-shrink:0}
+.nb-ic{font-size:15px;width:18px;text-align:center;flex-shrink:0;line-height:1}
 .sb-user{margin:10px;padding:11px 13px;background:rgba(255,255,255,.05);border-radius:10px;border:1px solid rgba(255,255,255,.06)}
 .su-role{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.26);margin-bottom:3px}
 .su-name{font-size:13px;font-weight:700;color:#fff}
@@ -5233,14 +5233,11 @@ function WerkMateApp({ user, onLogout }) {
             <div className="sb-sub">Bedrijfsbeheer platform</div>
           </div>
           <div className="nav-wrap">
-            {NAV_ITEMS.map(({id, icon: NavIcon, label, color})=>{
-              const active = tab===id;
-              return (
-                <button key={id} className={`nb ${active?"on":""}`} onClick={()=>handleTabSwitch(id)}>
-                  <span className="nb-ic"><NavIcon size={15} strokeWidth={1.8} color={active?"#fff":color}/></span>{label}
-                </button>
-              );
-            })}
+            {NAV_ITEMS.map(({id, icon, label})=>(
+              <button key={id} className={`nb ${tab===id?"on":""}`} onClick={()=>handleTabSwitch(id)}>
+                <span className="nb-ic">{icon}</span>{label}
+              </button>
+            ))}
           </div>
           <div className="sb-user">
             <div className="su-role">Ingelogd als</div>
@@ -5253,17 +5250,15 @@ function WerkMateApp({ user, onLogout }) {
         {/* bottom nav – mobile only (hidden via CSS on desktop) */}
         <nav className="mob-nav">
           {MOB_NAV.map(item => {
-            const MobIcon = item.icon;
             const mobActive = tab === item.id && !mobMore;
             const moreActive = item.id === "meer" && mobMore;
-            const iconColor = (mobActive || moreActive) ? item.color : "#9CA3AF";
             return item.id === "meer"
-              ? <button key="meer" className={`mob-nb${mobMore ? " mob-nb-on" : ""}`} style={mobMore?{color:item.color}:{}} onClick={() => setMobMore(m => !m)}>
-                  <span className="mob-nb-ic"><MobIcon size={20} strokeWidth={1.8} color={iconColor}/></span>
+              ? <button key="meer" className={`mob-nb${mobMore ? " mob-nb-on" : ""}`} onClick={() => setMobMore(m => !m)}>
+                  <span className="mob-nb-ic">{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
-              : <button key={item.id} className={`mob-nb${mobActive ? " mob-nb-on" : ""}`} style={mobActive?{color:item.color}:{}} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }}>
-                  <span className="mob-nb-ic"><MobIcon size={20} strokeWidth={1.8} color={iconColor}/></span>
+              : <button key={item.id} className={`mob-nb${mobActive ? " mob-nb-on" : ""}`} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }}>
+                  <span className="mob-nb-ic">{item.icon}</span>
                   <span>{item.label}</span>
                 </button>;
           })}
@@ -5272,11 +5267,10 @@ function WerkMateApp({ user, onLogout }) {
         {mobMore && (
           <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,borderTop:"1px solid #E5E7EB",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
             {MOB_MORE.map(item => {
-              const MoreIcon = item.icon;
               const moreItemActive = tab === item.id;
               return (
-                <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:moreItemActive?"#F8FAFC":"#F8FAFC",border:`1.5px solid ${moreItemActive?item.color+"44":"#E5E7EB"}`,borderRadius:12,color:moreItemActive?item.color:"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
-                  <MoreIcon size={18} strokeWidth={1.8} color={item.color}/>{item.label}
+                <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#F8FAFC",border:`1.5px solid ${moreItemActive?item.color+"44":"#E5E7EB"}`,borderRadius:12,color:moreItemActive?item.color:"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+                  <span style={{fontSize:18}}>{item.icon}</span>{item.label}
                 </button>
               );
             })}
