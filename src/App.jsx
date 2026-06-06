@@ -4963,7 +4963,7 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
     <div>
       <div className="ph"><div><div className="pg-title">Instellingen</div><div className="pg-sub">Automatisering, e-mail templates, reiskosten en abonnement</div></div></div>
 
-      <div className="sec-ttl" style={{marginBottom:12}}><Mail size={14} strokeWidth={1.8} color="#3B82F6" style={{marginRight:6}}/> E-mail automatisering</div>
+      {false&&<><div className="sec-ttl" style={{marginBottom:12}}><Mail size={14} strokeWidth={1.8} color="#3B82F6" style={{marginRight:6}}/> E-mail automatisering</div>
       <div className="card cp" style={{display:"flex",flexDirection:"column",gap:20}}>
         <Toggle label="Automatische review e-mail" desc="Stuur automatisch een review-verzoek als een werkbon op 'Afgerond' wordt gezet" value={settings.auto_review_email} onChange={v=>setSettings({...settings,auto_review_email:v})}/>
         <div style={{borderTop:"1px solid #F1F5F9"}}/>
@@ -4982,7 +4982,7 @@ function InstellingenTab({ userId, refresh, bedrijf, subscription, onBedrijfUpda
             <input className="inp" type="number" min="1" max="90" value={settings.invoice_reminder_days} onChange={e=>setSettings({...settings,invoice_reminder_days:Math.max(1,parseInt(e.target.value)||7)})}/>
           </div>
         )}
-      </div>
+      </div></>}
       {msg.text && <div style={{marginTop:12,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500,background:msg.type==="ok"?"#DCFCE7":"#FEE2E2",color:msg.type==="ok"?"#15803D":"#B91C1C"}}>{msg.text}</div>}
       <div style={{display:"flex",justifyContent:"flex-end",marginTop:16,marginBottom:28}}>
         <button className="btn btn-dark" onClick={save} disabled={saving}><Save size={14} strokeWidth={1.8}/>{saving?"Opslaan…":"Opslaan"}</button>
@@ -5216,7 +5216,7 @@ function WerkMateApp({ user, onLogout }) {
       case "team":       return <TeamTab ownerId={orgOwnerId} teamMembers={teamMembers} refresh={refreshAlles} bedrijf={bedrijf} />;
       case "werkregistratie": return <WerkbonnenTab userId={orgOwnerId} klanten={klanten} werkbonnen={werkbonnen} refresh={refreshAlles} bedrijf={bedrijf} emailSettings={emailSettings} emailTemplates={emailTemplates}/>;
       case "mail":       return <MailTab userId={orgOwnerId} emailsLog={emailsLog} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
-      case "social":     return <SocialTab userId={orgOwnerId}/>;
+      case "social":     return false&&<SocialTab userId={orgOwnerId}/>;
       case "ritten":     return <RittenTab userId={orgOwnerId} ritten={ritten} refresh={refreshAlles} klanten={klanten} bedrijf={bedrijf}/>;
       case "instellingen": return <InstellingenTab userId={orgOwnerId} refresh={refreshAlles} bedrijf={bedrijf} subscription={subscription} onBedrijfUpdate={(b)=>setBedrijf(b)} openTab={setTab} emailTemplates={emailTemplates} onTemplatesUpdate={setEmailTemplates} onPrijslijstUpdate={setPrijslijst}/>;
       default: return PH[tab]?<Placeholder {...PH[tab]}/>:null;
@@ -5266,7 +5266,7 @@ function WerkMateApp({ user, onLogout }) {
             <div className="sb-sub">Bedrijfsbeheer platform</div>
           </div>
           <div className="nav-wrap">
-            {NAV_ITEMS.map(({id, icon, label})=>(
+            {NAV_ITEMS.filter(i=>i.id!=="social").map(({id, icon, label})=>(
               <button key={id} className={`nb ${tab===id?"on":""}`} onClick={()=>handleTabSwitch(id)}>
                 <span className="nb-ic">{icon}</span>{label}
               </button>
@@ -5299,7 +5299,7 @@ function WerkMateApp({ user, onLogout }) {
         {/* Meer panel – mobile only */}
         {mobMore && (
           <div style={{position:"fixed",bottom:"calc(70px + env(safe-area-inset-bottom))",left:0,right:0,background:"#fff",zIndex:199,borderTop:"1px solid #E5E7EB",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
-            {MOB_MORE.map(item => {
+            {MOB_MORE.filter(i=>i.id!=="social").map(item => {
               const moreItemActive = tab === item.id;
               return (
                 <button key={item.id} onClick={() => { handleTabSwitch(item.id); setMobMore(false); }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#F8FAFC",border:`1.5px solid ${moreItemActive?item.color+"44":"#E5E7EB"}`,borderRadius:12,color:moreItemActive?item.color:"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
