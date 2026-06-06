@@ -911,6 +911,25 @@ const parseOfferRules = (offer) => {
   return [{ omschrijving: offer.dienst || "Offerte", aantal: 1, eenheid: "stuk", prijs: isNaN(exBtw) ? 0 : parseFloat(exBtw.toFixed(2)), btw_pct: 21 }];
 };
 
+const hexToRgb = hex => {
+  const h = (hex || "").replace("#", "");
+  if (h.length === 3) {
+    return [
+      parseInt(h[0] + h[0], 16),
+      parseInt(h[1] + h[1], 16),
+      parseInt(h[2] + h[2], 16),
+    ];
+  }
+  if (h.length === 6) {
+    return [
+      parseInt(h.slice(0, 2), 16),
+      parseInt(h.slice(2, 4), 16),
+      parseInt(h.slice(4, 6), 16),
+    ];
+  }
+  return null;
+};
+
 const companyEmailFields = bedrijf => ({
   company_name: bedrijf?.bedrijfsnaam || "",
   reply_to: bedrijf?.email || undefined,
@@ -936,18 +955,39 @@ const createOfferPdfDocument = (offer, bedrijf) => {
   const total = offer.totaal != null ? Number(offer.totaal) : subtotal + btw;
   const today = new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const accentRgb = hexToRgb(bedrijf?.kleur) || [99, 102, 241];
+  const pageW = 210;
+  const margin = 20;
 
+  // Header block with brand color
+  doc.setFillColor(...accentRgb);
+  doc.rect(0, 0, pageW, 36, "F");
+
+  // Logo in header if available
+  let headerTextX = margin;
+  if (bedrijf?.logo && bedrijf.logo.startsWith("data:image/")) {
+    try {
+      const ext = bedrijf.logo.startsWith("data:image/png") ? "PNG" : "JPEG";
+      doc.addImage(bedrijf.logo, ext, margin, 6, 24, 24);
+      headerTextX = margin + 28;
+    } catch(e) { /* ignore bad logo */ }
+  }
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text(String(company.bedrijfsnaam || "Bedrijf"), 20, 25);
-  doc.setFontSize(11);
+  doc.setFontSize(18);
+  doc.setTextColor(255, 255, 255);
+  doc.text(String(company.bedrijfsnaam || "Bedrijf"), headerTextX, 17);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Datum: ${today}`, 20, 34);
-  doc.text(`Offerte voor: ${offer.klant || "klant"}`, 20, 42);
-  doc.text(`Geachte ${offer.klant || "heer/mevrouw"},`, 20, 52);
-  doc.text(`Hierbij ontvangt u onze offerte voor ${offer.dienst || "uw aanvraag"}.`, 20, 58);
+  doc.text("OFFERTE", pageW - margin, 17, { align: "right" });
 
-  const startY = 70;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.text(`Datum: ${today}`, margin, 46);
+  doc.text(`Offerte voor: ${offer.klant || "klant"}`, margin, 53);
+  doc.text(`Geachte ${offer.klant || "heer/mevrouw"},`, margin, 62);
+  doc.text(`Hierbij ontvangt u onze offerte voor ${offer.dienst || "uw aanvraag"}.`, margin, 68);
+
+  const startY = 80;
   const rowX = [20, 85, 115, 145, 175];
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
@@ -956,8 +996,9 @@ const createOfferPdfDocument = (offer, bedrijf) => {
   doc.text("Eenheid", rowX[2], startY);
   doc.text("Prijs", rowX[3], startY);
   doc.text("Totaal", rowX[4], startY);
-  doc.setDrawColor(200);
-  doc.line(20, startY + 2, 190, startY + 2);
+  doc.setDrawColor(...accentRgb);
+  doc.setLineWidth(0.5);
+  doc.line(margin, startY + 2, pageW - margin, startY + 2);
 
   let y = startY + 10;
   doc.setFont("helvetica", "normal");
@@ -1063,13 +1104,25 @@ const createFactuurPdf = (factuur, bedrijf) => {
   const company = bedrijf || {};
   const margin = 20;
   const pageW = 210;
+  const accentRgb = hexToRgb(bedrijf?.kleur) || [17, 24, 39];
 
-  doc.setFillColor(17, 24, 39);
+  doc.setFillColor(...accentRgb);
   doc.rect(0, 0, pageW, 38, "F");
+
+  // Logo in header if available
+  let headerTextX = margin;
+  if (bedrijf?.logo && bedrijf.logo.startsWith("data:image/")) {
+    try {
+      const ext = bedrijf.logo.startsWith("data:image/png") ? "PNG" : "JPEG";
+      doc.addImage(bedrijf.logo, ext, margin, 7, 24, 24);
+      headerTextX = margin + 28;
+    } catch(e) { /* ignore bad logo */ }
+  }
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
   doc.setTextColor(255, 255, 255);
-  doc.text(company.bedrijfsnaam || "Bedrijf", margin, 24);
+  doc.text(company.bedrijfsnaam || "Bedrijf", headerTextX, 24);
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
   doc.text("FACTUUR", pageW - margin, 24, { align: "right" });
@@ -1142,7 +1195,7 @@ const createFactuurPdf = (factuur, bedrijf) => {
     doc.text(`€ ${nlFmt(btwAmt)}`, pageW - margin - 2, y, { align: "right" }); y += 7;
   }
   doc.setDrawColor(100, 100, 100); doc.line(pageW / 2, y, pageW - margin, y); y += 7;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(17, 24, 39);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...accentRgb);
   doc.text("Totaal:", pageW / 2 + 5, y);
   doc.text(`€ ${nlFmt(tot)}`, pageW - margin - 2, y, { align: "right" });
   const fRateNote = btwRateLabel(regels);
@@ -1413,6 +1466,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
     iban: bedrijf?.iban || "",
     km_vergoeding: bedrijf?.km_vergoeding ?? 0.23,
     google_review_url: bedrijf?.google_review_url || "",
+    kleur: bedrijf?.kleur || "",
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
@@ -1436,6 +1490,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
       iban: bedrijf?.iban || "",
       km_vergoeding: bedrijf?.km_vergoeding ?? 0.23,
       google_review_url: bedrijf?.google_review_url || "",
+      kleur: bedrijf?.kleur || "",
     });
   }, [bedrijf]);
 
@@ -1446,7 +1501,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
     setSaving(true);
     setSaveMsg({ type: "", text: "" });
     const payload = { ...profile, user_id: userId };
-    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban", "km_vergoeding", "google_review_url"];
+    const allowedColumns = ["user_id", "bedrijfsnaam", "sector", "stad", "adres", "telefoon", "email", "diensten", "logo", "kvk_nummer", "btw_nummer", "website", "iban", "km_vergoeding", "google_review_url", "kleur"];
     const filteredPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => allowedColumns.includes(key)));
     console.log("[saveProfile] payload", filteredPayload);
     console.log("[saveProfile] bedrijf", bedrijf);
@@ -1521,6 +1576,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
           <div className="ig"><label className="ilbl">Google review link</label><input className="inp" value={profile.google_review_url} onChange={e=>setProfile({...profile,google_review_url:e.target.value})} placeholder="https://g.page/r/..."/></div>
           <div className="ig"><label className="ilbl">Diensten</label><input className="inp" value={profile.diensten} onChange={e=>setProfile({...profile,diensten:e.target.value})} /></div>
           <div className="ig"><label className="ilbl">KM-vergoeding (€/km)</label><input className="inp" type="number" step="0.01" min="0" max="10" value={profile.km_vergoeding} onChange={e=>setProfile({...profile,km_vergoeding:parseFloat(e.target.value)||0.23})} placeholder="0.23"/></div>
+          <div className="ig"><label className="ilbl">Merkkleur (PDF &amp; e-mail)</label><div style={{display:"flex",alignItems:"center",gap:10}}><input type="color" value={profile.kleur||"#6366F1"} onChange={e=>setProfile({...profile,kleur:e.target.value})} style={{width:44,height:36,padding:2,border:"1px solid #E5E7EB",borderRadius:6,cursor:"pointer",background:"none"}}/><input className="inp" value={profile.kleur} onChange={e=>setProfile({...profile,kleur:e.target.value})} placeholder="#6366F1" style={{flex:1}}/><button type="button" className="btn btn-ghost btn-sm" onClick={()=>setProfile({...profile,kleur:""})} title="Standaard kleur">✕</button></div></div>
           <div className="ig"><label className="ilbl">Logo upload</label><input className="inp" type="file" accept="image/*" onChange={async(e)=>{
             const file = e.target.files?.[0];
             if (!file) return;

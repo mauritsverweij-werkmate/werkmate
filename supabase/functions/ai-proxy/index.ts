@@ -32,6 +32,7 @@ type Profiel = {
   website?: string | null;
   logo?: string | null;
   email?: string | null;
+  kleur?: string | null;
 };
 
 function buildSignature(profiel: Profiel | null): string {
@@ -71,7 +72,7 @@ async function fetchProfiel(userId: string): Promise<Profiel | null> {
   );
   const { data } = await admin
     .from("bedrijfsprofiel")
-    .select("bedrijfsnaam,telefoon,website,logo,email")
+    .select("bedrijfsnaam,telefoon,website,logo,email,kleur")
     .eq("user_id", userId)
     .single();
   return data ?? null;
@@ -102,7 +103,12 @@ async function sendViaResend(resendKey: string, payload: Record<string, unknown>
 }
 
 // ── Shared email outer wrapper ────────────────────────────────
-function emailWrapper(headerTitle: string, contentRows: string, signatureRow: string): string {
+function emailWrapper(headerTitle: string, contentRows: string, signatureRow: string, accentColor = "#111827", logoDataUri?: string | null): string {
+  // Only accept safe hex colors (prevent injection through color value)
+  const safeColor = /^#[0-9A-Fa-f]{3,6}$/.test(accentColor) ? accentColor : "#111827";
+  const logoHtml = logoDataUri && logoDataUri.startsWith("data:image/")
+    ? `<img src="${logoDataUri}" alt="" height="44" style="height:44px;max-width:140px;object-fit:contain;display:block;margin-bottom:10px;border-radius:6px;"/>`
+    : "";
   return `<!DOCTYPE html>
 <html lang="nl">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
@@ -110,8 +116,8 @@ function emailWrapper(headerTitle: string, contentRows: string, signatureRow: st
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;padding:24px;">
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.08);">
-<tr><td style="background:#111827;padding:28px 32px;">
-  <h1 style="margin:0;color:#fff;font-size:24px;font-family:Inter,system-ui,sans-serif;">${headerTitle}</h1>
+<tr><td style="background:${safeColor};padding:28px 32px;">
+  ${logoHtml}<h1 style="margin:0;color:#fff;font-size:24px;font-family:Inter,system-ui,sans-serif;">${headerTitle}</h1>
 </td></tr>
 <tr><td style="padding:32px 32px 24px;">
 ${contentRows}
@@ -191,7 +197,7 @@ serve(async (req: Request) => {
           emailWrapper(companyName,
             `<p style="margin:0 0 16px;font-size:16px;">Beste ${safeKlant},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bedankt voor het accepteren van de offerte. Uw factuur (<strong>${safeNummer}</strong>) is aangemaakt en wordt zo spoedig mogelijk verstuurd.</p>`,
-            sig)
+            sig, profiel?.kleur || undefined, profiel?.logo || undefined)
         );
       }
       // Internal notification to company (no customer signature needed)
@@ -241,7 +247,7 @@ serve(async (req: Request) => {
   <a href="${safeUrl}" style="background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">📋 Offerte bekijken &amp; ondertekenen</a>
 </p>
 <p style="margin:0 0 16px;font-size:14px;color:#9ca3af;">Of kopieer deze link: <a href="${safeUrl}" style="color:#6366F1;">${safeUrl}</a></p>`,
-      sig);
+      sig, profiel?.kleur || undefined, profiel?.logo || undefined);
 
     const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
     const finalSubject = customSubject || `Offerte van ${rawCn} — bekijk en onderteken`;
@@ -358,7 +364,7 @@ serve(async (req: Request) => {
 </p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Als de knop niet werkt, kopieer dan deze link in je browser:</p>
 <p style="font-size:13px;color:#6b7280;word-break:break-all;">${esc(acceptLink)}</p>`,
-        sig);
+        sig, profiel?.kleur || undefined, profiel?.logo || undefined);
 
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
       const payload: Record<string, unknown> = {
@@ -407,7 +413,7 @@ serve(async (req: Request) => {
         : `<p style="margin:0 0 16px;font-size:16px;">Geachte ${safeCustomer},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u uw offerte in de bijlage.</p>${portalBlock}`;
 
-      const html = emailWrapper(companyName, mainContent, sig);
+      const html = emailWrapper(companyName, mainContent, sig, profiel?.kleur || undefined, profiel?.logo || undefined);
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
@@ -457,7 +463,7 @@ serve(async (req: Request) => {
 <p style="margin:0 0 4px;font-size:15px;color:#4b5563;">Zou u even 1 minuut nemen om een review achter te laten? Dat helpt ons enorm.</p>
 ${reviewBtn}`;
 
-      const html = emailWrapper(companyName, mainContent, sig);
+      const html = emailWrapper(companyName, mainContent, sig, profiel?.kleur || undefined, profiel?.logo || undefined);
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const replyTo = isValidEmail(body.reply_to) ? body.reply_to : undefined;
@@ -493,7 +499,7 @@ ${reviewBtn}`;
 
       const html = emailWrapper(companyName,
         `<div style="font-size:15px;color:#374151;line-height:1.7;white-space:pre-line;">${safeMsg}</div>`,
-        sig);
+        sig, profiel?.kleur || undefined, profiel?.logo || undefined);
 
       const r = await sendViaResend(resendKey, {
         from: `${rawCompanyName} <info@werkmate.tech>`,
@@ -531,7 +537,7 @@ ${reviewBtn}`;
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Hierbij ontvangt u factuur <strong>${safeNummer}</strong> in de bijlage.</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Bij vragen kunt u altijd contact met ons opnemen.</p>`;
 
-      const html = emailWrapper(companyName, bodyContent, sig);
+      const html = emailWrapper(companyName, bodyContent, sig, profiel?.kleur || undefined, profiel?.logo || undefined);
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       const textInv = customBody
@@ -579,7 +585,7 @@ ${reviewBtn}`;
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Wij willen u vriendelijk herinneren aan openstaande factuur <strong>${safeNummer}</strong>${totaalFmt ? ` van <strong>${esc(totaalFmt)}</strong>` : ""}.</p>
 <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Gelieve het bedrag zo spoedig mogelijk over te maken.</p>`;
 
-      const html = emailWrapper(companyName, bodyContent, sig);
+      const html = emailWrapper(companyName, bodyContent, sig, profiel?.kleur || undefined, profiel?.logo || undefined);
 
       const customSubject = typeof body.custom_subject === "string" && body.custom_subject.trim() ? body.custom_subject.trim() : null;
       // Avoid spam-trigger words ("betalingsherinnering") and Unicode em-dashes in subject
