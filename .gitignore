@@ -39,3 +39,4 @@ playwright-report/
 
 # Claude Code
 .claude/
+.env.test
