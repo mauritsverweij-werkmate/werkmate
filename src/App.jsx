@@ -794,6 +794,9 @@ select.pl-inp{appearance:none;-webkit-appearance:none;background-image:url("data
   .pl-cat{display:none}
   .pl-inp{font-size:16px;min-height:40px}
   .off-tbl-act{flex-wrap:wrap;gap:8px}
+  .cp [style*="1fr"]{grid-template-columns:1fr !important}
+  .ph>div:first-child{flex:1;min-width:0}
+  .ph-btns{flex-wrap:wrap;justify-content:flex-end}
 }
 `;
 
@@ -2179,7 +2182,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8} color="#EF4444"/></span>Verwijderen</button>
       </MobDetailScreen>
     )}
-    <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><div style={{display:"flex",gap:8}}>{openTab&&<button className="btn btn-outline" onClick={()=>openTab("prijslijst")}><TagIcon size={14} strokeWidth={1.8}/> Prijslijst</button>}<button className="btn btn-ai" onClick={()=>setShowAI(true)}><Sparkles size={14} strokeWidth={1.8}/> Slimme offerte</button></div></div>
+    <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{offertes.length} offertes</div></div><div className="ph-btns" style={{display:"flex",gap:8}}>{openTab&&<button className="btn btn-outline mob-hide" onClick={()=>openTab("prijslijst")}><TagIcon size={14} strokeWidth={1.8}/> Prijslijst</button>}<button className="btn btn-ai" onClick={()=>setShowAI(true)}><Sparkles size={14} strokeWidth={1.8}/> Slimme offerte</button></div></div>
     <div className="sg" style={{gridTemplateColumns:"1fr 1fr 1fr 1fr"}}>
       {[
         {label:"In afwachting",val:offertes.filter(o=>o.status==="In afwachting").length,color:"#F59E0B"},
@@ -2335,7 +2338,7 @@ function PrijslijstTab({ initialItems, onSaveItems, userId }) {
     });
   };
   return(<div>
-    <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — de slimme generator gebruikt deze als basis</div></div><div style={{display:"flex",gap:8,alignItems:"center"}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}><Plus size={14} strokeWidth={2}/> Dienst</button><button className="btn btn-outline" onClick={()=>fileInputRef.current?.click()}>Excel importeren</button><button className="btn btn-dark" onClick={save} disabled={saving}>{saving?"Opslaan…":saved?"✓ Opgeslagen!":"Opslaan"}</button><input ref={fileInputRef} type="file" accept=".xlsx,.csv" style={{display:"none"}} onChange={importFile} /></div></div>
+    <div className="ph"><div><div className="pg-title">Prijslijst</div><div className="pg-sub">Jouw tarieven — de slimme generator gebruikt deze als basis</div></div><div className="ph-btns" style={{display:"flex",gap:8,alignItems:"center"}}><button className="btn btn-outline" onClick={()=>setShowAdd(true)}><Plus size={14} strokeWidth={2}/> Dienst</button><button className="btn btn-outline mob-hide" onClick={()=>fileInputRef.current?.click()}>Excel importeren</button><button className="btn btn-dark" onClick={save} disabled={saving}>{saving?"Opslaan…":saved?"✓ Opgeslagen!":"Opslaan"}</button><input ref={fileInputRef} type="file" accept=".xlsx,.csv" style={{display:"none"}} onChange={importFile} /></div></div>
     <div className="card cp">
       <div style={{background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:9,padding:"10px 13px",marginBottom:18,fontSize:12.5,color:"#4338CA"}}>💡 De slimme offerte generator gebruikt jouw tarieven automatisch als basis.</div>
       {importError&&<div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:9,padding:"14px 16px",marginBottom:18,fontSize:13,color:"#B91C1C",lineHeight:1.6}}>
@@ -4027,7 +4030,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
                 {Array.from({length:5},(_,i)=>new Date().getFullYear()-i).map(y=><option key={y} value={y}>{y}</option>)}
               </select>}
             </div>
-            <div style={{display:"flex",gap:8}}>
+            <div className="mob-hide" style={{display:"flex",gap:8}}>
               <button className="btn btn-outline" onClick={exportWinstXlsx}>⬇ Excel</button>
               <button className="btn btn-outline" onClick={exportWinstPdf}>⬇ PDF</button>
             </div>
@@ -4306,6 +4309,7 @@ function TypeBadge({ type }) {
 }
 
 function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
+  const mob = useMobile();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("Alle");
   const [detail, setDetail] = useState(null);
@@ -4383,51 +4387,71 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
         <button className="btn btn-dark" onClick={()=>{setShowCompose(true);setComposeSent(false);setComposeErr("");setCompose({klantId:"",to:"",subject:"",body:""});}}><Plus size={14} strokeWidth={2}/> Nieuwe email</button>
       </div>
 
-      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
         <input
           className="inp"
-          style={{maxWidth:260,margin:0}}
+          style={{maxWidth:mob?undefined:260,margin:0,flex:mob?"1 1 100%":undefined}}
           placeholder="Zoeken op ontvanger of onderwerp…"
           value={search}
           onChange={e=>setSearch(e.target.value)}
         />
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {["Alle","Offerte","Factuur","Herinnering","Review","Certificaat","Team","Handmatig"].map(t=>(
-            <button key={t} onClick={()=>setFilterType(t)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:filterType===t?"#0F0F14":"#fff",color:filterType===t?"#fff":"#555",borderColor:filterType===t?"#0F0F14":"#E5E7EB"}}>{t}</button>
-          ))}
-        </div>
+      </div>
+      <div className={mob?"tab-scroll":""} style={{display:"flex",gap:6,flexWrap:mob?"nowrap":"wrap",marginBottom:16}}>
+        {["Alle","Offerte","Factuur","Herinnering","Review","Certificaat","Team","Handmatig"].map(t=>(
+          <button key={t} onClick={()=>setFilterType(t)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:filterType===t?"#0F0F14":"#fff",color:filterType===t?"#fff":"#555",borderColor:filterType===t?"#0F0F14":"#E5E7EB",flexShrink:0,whiteSpace:"nowrap"}}>{t}</button>
+        ))}
       </div>
 
       {filtered.length === 0
         ? <LeegScherm icon={<Mail size={36} strokeWidth={1.3} color="#A5B4FC"/>} titel="Geen e-mails gevonden" sub={emailsLog.length === 0 ? "Verstuurde e-mails verschijnen hier automatisch" : "Geen e-mails die overeenkomen met je zoekopdracht"}/>
-        : <div className="card"><div className="tw"><table>
-            <thead><tr>{["Datum","Ontvanger","Onderwerp","Type","Status",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
-            <tbody>
-              {filtered.map(e=>(
-                <tr key={e.id} onClick={()=>setDetail(e)} style={{cursor:"pointer"}}>
-                  <td style={{color:"#888",fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(e.sent_at)}</td>
-                  <td style={{fontWeight:600,color:"#111"}}>{e.to_email}</td>
-                  <td style={{color:"#374151",fontSize:13}}>{e.subject}</td>
-                  <td><TypeBadge type={e.type}/></td>
-                  <td>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12.5,fontWeight:600,color:e.status==="verzonden"?"#065F46":"#991B1B"}}>
-                        <span style={{width:7,height:7,borderRadius:"50%",background:e.status==="verzonden"?"#10B981":"#EF4444",display:"inline-block"}}/>
-                        {e.status==="verzonden"?"Verzonden":"Mislukt"}
-                      </span>
-                      {e.status!=="verzonden"&&<button className="btn btn-ghost btn-sm" style={{fontSize:11.5,padding:"2px 9px"}} disabled={resending.has(e.id)} onClick={ev=>{ev.stopPropagation();retryEmail(e);}}>{resending.has(e.id)?"Bezig…":"Opnieuw"}</button>}
-                    </div>
-                  </td>
-                  <td onClick={ev=>ev.stopPropagation()}><button className="btn btn-danger btn-sm" style={{fontSize:11.5,padding:"2px 8px"}} onClick={ev=>deleteEmail(e.id,ev)}><X size={14}/></button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div></div>
+        : mob
+          ? <div className="mob-card-list">{filtered.map(e=>(
+              <div className="mob-card" key={e.id} onClick={()=>setDetail(e)}>
+                <div className="mob-card-top">
+                  <TypeBadge type={e.type}/>
+                  <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12,fontWeight:600,color:e.status==="verzonden"?"#065F46":"#991B1B"}}>
+                    <span style={{width:6,height:6,borderRadius:"50%",background:e.status==="verzonden"?"#10B981":"#EF4444",display:"inline-block"}}/>
+                    {e.status==="verzonden"?"Verzonden":"Mislukt"}
+                  </span>
+                </div>
+                <div style={{fontWeight:600,fontSize:14,color:"#0F0F14",margin:"6px 0 3px",lineHeight:1.3}}>{e.subject}</div>
+                <div className="mob-card-sub">{e.to_email}</div>
+                <div className="mob-card-sub" style={{marginTop:2}}>{fmtDate(e.sent_at)}</div>
+                <div className="mob-card-actions">
+                  {e.status!=="verzonden"&&<button className="btn btn-ghost btn-sm" disabled={resending.has(e.id)} onClick={ev=>{ev.stopPropagation();retryEmail(e);}}>{resending.has(e.id)?"Bezig…":"Opnieuw"}</button>}
+                  <button className="btn btn-danger btn-sm" onClick={ev=>deleteEmail(e.id,ev)}><X size={14}/></button>
+                </div>
+                <span className="mob-card-chevron">›</span>
+              </div>
+            ))}</div>
+          : <div className="card"><div className="tw"><table>
+              <thead><tr>{["Datum","Ontvanger","Onderwerp","Type","Status",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+              <tbody>
+                {filtered.map(e=>(
+                  <tr key={e.id} onClick={()=>setDetail(e)} style={{cursor:"pointer"}}>
+                    <td style={{color:"#888",fontSize:13,whiteSpace:"nowrap"}}>{fmtDate(e.sent_at)}</td>
+                    <td style={{fontWeight:600,color:"#111"}}>{e.to_email}</td>
+                    <td style={{color:"#374151",fontSize:13}}>{e.subject}</td>
+                    <td><TypeBadge type={e.type}/></td>
+                    <td>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12.5,fontWeight:600,color:e.status==="verzonden"?"#065F46":"#991B1B"}}>
+                          <span style={{width:7,height:7,borderRadius:"50%",background:e.status==="verzonden"?"#10B981":"#EF4444",display:"inline-block"}}/>
+                          {e.status==="verzonden"?"Verzonden":"Mislukt"}
+                        </span>
+                        {e.status!=="verzonden"&&<button className="btn btn-ghost btn-sm" style={{fontSize:11.5,padding:"2px 9px"}} disabled={resending.has(e.id)} onClick={ev=>{ev.stopPropagation();retryEmail(e);}}>{resending.has(e.id)?"Bezig…":"Opnieuw"}</button>}
+                      </div>
+                    </td>
+                    <td onClick={ev=>ev.stopPropagation()}><button className="btn btn-danger btn-sm" style={{fontSize:11.5,padding:"2px 8px"}} onClick={ev=>deleteEmail(e.id,ev)}><X size={14}/></button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div></div>
       }
 
       {detail && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{background:"#fff",borderRadius:18,padding:"28px 28px 22px",width:"100%",maxWidth:520,boxShadow:"0 24px 60px rgba(0,0,0,0.22)",maxHeight:"85vh",overflowY:"auto"}}>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:mob?`16px 16px calc(${80}px + env(safe-area-inset-bottom)) 16px`:"16px"}}>
+          <div style={{background:"#fff",borderRadius:mob?"16px":"18px",padding:mob?"20px 18px 18px":"28px 28px 22px",width:"100%",maxWidth:520,boxShadow:"0 24px 60px rgba(0,0,0,0.22)",maxHeight:mob?"80dvh":"85vh",overflowY:"auto"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
               <div>
                 <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:17,color:"#0F0F14",marginBottom:4}}>{detail.subject}</div>
@@ -4453,7 +4477,7 @@ function MailTab({ userId, emailsLog = [], refresh, klanten = [], bedrijf }) {
                     <iframe
                       srcDoc={detail.html_body}
                       sandbox=""
-                      style={{width:"100%",height:420,border:"none",display:"block"}}
+                      style={{width:"100%",height:mob?260:420,border:"none",display:"block"}}
                       title="E-mail preview"
                     />
                   </div>
@@ -5764,8 +5788,8 @@ function RittenTab({ userId, ritten, refresh, klanten, bedrijf }) {
   return (<div>
     <div className="ph">
       <div><div className="pg-title">Rittenregistratie</div><div className="pg-sub">{ritten.length} ritten geregistreerd · €{kmRate.toFixed(2)}/km</div></div>
-      <div style={{display:"flex",gap:8}}>
-        <button className="btn btn-ghost" onClick={exportXlsx}><Download size={14} strokeWidth={1.8}/> Export</button>
+      <div className="ph-btns" style={{display:"flex",gap:8}}>
+        <button className="btn btn-ghost mob-hide" onClick={exportXlsx}><Download size={14} strokeWidth={1.8}/> Export</button>
         <button className="btn btn-dark" onClick={()=>setShowAdd(true)}><Plus size={14} strokeWidth={2}/> Rit</button>
       </div>
     </div>
