@@ -1983,12 +1983,14 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
     setEditSaved(true);
     refresh();
   };
-  const totaal = offertes.reduce((s,o)=>{
+  const parseBedrag = (o) => {
+    if (o.totaal != null && Number(o.totaal) > 0) return Number(o.totaal);
     const bedrag = (o.bedrag||"0").replace(/[€\s]/g, "");
     const clean = bedrag.includes(",") ? bedrag.replace(/\./g, "").replace(",", ".") : bedrag;
     const n = parseFloat(clean);
-    return s + (isNaN(n) ? 0 : n);
-  }, 0);
+    return isNaN(n) ? 0 : n;
+  };
+  const totaal = offertes.filter(o=>o.status==="Ondertekend").reduce((s,o)=>s+parseBedrag(o), 0);
 
   const formatMoney = (value) => {
     const num = typeof value === "string"
@@ -2169,7 +2171,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         {label:"In afwachting",val:offertes.filter(o=>o.status==="In afwachting").length,color:"#F59E0B"},
         {label:"Ondertekend",val:offertes.filter(o=>o.status==="Ondertekend").length,color:"#10B981"},
         {label:"Verstuurd",val:offertes.filter(o=>o.status==="Verstuurd").length,color:"#3B82F6"},
-        {label:"Totaal",val:`€ ${totaal.toLocaleString("nl-NL", {minimumFractionDigits:2, maximumFractionDigits:2})}` ,color:"#0F0F14"},
+        {label:"Ondertekend waarde",val:`€ ${totaal.toLocaleString("nl-NL", {minimumFractionDigits:2, maximumFractionDigits:2})}` ,color:"#0F0F14"},
       ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color,fontSize:19}}>{s.val}</div></div>)}
     </div>
     {offertes.length===0
@@ -3248,11 +3250,14 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   };
 
   const updateStatus = async (id, status) => {
-    const extra = status === "Betaald"
-      ? { betaald_op: new Date().toISOString().slice(0,10) }
-      : { betaald_op: null };
-    const {error}=await supabase.from("facturen").update({status,...extra}).eq("id",id);
-    if(!error)refresh();
+    const updates = { status };
+    if (status === "Betaald") updates.betaald_op = new Date().toISOString().slice(0,10);
+    const {error}=await supabase.from("facturen").update(updates).eq("id",id);
+    if (error) {
+      // Column may not exist yet — fall back to status-only update
+      await supabase.from("facturen").update({status}).eq("id",id);
+    }
+    refresh();
   };
 
   const sendInvoiceEmail = async () => {
