@@ -3120,6 +3120,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
   const scanInputRef = useRef(null);
   const [uitgaveErr, setUitgaveErr] = useState("");
   const [uitgaveFotoPreview, setUitgaveFotoPreview] = useState("");
+  const [uitMaand, setUitMaand] = useState(()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;});
   const autoReminderSentRef = useRef(false);
   const [autoReminderCount, setAutoReminderCount] = useState(0);
 
@@ -3455,11 +3456,24 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
       }
     </>)}
 
-    {subTab==="uitgaven"&&(<>
+    {subTab==="uitgaven"&&(()=>{
+      const uitGefilterd=(uitgaven||[]).filter(u=>u.datum&&u.datum.startsWith(uitMaand));
+      const uitTotaal=uitGefilterd.reduce((s,u)=>s+Number(u.bedrag||0),0);
+      const uitBtw=uitGefilterd.reduce((s,u)=>s+Number(u.bedrag||0)*Number(u.btw_percentage||0)/100/(1+Number(u.btw_percentage||0)/100),0);
+      const uitLabel=new Date(uitMaand+"-02").toLocaleDateString("nl-NL",{month:"long",year:"numeric"});
+      const uitPrev=()=>{const[y,m]=uitMaand.split("-").map(Number);const d=new Date(y,m-2);setUitMaand(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);};
+      const uitNext=()=>{const[y,m]=uitMaand.split("-").map(Number);const d=new Date(y,m);setUitMaand(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);};
+      const isHuidigeMaand=uitMaand===(()=>{const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`;})();
+      return(<>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:mob?"flex-start":"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontWeight:700,fontSize:15,color:"#111"}}>Totaal: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0),0))}</div>
-          <div style={{fontSize:13,color:"#64748B"}}>BTW terug: {fmtEur((uitgaven||[]).reduce((s,u)=>s+Number(u.bedrag||0)*Number(u.btw_percentage||0)/100/(1+Number(u.btw_percentage||0)/100),0))}</div>
+          <div style={{fontWeight:700,fontSize:15,color:"#111"}}>Totaal: {fmtEur(uitTotaal)}</div>
+          <div style={{fontSize:13,color:"#64748B"}}>BTW terug: {fmtEur(uitBtw)}</div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:4,background:"#F8FAFC",borderRadius:10,border:"1px solid #E5E7EB",padding:"4px 6px"}}>
+          <button onClick={uitPrev} style={{background:"none",border:"none",cursor:"pointer",padding:"2px 8px",borderRadius:6,fontSize:16,color:"#475569",lineHeight:1}}>‹</button>
+          <span style={{fontSize:13,fontWeight:700,color:"#111",minWidth:110,textAlign:"center",textTransform:"capitalize"}}>{uitLabel}</span>
+          <button onClick={uitNext} disabled={isHuidigeMaand} style={{background:"none",border:"none",cursor:"pointer",padding:"2px 8px",borderRadius:6,fontSize:16,color:isHuidigeMaand?"#D1D5DB":"#475569",lineHeight:1}}>›</button>
         </div>
         <div style={{display:"flex",gap:8,flexShrink:0}}>
           <button className="btn btn-ghost" disabled={scanningBon} onClick={()=>scanInputRef.current?.click()} style={{display:"flex",alignItems:"center",gap:6}}>
@@ -3487,10 +3501,10 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           <button className="btn btn-dark" onClick={()=>{setNieuweUitgave({datum:localToday(),categorie:"",omschrijving:"",bedrag:"",btw_percentage:21,foto:""});setUitgaveFotoPreview("");setUitgaveErr("");setShowAddUitgave(true);}}><Plus size={14} strokeWidth={2}/> Uitgave</button>
         </div>
       </div>
-      {(uitgaven||[]).length===0
-        ?<LeegScherm icon={<FileText size={36} strokeWidth={1.3} color="#A5B4FC"/>} titel="Geen uitgaven" sub="Registreer je eerste zakelijke uitgave" actie="+ Uitgave toevoegen" onActie={()=>setShowAddUitgave(true)}/>
+      {uitGefilterd.length===0
+        ?<LeegScherm icon={<FileText size={36} strokeWidth={1.3} color="#A5B4FC"/>} titel="Geen uitgaven" sub={`Geen uitgaven in ${uitLabel}`} actie="+ Uitgave toevoegen" onActie={()=>setShowAddUitgave(true)}/>
         : mob
-          ? <div className="mob-card-list">{(uitgaven||[]).map(u=>(
+          ? <div className="mob-card-list">{uitGefilterd.map(u=>(
               <div className="mob-card" key={u.id}>
                 <div className="mob-card-top">
                   <div className="mob-card-name">{u.omschrijving||"Uitgave"}</div>
@@ -3505,7 +3519,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
               </div>
             ))}</div>
           : <div className="card"><div className="tw"><table><thead><tr>{["Datum","Categorie","Omschrijving","Bedrag","BTW %","Acties"].map(h=><th key={h}>{h}</th>)}</tr></thead>
-          <tbody>{(uitgaven||[]).map(u=><tr key={u.id}>
+          <tbody>{uitGefilterd.map(u=><tr key={u.id}>
             <td style={{color:"#888",fontSize:13}}>{u.datum}</td>
             <td><span style={{background:"#F1F5F9",borderRadius:6,padding:"2px 8px",fontSize:12,fontWeight:600}}>{u.categorie}</span></td>
             <td style={{fontWeight:600,color:"#111"}}>{u.omschrijving}{u.foto&&<img src={u.foto} alt="Bon" style={{width:36,height:28,objectFit:"cover",borderRadius:6,marginLeft:8,verticalAlign:"middle",cursor:"pointer"}} onClick={()=>window.open(u.foto)}/>}</td>
@@ -3558,7 +3572,7 @@ function FinancienTab({ userId, facturen, uitgaven, refresh, klanten, offertes, 
           }}><Save size={14} strokeWidth={1.8}/>{savingUitgave?"Opslaan…":"Opslaan"}</button>
         </div>
       </div></div></div>}
-    </>)}
+    </>);})()}
 
     {subTab==="btw"&&(()=>{
       const fE = n => `€ ${Number(n||0).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
