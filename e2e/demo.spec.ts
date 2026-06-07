@@ -16,7 +16,7 @@
  *   2:55–3:20  Boekhouding       (BTW 6s · Uitgaven 6s · Scan 3s · Winst 6s)
  */
 
-import { test, Page } from "@playwright/test";
+import { test, Page, BrowserContext } from "@playwright/test";
 import { readFileSync } from "fs";
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ async function glide(page: Page, x: number, y: number, steps = 28) {
 async function glideTo(page: Page, selector: string, steps = 28) {
   const el  = page.locator(selector).first();
   const box = await el.boundingBox();
-  if (!box) return;
+  if (!box) { console.warn(`  glideTo: geen boundingBox voor "${selector}"`); return; }
   await glide(page, box.x + box.width / 2, box.y + box.height / 2, steps);
 }
 
@@ -46,19 +46,17 @@ async function slowType(page: Page, selector: string, text: string, delay = 80) 
   }
 }
 
-async function selectByOptionText(page: Page, optionText: string) {
-  return page.locator("select", { has: page.locator("option", { hasText: optionText }) }).first();
-}
-
 /** Navigeert via sidebar-knop; wacht 2 sec zodat content laadt */
 async function navTab(page: Page, nameRe: RegExp) {
-  await page.locator("button.nb", { hasText: nameRe }).first().click();
+  console.log(`  navTab: ${nameRe}`);
+  const btn = page.locator("button.nb", { hasText: nameRe }).first();
+  await btn.waitFor({ state: "visible", timeout: 10_000 });
+  await btn.click();
   await page.waitForTimeout(2000);
 }
 
-/** Wacht seconden, toont een commentaar in console */
 async function pause(page: Page, ms: number, label?: string) {
-  if (label) console.log(`  pause ${ms}ms — ${label}`);
+  console.log(`  ⏸ ${ms}ms${label ? " — " + label : ""}`);
   await page.waitForTimeout(ms);
 }
 
@@ -85,13 +83,12 @@ async function cleanupDemoData(jwt: string) {
     "Prefer":        "return=minimal",
     "Content-Type":  "application/json",
   };
-  // Prijslijst wordt NIET verwijderd
   for (const tbl of ["facturen","offertes","werkbonnen","planning","ritten","uitgaven","klanten"]) {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/${tbl}?user_id=eq.${USER_ID}`,
       { method: "DELETE", headers }
     );
-    console.log(`cleanup ${tbl}: ${r.status}`);
+    console.log(`  cleanup ${tbl}: ${r.status}`);
   }
 }
 
@@ -105,82 +102,71 @@ async function seedDemoData(jwt: string) {
   const base  = `${SUPABASE_URL}/rest/v1`;
   const today = isoDate(0);
 
-  // Klanten
-  await fetch(`${base}/klanten`, {
+  const r1 = await fetch(`${base}/klanten`, {
     method: "POST", headers: h,
     body: JSON.stringify([
-      { user_id: USER_ID, naam: "Hoveniersbedrijf Van Dijk", tel: "06-12345678", email: "vandijk@hoveniers.nl",   adres: "Tuinlaan 15, Utrecht"   },
-      { user_id: USER_ID, naam: "Tuinservice Bakker",         tel: "06-87654321", email: "bakker@tuinservice.nl", adres: "Molenweg 8, Amsterdam"   },
-      { user_id: USER_ID, naam: "Villa Zonnedal",             tel: "06-11223344", email: "info@villazonnedal.nl", adres: "Zonneweg 3, Rotterdam"   },
+      { user_id: USER_ID, naam: "Hoveniersbedrijf Van Dijk", tel: "06-12345678", email: "vandijk@hoveniers.nl",   adres: "Tuinlaan 15, Utrecht"  },
+      { user_id: USER_ID, naam: "Tuinservice Bakker",         tel: "06-87654321", email: "bakker@tuinservice.nl", adres: "Molenweg 8, Amsterdam"  },
+      { user_id: USER_ID, naam: "Villa Zonnedal",             tel: "06-11223344", email: "info@villazonnedal.nl", adres: "Zonneweg 3, Rotterdam"  },
     ]),
   });
+  console.log(`  seed klanten: ${r1.status}`);
 
-  // Offertes
-  await fetch(`${base}/offertes`, {
+  const r2 = await fetch(`${base}/offertes`, {
     method: "POST", headers: h,
     body: JSON.stringify([
       {
         user_id: USER_ID, klant: "Hoveniersbedrijf Van Dijk",
-        dienst: "Jaarcontract tuinonderhoud", bedrag: "€ 3.521,10",
+        dienst: "Jaarcontract tuinonderhoud", bedrag: "€ 3.446,08",
         regels: JSON.stringify([
-          { omschrijving: "Tuinonderhoud",       aantal: 12, eenheid: "maand", prijs: 220, btw_pct: 21 },
-          { omschrijving: "Snoeiwerk",           aantal:  4, eenheid: "uur",   prijs:  52, btw_pct: 21 },
+          { omschrijving: "Tuinonderhoud",   aantal: 12, eenheid: "maand", prijs: 220, btw_pct: 21 },
+          { omschrijving: "Snoeiwerk",       aantal:  4, eenheid: "uur",   prijs:  52, btw_pct: 21 },
         ]),
         subtotaal: 2848, btw: 598.08, totaal: 3446.08,
         status: "Verstuurd", datum: isoDate(5),
-        opmerkingen: "Jaarcontract 2026–2027. Startdatum 1 juli.",
+        opmerkingen: "Jaarcontract 2026–2027.",
       },
       {
         user_id: USER_ID, klant: "Tuinservice Bakker",
         dienst: "Bestrating oprit 60m²", bedrag: "€ 2.904,00",
         regels: JSON.stringify([
           { omschrijving: "Bestrating vernieuwen", aantal: 60, eenheid: "m²",   prijs:  35, btw_pct: 21 },
-          { omschrijving: "Grondwerk egaliseren",  aantal:  8, eenheid: "uur",   prijs:  55, btw_pct: 21 },
-          { omschrijving: "Afvoer puin",           aantal:  1, eenheid: "stuk",  prijs: 160, btw_pct: 21 },
+          { omschrijving: "Grondwerk egaliseren",  aantal:  8, eenheid: "uur",  prijs:  55, btw_pct: 21 },
         ]),
-        subtotaal: 2400, btw: 504, totaal: 2904,
+        subtotaal: 2540, btw: 533.4, totaal: 3073.4,
         status: "In afwachting", datum: isoDate(2), opmerkingen: "",
       },
     ]),
   });
+  console.log(`  seed offertes: ${r2.status}`);
 
-  // Factuur Betaald
-  await fetch(`${base}/facturen`, {
+  const r3 = await fetch(`${base}/facturen`, {
     method: "POST", headers: h,
     body: JSON.stringify([{
       user_id: USER_ID, nummer: "2026-001",
       klant: "Villa Zonnedal", klant_email: "info@villazonnedal.nl",
       datum: isoDate(10), vervaldatum: isoDate(3),
       regels: JSON.stringify([
-        { omschrijving: "Snoeiwerk",         aantal: 6, eenheid: "uur",  prijs: 52, btw_pct: 21 },
+        { omschrijving: "Snoeiwerk",          aantal: 6, eenheid: "uur",  prijs: 52, btw_pct: 21 },
         { omschrijving: "Beplanting leveren", aantal: 8, eenheid: "stuk", prijs: 18, btw_pct: 21 },
       ]),
       btw: 98.49, totaal: 554.49, status: "Betaald",
     }]),
   });
+  console.log(`  seed facturen: ${r3.status}`);
 
-  // Planning — 2 items vandaag
-  await fetch(`${base}/planning`, {
+  const r4 = await fetch(`${base}/planning`, {
     method: "POST", headers: h,
     body: JSON.stringify([
-      {
-        user_id: USER_ID, datum: today,
-        tijd: "09:00", eindtijd: "12:00",
+      { user_id: USER_ID, datum: today, tijd: "09:00", eindtijd: "12:00",
         klant: "Hoveniersbedrijf Van Dijk", dienst: "Tuinonderhoud",
-        adres: "Tuinlaan 15, Utrecht",
-        status: "Ingepland", herhaal: "", categorie: "", medewerker: "",
-      },
-      {
-        user_id: USER_ID, datum: today,
-        tijd: "14:00", eindtijd: "15:30",
+        adres: "Tuinlaan 15, Utrecht", status: "Ingepland", herhaal: "", categorie: "", medewerker: "" },
+      { user_id: USER_ID, datum: today, tijd: "14:00", eindtijd: "15:30",
         klant: "Tuinservice Bakker", dienst: "Offerte opname oprit",
-        adres: "Molenweg 8, Amsterdam",
-        status: "Ingepland", herhaal: "", categorie: "", medewerker: "",
-      },
+        adres: "Molenweg 8, Amsterdam", status: "Ingepland", herhaal: "", categorie: "", medewerker: "" },
     ]),
   });
-
-  console.log("Seed data klaar.");
+  console.log(`  seed planning: ${r4.status}`);
 }
 
 async function portalSign(jwt: string, token: string): Promise<boolean> {
@@ -195,12 +181,12 @@ async function portalSign(jwt: string, token: string): Promise<boolean> {
       klant_naam:   "Groenservice Peters",
     }),
   });
-  console.log("portal-sign:", r.status);
+  console.log(`  portal-sign: ${r.status}`);
   return r.ok;
 }
 
 async function patchOfferteStatus(jwt: string, token: string, status: string) {
-  await fetch(`${SUPABASE_URL}/rest/v1/offertes?portal_token=eq.${token}`, {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/offertes?portal_token=eq.${token}`, {
     method: "PATCH",
     headers: {
       "Authorization": `Bearer ${jwt}`,
@@ -210,21 +196,21 @@ async function patchOfferteStatus(jwt: string, token: string, status: string) {
     },
     body: JSON.stringify({ status }),
   });
+  console.log(`  patch offerte status → ${status}: ${r.status}`);
 }
 
-// ── AI offerte mock — regels komen exact overeen met prijslijst-tarieven ──────
-// Prijslijst tuinieren: Tuinonderhoud €55/uur · Bestrating vernieuwen €35/m² · Snoeiwerk €52/uur
-// Offerte omschrijving: "Tuinonderhoud 5 uur, Bestrating vernieuwen 20m2, Snoeiwerk 3 uur"
+// Regels matchen exact de prijslijst-tarieven voor tuinieren:
+// Tuinonderhoud €55/uur · Bestrating vernieuwen €35/m² · Snoeiwerk €52/uur
 const AI_JSON = JSON.stringify({
   dienst: "Groenaanleg en onderhoud bedrijfspand Groenservice Peters",
   regels: [
-    { omschrijving: "Tuinonderhoud",       aantal:  5, eenheid: "uur", prijs: 55, btw_pct: 21 },
-    { omschrijving: "Bestrating vernieuwen", aantal: 20, eenheid: "m²", prijs: 35, btw_pct: 21 },
-    { omschrijving: "Snoeiwerk",           aantal:  3, eenheid: "uur", prijs: 52, btw_pct: 21 },
+    { omschrijving: "Tuinonderhoud",         aantal:  5, eenheid: "uur", prijs: 55, btw_pct: 21 },
+    { omschrijving: "Bestrating vernieuwen", aantal: 20, eenheid: "m²",  prijs: 35, btw_pct: 21 },
+    { omschrijving: "Snoeiwerk",             aantal:  3, eenheid: "uur", prijs: 52, btw_pct: 21 },
   ],
-  subtotaal: 1231,   // 5×55 + 20×35 + 3×52 = 275+700+156
-  btw:        258.51,
-  totaal:    1489.51,
+  subtotaal: 1131,   // 5×55 + 20×35 + 3×52 = 275+700+156
+  btw:        237.51,
+  totaal:    1368.51,
   opmerkingen: "Tarieven conform uw prijslijst. Uitvoering binnen 2 weken.",
 });
 
@@ -232,366 +218,406 @@ const AI_JSON = JSON.stringify({
 test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
   test.setTimeout(600_000);
 
-  // ── Setup ─────────────────────────────────────────────────────────────────
+  console.log("=== DEMO START ===");
+
+  // ── Setup (buiten browser, voor video begint) ─────────────────────────────
+  console.log("STAP: getJwt");
   const jwt = getJwt();
-  console.log("Cleanup + seed…");
+  console.log("STAP: cleanup");
   await cleanupDemoData(jwt);
+  console.log("STAP: seed");
   await seedDemoData(jwt);
 
   // ── Browser context + video ────────────────────────────────────────────────
-  const context = await browser.newContext({
-    viewport:     { width: 1280, height: 800 },
-    storageState: "e2e/.auth/session.json",
-    recordVideo:  { dir: "demo-videos/", size: { width: 1280, height: 800 } },
-  });
-  const page = await context.newPage();
-  page.setDefaultTimeout(30_000);
-
-  // ── Route mocks ────────────────────────────────────────────────────────────
+  console.log("STAP: browser.newContext");
+  let context: BrowserContext | undefined;
   let capturedPortalToken: string | null = null;
 
-  await context.route("**/functions/v1/ai-proxy", async (route, request) => {
-    const body = request.postDataJSON() as Record<string, unknown>;
-    if (body?.action === "ai-offerte") {
-      await route.fulfill({
-        status: 200, contentType: "application/json",
-        body: JSON.stringify({ content: [{ type: "text", text: AI_JSON }] }),
-      });
-    } else if (body?.action === "send-offer-email") {
-      await route.fulfill({
-        status: 200, contentType: "application/json",
-        body: JSON.stringify({ ok: true }),
-      });
-    } else {
-      await route.continue();
-    }
-  });
+  try {
+    context = await browser.newContext({
+      viewport:     { width: 1280, height: 800 },
+      storageState: "e2e/.auth/session.json",
+      recordVideo:  { dir: "demo-videos/", size: { width: 1280, height: 800 } },
+    });
 
-  // Capture portal_token uit Peters offerte INSERT response
-  await context.route("**/rest/v1/offertes*", async (route, request) => {
-    const response = await route.fetch();
-    if (request.method() === "POST" && !capturedPortalToken) {
-      const text = await response.text();
+    console.log("STAP: newPage");
+    const page = await context.newPage();
+    page.setDefaultTimeout(30_000);
+
+    // Log browser-side errors zodat we zien wat mis gaat
+    page.on("console", msg => {
+      if (msg.type() === "error") console.error("  [browser error]", msg.text());
+    });
+    page.on("pageerror", err => console.error("  [page error]", err.message));
+
+    // ── Route mocks ──────────────────────────────────────────────────────────
+    console.log("STAP: routes instellen");
+
+    await context.route("**/functions/v1/ai-proxy", async (route, request) => {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      if (body?.action === "ai-offerte") {
+        await route.fulfill({
+          status: 200, contentType: "application/json",
+          body: JSON.stringify({ content: [{ type: "text", text: AI_JSON }] }),
+        });
+      } else if (body?.action === "send-offer-email") {
+        await route.fulfill({
+          status: 200, contentType: "application/json",
+          body: JSON.stringify({ ok: true }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // ── BUGFIX: gebruik route.continue() voor GETs; alleen POSTs onderscheppen ─
+    await context.route("**/rest/v1/offertes*", async (route, request) => {
+      if (request.method() !== "POST") {
+        // Laat GETs/PATCHes/DELETEs gewoon door — GEEN route.fetch() aanroepen
+        await route.continue();
+        return;
+      }
+      // POST: onderschep voor portal_token
       try {
-        const json = JSON.parse(text);
-        const pt   = Array.isArray(json) ? json[0]?.portal_token : json?.portal_token;
-        if (pt) { capturedPortalToken = pt; console.log("portal_token:", pt); }
-      } catch { /* ignore */ }
-      await route.fulfill({ response, body: text });
-    } else {
-      await route.fulfill({ response });
+        const response = await route.fetch();
+        const text     = await response.text();
+        if (!capturedPortalToken) {
+          try {
+            const json = JSON.parse(text);
+            const pt   = Array.isArray(json) ? json[0]?.portal_token : json?.portal_token;
+            if (pt) { capturedPortalToken = pt; console.log("  portal_token gevangen:", pt.slice(0, 8) + "…"); }
+          } catch { /* lege response of geen portal_token */ }
+        }
+        await route.fulfill({ response, body: text });
+      } catch (err) {
+        console.error("  [route/offertes POST fout]", err);
+        await route.continue(); // val terug op normale request
+      }
+    });
+
+    // ── Open app ──────────────────────────────────────────────────────────────
+    console.log("STAP: page.goto");
+    await page.goto("https://app.werkmate.tech");
+
+    console.log("STAP: waitForSelector button.nb");
+    await page.waitForSelector("button.nb", { timeout: 20_000 });
+    console.log("  button.nb gevonden — app geladen");
+    await pause(page, 2000, "app geladen");
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 0:00–0:18  DASHBOARD
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: DASHBOARD");
+
+    const statCards = page.locator(".sc");
+    const nCards    = await statCards.count();
+    console.log(`  stat cards: ${nCards}`);
+    for (let i = 0; i < Math.min(nCards, 4); i++) {
+      const box = await statCards.nth(i).boundingBox();
+      if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 24);
+      await pause(page, 800);
     }
-  });
 
-  // ── Open app ──────────────────────────────────────────────────────────────
-  await page.goto("https://app.werkmate.tech");
-  await page.waitForSelector("button.nb", { timeout: 20_000 });
-  await pause(page, 2000, "app geladen");
+    await glide(page, 640, 480, 22);
+    await pause(page, 1000);
+    await glide(page, 640, 580, 18);
+    await pause(page, 4000, "dashboard-overzicht");
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 0:00–0:18  DASHBOARD — gevulde stats
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== DASHBOARD ==");
+    // ═════════════════════════════════════════════════════════════════════════
+    // 0:18–0:48  KLANTEN — 3 bestaande + Peters toevoegen
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: KLANTEN — navTab");
+    await navTab(page, /klanten|crm/i);
 
-  // Glide langs alle stat-kaarten
-  const statCards = page.locator(".sc");
-  const nCards    = await statCards.count();
-  for (let i = 0; i < Math.min(nCards, 4); i++) {
-    const box = await statCards.nth(i).boundingBox();
-    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 24);
-    await pause(page, 800);
-  }
+    const klantCards = page.locator(".pc");
+    const nKlanten   = await klantCards.count();
+    console.log(`  klantkaarten: ${nKlanten}`);
+    for (let i = 0; i < Math.min(nKlanten, 3); i++) {
+      const box = await klantCards.nth(i).boundingBox();
+      if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 22);
+      await pause(page, 900);
+    }
+    await pause(page, 2500, "bestaande klanten bekijken");
 
-  // Glide naar planning-sectie (vandaag 2 items)
-  await glide(page, 640, 480, 22);
-  await pause(page, 1000);
-  await glide(page, 640, 580, 18);
-  await pause(page, 4000, "dashboard-overzicht");
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 0:18–0:48  KLANTEN — 3 bestaande tonen + Groenservice Peters toevoegen
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== KLANTEN ==");
-  await navTab(page, /klanten|crm/i);
-
-  // Glide langzaam langs 3 bestaande klantkaarten
-  const klantCards = page.locator(".pc");
-  const nKlanten   = await klantCards.count();
-  for (let i = 0; i < Math.min(nKlanten, 3); i++) {
-    const box = await klantCards.nth(i).boundingBox();
-    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 22);
+    console.log("STAP: klant toevoegen — klik +");
+    await glideTo(page, ".ph button.btn-dark");
+    await page.locator(".ph button.btn-dark").first().click();
     await pause(page, 900);
-  }
-  await pause(page, 2500, "bestaande klanten bekijken");
 
-  // + Klant toevoegen
-  await glideTo(page, ".ph button.btn-dark");
-  await page.locator(".ph button.btn-dark").first().click();
-  await pause(page, 900);
+    console.log("STAP: typ naam Peters");
+    await slowType(page, "input[placeholder='Bedrijf of naam']", "Groenservice Peters");
+    await pause(page, 600);
 
-  // Naam
-  await slowType(page, "input[placeholder='Bedrijf of naam']", "Groenservice Peters");
-  await pause(page, 600);
+    console.log("STAP: typ telefoon");
+    await slowType(page, "input[placeholder='06-12345678']", "06-55667788");
+    await pause(page, 600);
 
-  // Telefoon
-  await glideTo(page, "input[placeholder='06-12345678']");
-  await slowType(page, "input[placeholder='06-12345678']", "06-55667788");
-  await pause(page, 600);
+    console.log("STAP: typ email");
+    await slowType(page, "input[placeholder='klant@email.nl']", "peters@groenservice.nl");
+    await pause(page, 600);
 
-  // Email
-  await glideTo(page, "input[placeholder='klant@email.nl']");
-  await slowType(page, "input[placeholder='klant@email.nl']", "peters@groenservice.nl");
-  await pause(page, 600);
+    console.log("STAP: typ adres");
+    await slowType(page, "input[placeholder='Straat 1, Amsterdam']", "Groenstraat 12, Den Haag");
+    await pause(page, 700);
 
-  // Adres
-  await glideTo(page, "input[placeholder='Straat 1, Amsterdam']");
-  await slowType(page, "input[placeholder='Straat 1, Amsterdam']", "Groenstraat 12, Den Haag");
-  await pause(page, 700);
+    console.log("STAP: opslaan klant");
+    await glideTo(page, ".overlay .btn-dark.btn-full");
+    await page.locator(".overlay .btn-dark.btn-full").first().click();
+    await page.waitForSelector(".pc", { timeout: 8000 });
+    console.log("  klant opgeslagen");
 
-  // Opslaan
-  await glideTo(page, ".overlay .btn-dark.btn-full");
-  await page.locator(".overlay .btn-dark.btn-full").first().click();
-  await page.waitForSelector(".pc", { timeout: 8000 });
+    const allCards = page.locator(".pc");
+    const lastBox  = await allCards.last().boundingBox();
+    if (lastBox) await glide(page, lastBox.x + lastBox.width / 2, lastBox.y + lastBox.height / 2, 22);
+    await pause(page, 3000, "Peters-kaart zichtbaar");
 
-  // Glide naar nieuwe Peters-kaart (laatste)
-  const allCards = page.locator(".pc");
-  const lastBox  = await allCards.last().boundingBox();
-  if (lastBox) await glide(page, lastBox.x + lastBox.width / 2, lastBox.y + lastBox.height / 2, 22);
-  await pause(page, 3000, "Peters-kaart zichtbaar");
+    // ═════════════════════════════════════════════════════════════════════════
+    // 0:48–1:05  PRIJSLIJST — tarieven bekijken
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: PRIJSLIJST — account dropdown");
+    await glideTo(page, ".sb-acct-btn");
+    await page.locator(".sb-acct-btn").click();
+    await pause(page, 700);
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 0:48–1:05  PRIJSLIJST — tarieven bekijken (connectie met offerte)
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== PRIJSLIJST ==");
+    console.log("STAP: klik Prijslijst item");
+    await glideTo(page, ".sb-dd-item");
+    await page.locator(".sb-dd-item").filter({ hasText: /Prijslijst/i }).click();
 
-  // Navigeer via account-dropdown
-  await glideTo(page, ".sb-acct-btn");
-  await page.locator(".sb-acct-btn").click();
-  await pause(page, 700);
-  await glideTo(page, ".sb-dd-item");
-  await page.locator(".sb-dd-item").filter({ hasText: /Prijslijst/i }).click();
+    console.log("STAP: wacht op .pl-row");
+    await page.waitForSelector(".pl-row", { timeout: 8000 });
+    await pause(page, 1500, "prijslijst geladen");
 
-  await page.waitForSelector(".pl-row", { timeout: 8000 });
-  await pause(page, 1500, "prijslijst geladen");
+    const plRows = page.locator(".pl-row");
+    const nRows  = await plRows.count();
+    console.log(`  prijslijst rijen: ${nRows}`);
+    for (let i = 0; i < Math.min(nRows, 8); i++) {
+      const box = await plRows.nth(i).boundingBox();
+      if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 16);
+      await pause(page, 400);
+    }
+    await pause(page, 8000, "tarieven bekijken");
 
-  // Glide langs tariefregels — kijker ziet Tuinonderhoud/Bestrating/Snoeiwerk
-  const plRows = page.locator(".pl-row");
-  const nRows  = await plRows.count();
-  for (let i = 0; i < Math.min(nRows, 8); i++) {
-    const box = await plRows.nth(i).boundingBox();
-    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 16);
-    await pause(page, 400);
-  }
-  await pause(page, 8000, "tarieven bekijken — kijker herkent Tuinonderhoud/Bestrating/Snoeiwerk");
+    // ═════════════════════════════════════════════════════════════════════════
+    // 1:05–1:28  OFFERTES — 2 bestaande + Slimme offerte Peters
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: OFFERTES — navTab");
+    await navTab(page, /offert/i);
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 1:05–1:28  OFFERTES — 2 bestaande + Slimme offerte voor Peters
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== OFFERTES ==");
-  await navTab(page, /offert/i);
-
-  // Even de bestaande offertes bekijken
-  await glide(page, 640, 300, 20);
-  await pause(page, 1500);
-  await glide(page, 640, 420, 18);
-  await pause(page, 2500, "bestaande offertes");
-
-  // Slimme offerte knop
-  await glideTo(page, "button.btn-ai");
-  await pause(page, 800);
-  await page.locator("button.btn-ai").first().click();
-  await pause(page, 1000);
-
-  // Selecteer Peters
-  const klantSel = await selectByOptionText(page, "Groenservice Peters");
-  await glideTo(page, ".overlay select.inp");
-  await klantSel.selectOption({ label: "Groenservice Peters" });
-  await pause(page, 700);
-
-  // Typ omschrijving met EXACT de diensten uit de prijslijst
-  // Kijker ziet: Tuinonderhoud, Bestrating vernieuwen, Snoeiwerk → straks in de offerte
-  await glideTo(page, "textarea[placeholder*='CV ketel']");
-  await slowType(
-    page,
-    "textarea[placeholder*='CV ketel']",
-    "Tuinonderhoud 5 uur, Bestrating vernieuwen 20m2, Snoeiwerk 3 uur"
-  );
-  await pause(page, 3500, "omschrijving met prijslijst-diensten");
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 1:28–2:05  AI GENEREERT — regels tonen met prijslijst-tarieven
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== AI GENEREREN ==");
-  await glideTo(page, "button.btn-ai.btn-full");
-  await page.locator("button.btn-ai.btn-full").first().click();
-
-  // Wacht op stap 2 (regels geladen)
-  await page.waitForSelector(".tot-box", { timeout: 15_000 });
-  await pause(page, 2500, "AI resultaat geladen");
-
-  const overlay = page.locator(".overlay").first();
-
-  // Scroll langzaam door de regels — kijker herkent de prijslijst-prijzen
-  await overlay.evaluate(el => el.scrollTo({ top: 60,  behavior: "smooth" }));
-  await pause(page, 2500);
-  await overlay.evaluate(el => el.scrollTo({ top: 160, behavior: "smooth" }));
-  await pause(page, 2500);
-
-  // Glide cursor langs elke regel om de diensten te benadrukken
-  const regels = overlay.locator(".off-cel, .off-row, tr").filter({ hasText: /uur|m²|stuk/i });
-  const nRegels = await regels.count();
-  for (let i = 0; i < Math.min(nRegels, 3); i++) {
-    const box = await regels.nth(i).boundingBox();
-    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 20);
-    await pause(page, 1800);
-  }
-
-  await overlay.evaluate(el => el.scrollTo({ top: 320, behavior: "smooth" }));
-  await pause(page, 2500);
-
-  // Totaalbox — prominent zichtbaar
-  await glideTo(page, ".tot-box");
-  await pause(page, 10000, "totaal zichtbaar €1.489,51");
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 2:05–2:20  OFFERTE VERSTUREN — Mail 4 sec, WhatsApp hover
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== VERSTUREN ==");
-
-  // Scroll naar Opslaan & Verstuur
-  await overlay.evaluate(el => el.scrollTo({ top: 9999, behavior: "smooth" }));
-  await pause(page, 1000);
-  await glideTo(page, "button.btn-ai:not(.btn-full)");
-  await page.locator("button.btn-ai:not(.btn-full)").first().click();
-
-  // Wacht tot offerte in lijst staat
-  await page.waitForSelector(".off-tbl-row.mob-hide, .mob-card", { timeout: 10_000 });
-  await pause(page, 1500);
-
-  // Mail knop — native alert blijft 4 sec zichtbaar
-  page.once("dialog", async dialog => {
-    await new Promise<void>(res => setTimeout(res, 4000));
-    await dialog.accept();
-  });
-  await glideTo(page, ".btn-blue.btn-sm");
-  await page.locator(".btn-blue.btn-sm").first().click();
-  await pause(page, 5500, "mail-alert 4 sec zichtbaar");
-
-  // WhatsApp knop hoveren
-  await glideTo(page, ".btn-green.btn-sm");
-  await page.locator(".btn-green.btn-sm").first().hover();
-  await pause(page, 4000, "WhatsApp knop");
-
-  // ── Portal-sign + status patch (achtergrond, niet zichtbaar) ───────────────
-  if (capturedPortalToken) {
-    await portalSign(jwt, capturedPortalToken);
-    await patchOfferteStatus(jwt, capturedPortalToken, "Ondertekend");
-  } else {
-    console.warn("portal_token niet gevangen — factuur wordt niet aangemaakt");
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 2:20–2:30  STATUS ONDERTEKEND
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== ONDERTEKEND ==");
-  await navTab(page, /offert/i);
-
-  await page.waitForSelector(".badge", { timeout: 8000 });
-  await glideTo(page, ".badge");
-  await pause(page, 4000, "Ondertekend badge");
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 2:30–2:43  FINANCIËN — factuur automatisch aangemaakt
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== FINANCIËN ==");
-  await navTab(page, /financ/i);
-
-  await page.waitForSelector(".f-row, .tw tbody tr", { timeout: 10_000 });
-  await pause(page, 1000);
-
-  await glide(page, 640, 340, 22);
-  await pause(page, 2000);
-  await glide(page, 960, 340, 18);
-  await pause(page, 5000, "factuur zichtbaar");
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 2:43–2:55  PLANNING — afspraak Peters + weekoverzicht
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== PLANNING ==");
-  await navTab(page, /planning/i);
-  await page.waitForSelector(".cal-grid, .cal-wg-outer", { timeout: 8000 });
-
-  // + Opdracht
-  await glideTo(page, ".ph button.btn-dark");
-  await page.locator(".ph button.btn-dark").last().click();
-  await pause(page, 800);
-
-  // Klant Peters
-  const planKlant = await selectByOptionText(page, "Groenservice Peters");
-  await glideTo(page, ".overlay select.inp");
-  await planKlant.selectOption({ label: "Groenservice Peters" });
-  await pause(page, 500);
-
-  // Dienst
-  await glideTo(page, "input[placeholder='Wat ga je doen?']");
-  await slowType(page, "input[placeholder='Wat ga je doen?']", "Startopname groenaanleg");
-  await pause(page, 600);
-
-  // Opslaan
-  await glideTo(page, ".overlay .btn-dark.btn-full");
-  await page.locator(".overlay .btn-dark.btn-full").first().click();
-  await pause(page, 1500);
-
-  // Schakel naar weekoverzicht
-  await page.locator(".cal-vt-btn:has-text('Week')").click();
-  await pause(page, 1500);
-  await glide(page, 640, 440, 22);
-  await pause(page, 1000);
-
-  const taskBlk = page.locator(".cal-task-blk").first();
-  if (await taskBlk.isVisible().catch(() => false)) {
-    await glideTo(page, ".cal-task-blk");
+    await glide(page, 640, 300, 20);
     await pause(page, 1500);
+    await glide(page, 640, 420, 18);
+    await pause(page, 2500, "bestaande offertes");
+
+    console.log("STAP: Slimme offerte — klik btn-ai");
+    await glideTo(page, "button.btn-ai");
+    await pause(page, 800);
+    await page.locator("button.btn-ai").first().click();
+    await pause(page, 1000, "AI modal open");
+
+    console.log("STAP: selecteer Peters in klantdropdown");
+    // Selecteer Peters via de select in de overlay
+    const klantSelect = page.locator(".overlay select").first();
+    await klantSelect.waitFor({ state: "visible", timeout: 8000 });
+    await klantSelect.selectOption({ label: "Groenservice Peters" });
+    await pause(page, 700);
+
+    console.log("STAP: typ omschrijving (prijslijst-diensten)");
+    await glideTo(page, "textarea");
+    await slowType(
+      page,
+      "textarea",
+      "Tuinonderhoud 5 uur, Bestrating vernieuwen 20m2, Snoeiwerk 3 uur"
+    );
+    await pause(page, 3500, "omschrijving klaar");
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 1:28–2:05  AI GENEREERT
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: klik Genereer");
+    await glideTo(page, "button.btn-ai.btn-full");
+    await page.locator("button.btn-ai.btn-full").first().click();
+
+    console.log("STAP: wacht op .tot-box");
+    await page.waitForSelector(".tot-box", { timeout: 15_000 });
+    console.log("  tot-box gevonden");
+    await pause(page, 2500, "AI resultaat geladen");
+
+    const overlay = page.locator(".overlay").first();
+
+    console.log("STAP: scroll door regels");
+    await overlay.evaluate(el => el.scrollTo({ top: 80,  behavior: "smooth" }));
+    await pause(page, 2500);
+    await overlay.evaluate(el => el.scrollTo({ top: 200, behavior: "smooth" }));
+    await pause(page, 2500);
+
+    // Glide langs de regels — kijker herkent Tuinonderhoud/Bestrating/Snoeiwerk
+    const regels = overlay.locator("tr, [class*='row']").filter({ hasText: /uur|m²|stuk/i });
+    const nRegels = await regels.count();
+    console.log(`  offerte-regels: ${nRegels}`);
+    for (let i = 0; i < Math.min(nRegels, 3); i++) {
+      const box = await regels.nth(i).boundingBox();
+      if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 20);
+      await pause(page, 1800);
+    }
+
+    await overlay.evaluate(el => el.scrollTo({ top: 9999, behavior: "smooth" }));
+    await pause(page, 2000);
+
+    console.log("STAP: glide naar totaalbox");
+    await glideTo(page, ".tot-box");
+    await pause(page, 10000, "totaal €1.368,51 zichtbaar");
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 2:05–2:20  VERSTUREN
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: Opslaan & Verstuur");
+    await glideTo(page, "button.btn-ai:not(.btn-full)");
+    await page.locator("button.btn-ai:not(.btn-full)").first().click();
+
+    console.log("STAP: wacht op offerte in lijst");
+    await page.waitForSelector(".off-tbl-row.mob-hide, .mob-card", { timeout: 10_000 });
+    await pause(page, 1500);
+
+    console.log("STAP: mail knop — native alert 4s");
+    page.once("dialog", async dialog => {
+      await new Promise<void>(res => setTimeout(res, 4000));
+      await dialog.accept();
+    });
+    await glideTo(page, ".btn-blue.btn-sm");
+    await page.locator(".btn-blue.btn-sm").first().click();
+    await pause(page, 5500, "mail-alert 4s zichtbaar");
+
+    console.log("STAP: WhatsApp hover");
+    await glideTo(page, ".btn-green.btn-sm");
+    await page.locator(".btn-green.btn-sm").first().hover();
+    await pause(page, 4000, "WhatsApp knop");
+
+    // Portal-sign (achtergrond)
+    if (capturedPortalToken) {
+      console.log("STAP: portal-sign");
+      await portalSign(jwt, capturedPortalToken);
+      await patchOfferteStatus(jwt, capturedPortalToken, "Ondertekend");
+    } else {
+      console.warn("  [WARN] portal_token niet gevangen — badge mogelijk niet zichtbaar");
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 2:20–2:30  ONDERTEKEND
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: OFFERTES — Ondertekend badge");
+    await navTab(page, /offert/i);
+    const badge = page.locator(".badge").first();
+    await badge.waitFor({ state: "visible", timeout: 8000 }).catch(() => {
+      console.warn("  [WARN] badge niet zichtbaar — door");
+    });
+    await glideTo(page, ".badge");
+    await pause(page, 4000, "Ondertekend badge");
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 2:30–2:43  FINANCIËN
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: FINANCIËN — navTab");
+    await navTab(page, /financ/i);
+    await page.waitForSelector(".f-row, .tw tbody tr", { timeout: 10_000 }).catch(() => {
+      console.warn("  [WARN] geen factuurrows gevonden");
+    });
+    await pause(page, 1000);
+    await glide(page, 640, 340, 22);
+    await pause(page, 2000);
+    await glide(page, 960, 340, 18);
+    await pause(page, 5000, "factuur zichtbaar");
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 2:43–2:55  PLANNING
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: PLANNING — navTab");
+    await navTab(page, /planning/i);
+    await page.waitForSelector(".cal-grid, .cal-wg-outer", { timeout: 8000 }).catch(() => {
+      console.warn("  [WARN] kalender niet gevonden");
+    });
+
+    console.log("STAP: planning — + Opdracht");
+    await glideTo(page, ".ph button.btn-dark");
+    await page.locator(".ph button.btn-dark").last().click();
+    await pause(page, 800);
+
+    // Klant selecteren in planning overlay
+    const planSelect = page.locator(".overlay select").first();
+    await planSelect.waitFor({ state: "visible", timeout: 8000 }).catch(() => {
+      console.warn("  [WARN] planning klantselect niet gevonden");
+    });
+    await planSelect.selectOption({ label: "Groenservice Peters" }).catch(() => {
+      console.warn("  [WARN] Peters niet in planning dropdown");
+    });
+    await pause(page, 500);
+
+    console.log("STAP: typ dienst planning");
+    await glideTo(page, "input[placeholder='Wat ga je doen?']");
+    await slowType(page, "input[placeholder='Wat ga je doen?']", "Startopname groenaanleg");
+    await pause(page, 600);
+
+    console.log("STAP: planning opslaan");
+    await glideTo(page, ".overlay .btn-dark.btn-full");
+    await page.locator(".overlay .btn-dark.btn-full").first().click();
+    await pause(page, 1500);
+
+    // Weekoverzicht
+    const weekBtn = page.locator(".cal-vt-btn:has-text('Week')");
+    if (await weekBtn.isVisible().catch(() => false)) {
+      await weekBtn.click();
+      await pause(page, 1500);
+    }
+    await glide(page, 640, 440, 22);
+    await pause(page, 1000);
+
+    const taskBlk = page.locator(".cal-task-blk").first();
+    if (await taskBlk.isVisible().catch(() => false)) {
+      await glideTo(page, ".cal-task-blk");
+      await pause(page, 1500);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 2:55–3:20  BOEKHOUDING TOUR
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: BOEKHOUDING — navTab Financiën");
+    await navTab(page, /financ/i);
+    await pause(page, 1000);
+
+    console.log("STAP: BTW tab");
+    await glideTo(page, "button:has-text('📊 BTW')");
+    await page.locator("button:has-text('📊 BTW')").click();
+    await pause(page, 6000, "BTW-overzicht");
+
+    console.log("STAP: Uitgaven tab");
+    await glideTo(page, "button:has-text('💳 Uitgaven')");
+    await page.locator("button:has-text('💳 Uitgaven')").click();
+    await pause(page, 6000, "Uitgaven-overzicht");
+
+    console.log("STAP: Scan knop hover");
+    await glideTo(page, "button.btn-ghost");
+    await page.locator("button.btn-ghost").filter({ hasText: /Scan/i }).first().hover().catch(() => {
+      console.warn("  [WARN] Scan knop niet gevonden");
+    });
+    await pause(page, 3000, "Scan-knop hover");
+
+    console.log("STAP: Winst tab");
+    await glideTo(page, "button:has-text('📈 Winst')");
+    await page.locator("button:has-text('📈 Winst')").click();
+    await pause(page, 6000, "Winst-grafiek");
+
+    console.log("STAP: terug naar Facturen");
+    await glideTo(page, "button:has-text('📄 Facturen')");
+    await page.locator("button:has-text('📄 Facturen')").click();
+    await pause(page, 4000, "einde — facturen");
+
+    console.log("=== DEMO COMPLEET ===");
+
+  } finally {
+    // Context sluiten triggert video-opslag — altijd uitvoeren, ook bij fout
+    if (context) {
+      console.log("STAP: context.close() — video opslaan");
+      await context.close();
+      console.log("  video opgeslagen in demo-videos/");
+    }
   }
-
-  // Categorieën hover
-  await glideTo(page, "button:has-text('🏷️')");
-  await page.locator("button:has-text('🏷️')").hover();
-  await pause(page, 1500);
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 2:55–3:20  BOEKHOUDING TOUR
-  // ═══════════════════════════════════════════════════════════════════════════
-  console.log("== BOEKHOUDING ==");
-  await navTab(page, /financ/i);
-  await pause(page, 1000);
-
-  // BTW — 6 sec
-  await glideTo(page, "button:has-text('📊 BTW')");
-  await page.locator("button:has-text('📊 BTW')").click();
-  await pause(page, 6000, "BTW-overzicht");
-
-  // Uitgaven — 6 sec
-  await glideTo(page, "button:has-text('💳 Uitgaven')");
-  await page.locator("button:has-text('💳 Uitgaven')").click();
-  await pause(page, 6000, "Uitgaven-overzicht");
-
-  // Scan knop hoveren — 3 sec
-  await glideTo(page, "button.btn-ghost");
-  await page.locator("button.btn-ghost").filter({ hasText: /Scan/i }).first().hover();
-  await pause(page, 3000, "Scan-knop");
-
-  // Winst — 6 sec
-  await glideTo(page, "button:has-text('📈 Winst')");
-  await page.locator("button:has-text('📈 Winst')").click();
-  await pause(page, 6000, "Winst-grafiek");
-
-  // Eindigen op Facturen
-  await glideTo(page, "button:has-text('📄 Facturen')");
-  await page.locator("button:has-text('📄 Facturen')").click();
-  await pause(page, 4000, "einde — facturen-dashboard");
-
-  // ── Opslaan video ─────────────────────────────────────────────────────────
-  console.log("Context sluiten — video wordt opgeslagen in demo-videos/");
-  await context.close();
 });
