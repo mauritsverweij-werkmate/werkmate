@@ -53,6 +53,12 @@ function getJwt(): string {
   return JSON.parse(entry.value).access_token;
 }
 
+function isoDate(daysAgo = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
+
 async function cleanupDemoData(jwt: string) {
   const headers = {
     "Authorization": `Bearer ${jwt}`,
@@ -60,6 +66,7 @@ async function cleanupDemoData(jwt: string) {
     "Prefer":        "return=minimal",
     "Content-Type":  "application/json",
   };
+  // Prijslijst wordt NIET verwijderd
   for (const tbl of ["facturen","offertes","werkbonnen","planning","ritten","uitgaven","klanten"]) {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/${tbl}?user_id=eq.${USER_ID}`,
@@ -67,6 +74,106 @@ async function cleanupDemoData(jwt: string) {
     );
     console.log(`cleanup ${tbl}: ${r.status}`);
   }
+}
+
+async function seedDemoData(jwt: string) {
+  const h = {
+    "Authorization": `Bearer ${jwt}`,
+    "apikey":        ANON_KEY,
+    "Content-Type":  "application/json",
+    "Prefer":        "return=minimal",
+  };
+  const base = `${SUPABASE_URL}/rest/v1`;
+  const today = isoDate(0);
+
+  // ── Klanten ──────────────────────────────────────────────────────────────
+  await fetch(`${base}/klanten`, {
+    method: "POST", headers: h,
+    body: JSON.stringify([
+      { user_id: USER_ID, naam: "Hoveniersbedrijf Van Dijk", tel: "06-12345678", email: "vandijk@hoveniers.nl",   adres: "Tuinlaan 15, Utrecht"     },
+      { user_id: USER_ID, naam: "Tuinservice Bakker",         tel: "06-87654321", email: "bakker@tuinservice.nl", adres: "Molenweg 8, Amsterdam"     },
+      { user_id: USER_ID, naam: "Villa Zonnedal",             tel: "06-11223344", email: "info@villazonnedal.nl", adres: "Zonneweg 3, Rotterdam"     },
+    ]),
+  });
+
+  // ── Offertes ──────────────────────────────────────────────────────────────
+  await fetch(`${base}/offertes`, {
+    method: "POST", headers: h,
+    body: JSON.stringify([
+      {
+        user_id: USER_ID,
+        klant:   "Hoveniersbedrijf Van Dijk",
+        dienst:  "Jaarcontract tuinonderhoud",
+        bedrag:  "€ 3.448,50",
+        regels:  JSON.stringify([
+          { omschrijving: "Maandelijks onderhoud", aantal: 12, eenheid: "maand", prijs: 195, btw_pct: 21 },
+          { omschrijving: "Seizoenssnoei",          aantal:  2, eenheid: "dag",   prijs: 285, btw_pct: 21 },
+        ]),
+        subtotaal: 2910, btw: 611.10, totaal: 3521.10,
+        status:  "Verstuurd",
+        datum:   isoDate(5),
+        opmerkingen: "Startdatum 1 juli 2026. Jaarcontract.",
+      },
+      {
+        user_id: USER_ID,
+        klant:   "Tuinservice Bakker",
+        dienst:  "Bestrating oprit 60m²",
+        bedrag:  "€ 3.673,56",
+        regels:  JSON.stringify([
+          { omschrijving: "Betontegels 60m²",    aantal: 60, eenheid: "m²",   prijs:  42, btw_pct: 21 },
+          { omschrijving: "Grondwerk egaliseren", aantal:  8, eenheid: "uur",  prijs:  72, btw_pct: 21 },
+          { omschrijving: "Afvoer puin",          aantal:  1, eenheid: "stuk", prijs: 165, btw_pct: 21 },
+        ]),
+        subtotaal: 3081, btw: 647.01, totaal: 3728.01,
+        status:  "In afwachting",
+        datum:   isoDate(2),
+        opmerkingen: "",
+      },
+    ]),
+  });
+
+  // ── Factuur Betaald ───────────────────────────────────────────────────────
+  await fetch(`${base}/facturen`, {
+    method: "POST", headers: h,
+    body: JSON.stringify([{
+      user_id:      USER_ID,
+      nummer:       "2026-001",
+      klant:        "Villa Zonnedal",
+      klant_email:  "info@villazonnedal.nl",
+      datum:        isoDate(10),
+      vervaldatum:  isoDate(3),
+      regels:       JSON.stringify([
+        { omschrijving: "Snoeiwerkzaamheden", aantal: 10, eenheid: "uur",  prijs: 72, btw_pct: 21 },
+        { omschrijving: "Materialen",          aantal:  1, eenheid: "stuk", prijs: 85, btw_pct: 21 },
+      ]),
+      btw:    169.05,
+      totaal: 974.05,
+      status: "Betaald",
+    }]),
+  });
+
+  // ── Planning — 2 items vandaag ────────────────────────────────────────────
+  await fetch(`${base}/planning`, {
+    method: "POST", headers: h,
+    body: JSON.stringify([
+      {
+        user_id:    USER_ID, datum: today,
+        tijd: "09:00", eindtijd: "12:00",
+        klant: "Hoveniersbedrijf Van Dijk",
+        dienst: "Tuinonderhoud", adres: "Tuinlaan 15, Utrecht",
+        status: "Ingepland", herhaal: "", categorie: "", medewerker: "",
+      },
+      {
+        user_id:    USER_ID, datum: today,
+        tijd: "14:00", eindtijd: "15:00",
+        klant: "Tuinservice Bakker",
+        dienst: "Offerte opname oprit", adres: "Molenweg 8, Amsterdam",
+        status: "Ingepland", herhaal: "", categorie: "", medewerker: "",
+      },
+    ]),
+  });
+
+  console.log("Seed data ingevoerd.");
 }
 
 async function portalSign(jwt: string, token: string): Promise<boolean> {
@@ -77,8 +184,8 @@ async function portalSign(jwt: string, token: string): Promise<boolean> {
       action:       "portal-sign",
       portal_token: token,
       handtekening: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjE+ibYAAAAASUVORK5CYII=",
-      klant_email:  "vandijk@gmail.com",
-      klant_naam:   "Hoveniersbedrijf Van Dijk",
+      klant_email:  "peters@groenservice.nl",
+      klant_naam:   "Groenservice Peters",
     }),
   });
   console.log("portal-sign:", r.status);
@@ -98,30 +205,30 @@ async function patchOfferteStatus(jwt: string, token: string, status: string) {
   });
 }
 
-// ── AI offerte mock data ──────────────────────────────────────────────────────
+// ── AI offerte mock data (voor Peters) ───────────────────────────────────────
 const AI_JSON = JSON.stringify({
-  dienst: "Tuinaanleg Villa Zonnedal",
+  dienst: "Groenaanleg bedrijfspand Peters",
   regels: [
-    { omschrijving: "Bestrating 80m²",        aantal: 80, eenheid: "m²",   prijs:  38, btw_pct: 21 },
-    { omschrijving: "Borders aanleggen",       aantal: 16, eenheid: "uur",  prijs:  72, btw_pct: 21 },
-    { omschrijving: "Beplanting en graszaad",  aantal:  1, eenheid: "stuk", prijs: 890, btw_pct: 21 },
-    { omschrijving: "Grondwerk en afvoer",     aantal:  8, eenheid: "uur",  prijs:  72, btw_pct: 21 },
+    { omschrijving: "Gazon aanleggen 120m²",  aantal: 120, eenheid: "m²",   prijs:  18, btw_pct: 21 },
+    { omschrijving: "Heesters plaatsen",       aantal:  25, eenheid: "stuk", prijs:  28, btw_pct: 21 },
+    { omschrijving: "Terras bestrating 80m²",  aantal:  80, eenheid: "m²",   prijs:  38, btw_pct: 21 },
+    { omschrijving: "Grondvoorbereiding",      aantal:  12, eenheid: "uur",  prijs:  72, btw_pct: 21 },
   ],
-  subtotaal: 5242,
-  btw:       1100.82,
-  totaal:    6342.82,
-  opmerkingen: "2 jaar garantie op aanleg en materialen.",
+  subtotaal: 6764,
+  btw:       1420.44,
+  totaal:    8184.44,
+  opmerkingen: "2 jaar garantie op aanleg. Materialen inclusief.",
 });
 
 // ── Main demo test ────────────────────────────────────────────────────────────
 test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
-  test.setTimeout(420_000);
+  test.setTimeout(480_000);
 
-  // ── Cleanup ────────────────────────────────────────────────────────────────
+  // ── Setup: cleanup + seed ──────────────────────────────────────────────────
   const jwt = getJwt();
-  console.log("Cleaning up demo data…");
+  console.log("Cleanup + seed…");
   await cleanupDemoData(jwt);
-  console.log("Cleanup done.");
+  await seedDemoData(jwt);
 
   // ── Browser context + video ────────────────────────────────────────────────
   const context = await browser.newContext({
@@ -135,7 +242,6 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
   // ── Route mocks ────────────────────────────────────────────────────────────
   let capturedPortalToken: string | null = null;
 
-  // AI offerte + email send mocks
   await context.route("**/functions/v1/ai-proxy", async (route, request) => {
     const body = request.postDataJSON() as Record<string, unknown>;
     if (body?.action === "ai-offerte") {
@@ -145,17 +251,13 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
         body:        JSON.stringify({ content: [{ type: "text", text: AI_JSON }] }),
       });
     } else if (body?.action === "send-offer-email") {
-      await route.fulfill({
-        status:      200,
-        contentType: "application/json",
-        body:        JSON.stringify({ ok: true }),
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
     } else {
       await route.continue();
     }
   });
 
-  // Capture portal_token from offerte POST response
+  // Capture portal_token van Peters offerte insert
   await context.route("**/rest/v1/offertes*", async (route, request) => {
     const response = await route.fetch();
     if (request.method() === "POST" && !capturedPortalToken) {
@@ -163,7 +265,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
       try {
         const json = JSON.parse(text);
         const pt   = Array.isArray(json) ? json[0]?.portal_token : json?.portal_token;
-        if (pt) { capturedPortalToken = pt; console.log("portal_token captured:", pt); }
+        if (pt) { capturedPortalToken = pt; console.log("portal_token:", pt); }
       } catch { /* ignore */ }
       await route.fulfill({ response, body: text });
     } else {
@@ -171,105 +273,120 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     }
   });
 
-  // ── Navigate to app ────────────────────────────────────────────────────────
+  // ── Open app ───────────────────────────────────────────────────────────────
   await page.goto("https://app.werkmate.tech");
-  await page.waitForSelector("button.nb", { timeout: 15_000 });
-  await page.waitForTimeout(1500);
+  await page.waitForSelector("button.nb", { timeout: 20_000 });
+  await page.waitForTimeout(2000);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 0:00–0:10  DASHBOARD
+  // 0:00–0:12  DASHBOARD — gevulde stats
   // ─────────────────────────────────────────────────────────────────────────
   const statCards = page.locator(".sc");
   const nCards    = await statCards.count();
   for (let i = 0; i < Math.min(nCards, 4); i++) {
     const box = await statCards.nth(i).boundingBox();
-    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 22);
-    await page.waitForTimeout(600);
+    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 24);
+    await page.waitForTimeout(700);
   }
-  await glide(page, 640, 520, 22);
+  // Glide naar planning-sectie op dashboard
+  await glide(page, 640, 540, 22);
   await page.waitForTimeout(3000);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 0:10–0:35  KLANTEN — Hoveniersbedrijf Van Dijk toevoegen
+  // 0:12–0:27  PRIJSLIJST — tarieven tonen
   // ─────────────────────────────────────────────────────────────────────────
-  await navTab(page, /klanten|crm/i);
-
-  await glideTo(page, ".ph button.btn-dark");
-  await page.locator(".ph button.btn-dark").first().click();
-  await page.waitForTimeout(800);
-
-  await slowType(page, "input[placeholder='Bedrijf of naam']", "Hoveniersbedrijf Van Dijk");
-  await page.waitForTimeout(350);
-  await glideTo(page, "input[placeholder='06-12345678']");
-  await slowType(page, "input[placeholder='06-12345678']", "06-12345678");
-  await page.waitForTimeout(350);
-  await glideTo(page, "input[placeholder='klant@email.nl']");
-  await slowType(page, "input[placeholder='klant@email.nl']", "vandijk@gmail.com");
-  await page.waitForTimeout(350);
-  await glideTo(page, "input[placeholder='Straat 1, Amsterdam']");
-  await slowType(page, "input[placeholder='Straat 1, Amsterdam']", "Utrecht");
-  await page.waitForTimeout(500);
-
-  await glideTo(page, ".overlay .btn-dark.btn-full");
-  await page.locator(".overlay .btn-dark.btn-full").first().click();
-
-  await page.waitForSelector(".pc, .mob-card", { timeout: 8000 });
-  await glideTo(page, ".pc, .mob-card");
-  await page.waitForTimeout(3000);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // 0:35–0:50  PRIJSLIJST — tarieven bekijken
-  // ─────────────────────────────────────────────────────────────────────────
-  // Open via account-dropdown onderaan sidebar
+  // Via account-dropdown onderaan sidebar
   await glideTo(page, ".sb-acct-btn");
   await page.locator(".sb-acct-btn").click();
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(700);
   await glideTo(page, ".sb-dd-item");
   await page.locator(".sb-dd-item").filter({ hasText: /Prijslijst/i }).click();
 
-  // Wacht tot tarieven geladen zijn
   await page.waitForSelector(".pl-row", { timeout: 8000 });
   await page.waitForTimeout(1500);
 
-  // Glide langzaam langs de rijen
+  // Glide langs tariefregels
   const plRows = page.locator(".pl-row");
   const nRows  = await plRows.count();
-  for (let i = 0; i < Math.min(nRows, 6); i++) {
+  for (let i = 0; i < Math.min(nRows, 7); i++) {
     const box = await plRows.nth(i).boundingBox();
-    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 20);
-    await page.waitForTimeout(350);
+    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 18);
+    await page.waitForTimeout(300);
   }
   await page.waitForTimeout(5000); // 5 sec bekijken
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 0:50–1:10  OFFERTES — Slimme offerte opstarten
+  // 0:27–0:52  KLANTEN — 3 bestaande tonen + Groenservice Peters toevoegen
+  // ─────────────────────────────────────────────────────────────────────────
+  await navTab(page, /klanten|crm/i);
+
+  // Glide langs bestaande klantkaarten
+  const existingCards = page.locator(".pc");
+  const nExisting     = await existingCards.count();
+  for (let i = 0; i < Math.min(nExisting, 3); i++) {
+    const box = await existingCards.nth(i).boundingBox();
+    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 20);
+    await page.waitForTimeout(600);
+  }
+  await page.waitForTimeout(1500);
+
+  // + Klant knop
+  await glideTo(page, ".ph button.btn-dark");
+  await page.locator(".ph button.btn-dark").first().click();
+  await page.waitForTimeout(800);
+
+  // Groenservice Peters typen
+  await slowType(page, "input[placeholder='Bedrijf of naam']",     "Groenservice Peters");
+  await page.waitForTimeout(300);
+  await glideTo(page, "input[placeholder='06-12345678']");
+  await slowType(page, "input[placeholder='06-12345678']",          "06-55667788");
+  await page.waitForTimeout(300);
+  await glideTo(page, "input[placeholder='klant@email.nl']");
+  await slowType(page, "input[placeholder='klant@email.nl']",       "peters@groenservice.nl");
+  await page.waitForTimeout(300);
+  await glideTo(page, "input[placeholder='Straat 1, Amsterdam']");
+  await slowType(page, "input[placeholder='Straat 1, Amsterdam']",  "Groenstraat 12, Den Haag");
+  await page.waitForTimeout(400);
+
+  // Opslaan
+  await glideTo(page, ".overlay .btn-dark.btn-full");
+  await page.locator(".overlay .btn-dark.btn-full").first().click();
+
+  await page.waitForSelector(".pc, .mob-card", { timeout: 8000 });
+  await glideTo(page, ".pc:last-of-type, .mob-card:last-of-type");
+  await page.waitForTimeout(3000);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 0:52–1:12  OFFERTES — 2 bestaande + Slimme offerte voor Peters
   // ─────────────────────────────────────────────────────────────────────────
   await navTab(page, /offert/i);
 
-  await glide(page, 640, 350, 20);
+  // Glide langs bestaande offertes
+  await glide(page, 640, 320, 20);
   await page.waitForTimeout(2000);
 
+  // Klik Slimme offerte
   await glideTo(page, "button.btn-ai");
   await page.locator("button.btn-ai").first().click();
   await page.waitForTimeout(1000);
 
-  // Klant selecteren
-  const klantSel = await selectByOptionText(page, "Hoveniersbedrijf Van Dijk");
+  // Selecteer Peters (niet Van Dijk of Bakker)
+  const klantSel = await selectByOptionText(page, "Groenservice Peters");
   await glideTo(page, ".overlay select.inp");
-  await klantSel.selectOption({ label: "Hoveniersbedrijf Van Dijk" });
+  await klantSel.selectOption({ label: "Groenservice Peters" });
   await page.waitForTimeout(600);
 
-  // Projectomschrijving typen
+  // Type projectomschrijving voor Peters
   await glideTo(page, "textarea[placeholder*='CV ketel']");
   await slowType(
     page,
     "textarea[placeholder*='CV ketel']",
-    "Volledige tuinaanleg 80m2 bestrating, borders en beplanting"
+    "Groenaanleg bedrijfspand 200m2 gazon, heesters en terrasbestrating"
   );
   await page.waitForTimeout(3000);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 0:55–1:35  AI GENEREERT — scroll door regels + totaal
+  // 1:12–1:52  AI GENEREERT — scroll door regels + totaal
   // ─────────────────────────────────────────────────────────────────────────
   await glideTo(page, "button.btn-ai.btn-full");
   await page.locator("button.btn-ai.btn-full").first().click();
@@ -277,47 +394,44 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
   await page.waitForSelector(".tot-box", { timeout: 15_000 });
   await page.waitForTimeout(2000);
 
-  // Scroll langzaam door offerte regels
   const overlay = page.locator(".overlay").first();
-  await overlay.evaluate(el => el.scrollTo({ top: 80, behavior: "smooth" }));
+  await overlay.evaluate(el => el.scrollTo({ top: 80,  behavior: "smooth" }));
   await page.waitForTimeout(1800);
-  await overlay.evaluate(el => el.scrollTo({ top: 220, behavior: "smooth" }));
+  await overlay.evaluate(el => el.scrollTo({ top: 230, behavior: "smooth" }));
   await page.waitForTimeout(1800);
-  await overlay.evaluate(el => el.scrollTo({ top: 380, behavior: "smooth" }));
+  await overlay.evaluate(el => el.scrollTo({ top: 400, behavior: "smooth" }));
   await page.waitForTimeout(1800);
 
-  // Hover totaalbox
   await glideTo(page, ".tot-box");
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(5000); // 5 sec op totaalbox
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 1:35–1:55  OFFERTE VERSTUREN — Mail alert + WhatsApp hover
+  // 1:52–2:10  OFFERTE VERSTUREN — Opslaan & Verstuur, Mail 4 sec, WhatsApp
   // ─────────────────────────────────────────────────────────────────────────
-  // Scroll naar beneden voor Opslaan & Verstuur knop
   await overlay.evaluate(el => el.scrollTo({ top: 9999, behavior: "smooth" }));
   await page.waitForTimeout(800);
   await glideTo(page, "button.btn-ai:not(.btn-full)");
   await page.locator("button.btn-ai:not(.btn-full)").first().click();
 
-  // Wacht tot offerte in lijst verschijnt
+  // Wacht tot offerte in lijst
   await page.waitForSelector(".off-tbl-row.mob-hide, .mob-card", { timeout: 10_000 });
   await page.waitForTimeout(1500);
 
-  // Klik Mail knop — native alert zichtbaar gedurende 4 sec
+  // Mail knop — native alert 4 sec zichtbaar
   page.once("dialog", async dialog => {
     await new Promise<void>(res => setTimeout(res, 4000));
     await dialog.accept();
   });
   await glideTo(page, ".btn-blue.btn-sm");
   await page.locator(".btn-blue.btn-sm").first().click();
-  await page.waitForTimeout(5500); // wacht tot dialog geaccepteerd en pagina stabiel
+  await page.waitForTimeout(5500);
 
-  // Hover WhatsApp knop
+  // WhatsApp hover
   await glideTo(page, ".btn-green.btn-sm");
   await page.locator(".btn-green.btn-sm").first().hover();
   await page.waitForTimeout(3000);
 
-  // ── Achtergrond: portal-sign → factuur aanmaken + status patchen ──────────
+  // ── Portal sign + status patch (achtergrond) ───────────────────────────────
   if (capturedPortalToken) {
     await portalSign(jwt, capturedPortalToken);
     await patchOfferteStatus(jwt, capturedPortalToken, "Ondertekend");
@@ -326,7 +440,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 1:55–2:10  STATUS ONDERTEKEND — zichtbaar in offertes lijst
+  // 2:10–2:22  STATUS ONDERTEKEND — in lijst
   // ─────────────────────────────────────────────────────────────────────────
   await navTab(page, /offert/i);
 
@@ -335,7 +449,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
   await page.waitForTimeout(3000);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 2:10–2:25  FINANCIËN — factuur automatisch aangemaakt
+  // 2:22–2:37  FINANCIËN — factuur automatisch aangemaakt
   // ─────────────────────────────────────────────────────────────────────────
   await navTab(page, /financ/i);
 
@@ -348,33 +462,29 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
   await page.waitForTimeout(5000);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 2:25–2:40  PLANNING — afspraak toevoegen + weekoverzicht
+  // 2:37–2:52  PLANNING — afspraak Peters + weekoverzicht
   // ─────────────────────────────────────────────────────────────────────────
   await navTab(page, /planning/i);
   await page.waitForSelector(".cal-grid, .cal-wg-outer", { timeout: 8000 });
 
-  // + Opdracht knop
   await glideTo(page, ".ph button.btn-dark");
   await page.locator(".ph button.btn-dark").last().click();
   await page.waitForTimeout(800);
 
-  // Klant selecteren in formulier
-  const planKlant = await selectByOptionText(page, "Hoveniersbedrijf Van Dijk");
+  const planKlant = await selectByOptionText(page, "Groenservice Peters");
   await glideTo(page, ".overlay select.inp");
-  await planKlant.selectOption({ label: "Hoveniersbedrijf Van Dijk" });
+  await planKlant.selectOption({ label: "Groenservice Peters" });
   await page.waitForTimeout(500);
 
-  // Dienst typen
   await glideTo(page, "input[placeholder='Wat ga je doen?']");
-  await slowType(page, "input[placeholder='Wat ga je doen?']", "Tuinaanleg check");
+  await slowType(page, "input[placeholder='Wat ga je doen?']", "Startopname groenaanleg");
   await page.waitForTimeout(500);
 
-  // Opslaan
   await glideTo(page, ".overlay .btn-dark.btn-full");
   await page.locator(".overlay .btn-dark.btn-full").first().click();
   await page.waitForTimeout(1500);
 
-  // Weekoverzicht
+  // Weekoverzicht — 3 planning items zichtbaar
   await page.locator(".cal-vt-btn:has-text('Week')").click();
   await page.waitForTimeout(1500);
 
@@ -387,38 +497,32 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await page.waitForTimeout(1500);
   }
 
-  // Categorieën knop hoveren
   await glideTo(page, "button:has-text('🏷️')");
   await page.locator("button:has-text('🏷️')").hover();
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(2000);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 2:40–3:00  BOEKHOUDING TOUR
+  // 2:52–3:12  BOEKHOUDING TOUR
   // ─────────────────────────────────────────────────────────────────────────
   await navTab(page, /financ/i);
   await page.waitForTimeout(1000);
 
-  // BTW — 4 sec
   await glideTo(page, "button:has-text('📊 BTW')");
   await page.locator("button:has-text('📊 BTW')").click();
   await page.waitForTimeout(4000);
 
-  // Uitgaven — 4 sec
   await glideTo(page, "button:has-text('💳 Uitgaven')");
   await page.locator("button:has-text('💳 Uitgaven')").click();
   await page.waitForTimeout(4000);
 
-  // Hover Scan knop — 2 sec
   await glideTo(page, "button.btn-ghost");
   await page.locator("button.btn-ghost").filter({ hasText: /Scan/i }).first().hover();
   await page.waitForTimeout(2000);
 
-  // Winst — 4 sec
   await glideTo(page, "button:has-text('📈 Winst')");
   await page.locator("button:has-text('📈 Winst')").click();
   await page.waitForTimeout(4000);
 
-  // Eindigen op Facturen dashboard
   await glideTo(page, "button:has-text('📄 Facturen')");
   await page.locator("button:has-text('📄 Facturen')").click();
   await page.waitForTimeout(3000);

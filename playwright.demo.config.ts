@@ -34,7 +34,14 @@ export default defineConfig({
     launchOptions: {
       slowMo: 0,
       // Open without address bar / tab strip for clean video
-      args: ["--app=data:,", "--window-size=1280,800", "--disable-infobars"],
+      args: [
+        "--app=data:,",
+        "--window-size=1280,800",
+        "--disable-infobars",
+        "--lang=nl",
+        "--disable-translate",
+        "--disable-features=TranslateUI",
+      ],
     },
   },
   projects: [{ name: "chromium" }],
