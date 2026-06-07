@@ -34,11 +34,24 @@ async function isTokenValid(token: { access_token: string; expires_at: number })
   return res?.ok ?? false;
 }
 
+const TARGET_ORIGIN = "https://app.werkmate.tech";
+
 export default async function globalSetup(_config: FullConfig) {
   // Check if we have a still-valid session — skip login if so
   const stored = await getStoredToken();
   if (stored && await isTokenValid(stored)) {
-    console.log("[setup] Bestaande sessie nog geldig, login overgeslagen.");
+    // Ensure origin matches production URL (migrate localhost sessions)
+    try {
+      const raw = fs.readFileSync(AUTH_PATH, "utf-8");
+      const state = JSON.parse(raw);
+      if (state?.origins?.[0]?.origin !== TARGET_ORIGIN) {
+        state.origins[0].origin = TARGET_ORIGIN;
+        fs.writeFileSync(AUTH_PATH, JSON.stringify(state, null, 2));
+        console.log("[setup] Sessie-origin bijgewerkt naar", TARGET_ORIGIN);
+      } else {
+        console.log("[setup] Bestaande sessie nog geldig, login overgeslagen.");
+      }
+    } catch { /* ignore */ }
     return;
   }
 
@@ -81,7 +94,7 @@ export default async function globalSetup(_config: FullConfig) {
     cookies: [],
     origins: [
       {
-        origin: "http://localhost:5173",
+        origin: TARGET_ORIGIN,
         localStorage: [
           {
             name: "sb-cpfdyrscucicvqzpnisd-auth-token",
@@ -98,7 +111,7 @@ export default async function globalSetup(_config: FullConfig) {
 
   // Verifieer dat de app daadwerkelijk laadt met de nieuwe sessie
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ storageState: AUTH_PATH, baseURL: "http://localhost:5173" });
+  const context = await browser.newContext({ storageState: AUTH_PATH, baseURL: TARGET_ORIGIN });
   const page = await context.newPage();
   await page.goto("/");
   await page.waitForSelector(".shell", { timeout: 20000 }).catch(async () => {

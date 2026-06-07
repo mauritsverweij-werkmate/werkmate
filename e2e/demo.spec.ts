@@ -172,7 +172,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
   });
 
   // ── Navigate to app ────────────────────────────────────────────────────────
-  await page.goto("http://localhost:5173");
+  await page.goto("https://app.werkmate.tech");
   await page.waitForSelector("button.nb", { timeout: 15_000 });
   await page.waitForTimeout(1500);
 
@@ -218,7 +218,31 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
   await page.waitForTimeout(3000);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 0:35–0:55  OFFERTES — Slimme offerte opstarten
+  // 0:35–0:50  PRIJSLIJST — tarieven bekijken
+  // ─────────────────────────────────────────────────────────────────────────
+  // Open via account-dropdown onderaan sidebar
+  await glideTo(page, ".sb-acct-btn");
+  await page.locator(".sb-acct-btn").click();
+  await page.waitForTimeout(600);
+  await glideTo(page, ".sb-dd-item");
+  await page.locator(".sb-dd-item").filter({ hasText: /Prijslijst/i }).click();
+
+  // Wacht tot tarieven geladen zijn
+  await page.waitForSelector(".pl-row", { timeout: 8000 });
+  await page.waitForTimeout(1500);
+
+  // Glide langzaam langs de rijen
+  const plRows = page.locator(".pl-row");
+  const nRows  = await plRows.count();
+  for (let i = 0; i < Math.min(nRows, 6); i++) {
+    const box = await plRows.nth(i).boundingBox();
+    if (box) await glide(page, box.x + box.width / 2, box.y + box.height / 2, 20);
+    await page.waitForTimeout(350);
+  }
+  await page.waitForTimeout(5000); // 5 sec bekijken
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 0:50–1:10  OFFERTES — Slimme offerte opstarten
   // ─────────────────────────────────────────────────────────────────────────
   await navTab(page, /offert/i);
 

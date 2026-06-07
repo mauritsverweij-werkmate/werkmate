@@ -22,7 +22,7 @@ export default defineConfig({
   retries: 0,
   reporter: [["line"]],
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "https://app.werkmate.tech",
     headless: false,
     viewport: { width: 1280, height: 800 },
     storageState: "e2e/.auth/session.json",
@@ -31,7 +31,11 @@ export default defineConfig({
       dir: "demo-videos/",
       size: { width: 1280, height: 800 },
     },
-    launchOptions: { slowMo: 0 },
+    launchOptions: {
+      slowMo: 0,
+      // Open without address bar / tab strip for clean video
+      args: ["--app=data:,", "--window-size=1280,800", "--disable-infobars"],
+    },
   },
   projects: [{ name: "chromium" }],
 });
