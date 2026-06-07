@@ -617,22 +617,24 @@ select.pl-inp{appearance:none;-webkit-appearance:none;background-image:url("data
 .pl-inp.no-spinner{ -moz-appearance:textfield; }
 .pl-cat{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#94A3B8;padding:3px 7px;background:#F3F4F6;border-radius:5px;white-space:nowrap}
 .f-nr{font-weight:700;color:#6366F1;font-size:13px;white-space:nowrap}
-.f-klant{font-weight:600;color:#0F0F14;max-width:180px}
+.f-klant{font-weight:600;color:#0F0F14;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .f-date{color:#64748B;font-size:13px;white-space:nowrap}
 .f-overdue{color:#DC2626;font-weight:700}
 .f-amt{font-weight:700;color:#0F0F14;white-space:nowrap}
-.f-actions{display:flex;gap:5px;align-items:center;flex-wrap:nowrap}
-.f-btn{display:inline-flex;align-items:center;gap:4px;border:1.5px solid #E2E8F0;background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;color:#374151;transition:all .15s;white-space:nowrap;line-height:1}
+.f-actions{display:flex;gap:4px;align-items:center;flex-wrap:nowrap}
+.f-btn{display:inline-flex;align-items:center;gap:3px;border:1.5px solid #E2E8F0;background:#fff;border-radius:6px;padding:3px 7px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;color:#374151;transition:all .15s;white-space:nowrap;line-height:1}
 .f-btn:hover{border-color:#6366F1;color:#6366F1;background:#F5F3FF}
 .f-btn-remind{border-color:#FDE68A;color:#92400E;background:#FFFBEB}
 .f-btn-remind:hover{border-color:#F59E0B;background:#FEF3C7;color:#78350F}
-.f-btn-del{border-color:#FECACA;color:#EF4444;background:#FFF5F5;padding:5px 8px;font-size:13px;line-height:1}
+.f-btn-del{border-color:#FECACA;color:#EF4444;background:#FFF5F5;padding:3px 6px;line-height:1}
 .f-btn-del:hover{background:#FEE2E2;border-color:#EF4444}
 .f-btn-mail{border-color:#BFDBFE;color:#1D4ED8;background:#EFF6FF}
 .f-btn-mail:hover{background:#DBEAFE;border-color:#60A5FA}
 .f-btn-pdf{border-color:#E2E8F0;color:#374151;background:#fff}
 .f-btn-pdf:hover{border-color:#9CA3AF;background:#F9FAFB}
-.f-status-sel{appearance:none;-webkit-appearance:none;border:1.5px solid #E2E8F0;border-radius:8px;padding:5px 26px 5px 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:#374151;outline:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236366F1' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center;cursor:pointer;transition:border-color .15s,background-color .15s;font-weight:500;min-width:118px}
+.f-status-sel{appearance:none;-webkit-appearance:none;border:1.5px solid #E2E8F0;border-radius:7px;padding:4px 20px 4px 8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:#374151;outline:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236366F1' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 6px center;cursor:pointer;transition:border-color .15s,background-color .15s;font-weight:500;min-width:95px}
+.f-table td{padding:8px 10px;font-size:13px}
+.f-table th{padding:8px 10px}
 .f-status-sel:hover{border-color:#CBD5E1}
 .f-status-sel:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.11)}
 .f-status-concept{border-color:#E2E8F0;color:#6B7280;background-color:#F9FAFB}
@@ -3445,7 +3447,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
 
   const {subtotaal:cSub,btw9:cBtw9,btw21:cBtw21,btw:cBtw,totaal:cTot}=calcTotals(nieuw.regels);
   const fmtEur=(n)=>`€ ${Number(n).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  const fmtDate=(s)=>s?new Date(s).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"}):"-";
+  const fmtDate=(s)=>s?new Date(s).toLocaleDateString("nl-NL",{day:"numeric",month:"short"}):"-";
 
   return (<div>
     {autoReminderCount > 0 && (
@@ -3525,7 +3527,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
                 </div>
               );
             })}</div>
-          : <div className="card"><div className="tw"><table>
+          : <div className="card"><div className="tw"><table className="f-table">
               <thead><tr>
                 <th>Nummer</th>
                 <th>Klant</th>
@@ -3533,7 +3535,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
                 <th>Vervaldatum</th>
                 <th>Bedrag</th>
                 <th>Status</th>
-                <th style={{width:200}}>Acties</th>
+                <th style={{width:170}}>Acties</th>
               </tr></thead>
               <tbody>{filtered.map(f=>{
                 const st=dispStatus(f), od=isOverdue(f);
