@@ -3535,7 +3535,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
                 <th>Vervaldatum</th>
                 <th>Bedrag</th>
                 <th>Status</th>
-                <th style={{width:170}}>Acties</th>
+                <th style={{width:130}}>Acties</th>
               </tr></thead>
               <tbody>{filtered.map(f=>{
                 const st=dispStatus(f), od=isOverdue(f);
@@ -3547,7 +3547,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
                   <td className="f-date">{fmtDate(f.datum)}</td>
                   <td className={`f-date${od?" f-overdue":""}`}>{fmtDate(f.vervaldatum)}</td>
                   <td className="f-amt">{fmtEur(getTotal(f))}</td>
-                  <td style={{paddingTop:10,paddingBottom:10}}>
+                  <td>
                     <select
                       value={f.status||"Concept"}
                       onChange={e=>updateStatus(f.id,e.target.value)}
@@ -3556,10 +3556,10 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
                       {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
                     </select>
                   </td>
-                  <td style={{paddingTop:10,paddingBottom:10}}>
+                  <td>
                     <div className="f-actions">
                       <button className="f-btn f-btn-pdf" title="PDF downloaden" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}><FileText size={12} strokeWidth={1.8} color="#EF4444"/> PDF</button>
-                      {canRemind&&<button className="f-btn f-btn-remind" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}><Bell size={12} strokeWidth={1.8} color="#F59E0B"/> Herinnering</button>}
+                      {canRemind&&<button className="f-btn f-btn-remind" title="Betalingsherinnering sturen" onClick={()=>{setShowReminder(f);setEmailAddr(f.klant_email||"");}}><Bell size={12} strokeWidth={1.8} color="#F59E0B"/></button>}
                       <button className="f-btn f-btn-mail" onClick={()=>{setShowEmail(f);setEmailAddr(f.klant_email||"");}}><Mail size={12} strokeWidth={1.8} color="#3B82F6"/> Mail</button>
                       <button className="f-btn f-btn-del" title="Verwijderen" onClick={()=>{ if(window.confirm("Factuur verwijderen?")) { supabase.from("facturen").delete().eq("id",f.id).then(()=>refresh()); } }}><Trash2 size={12} strokeWidth={1.8} color="#EF4444"/></button>
                     </div>
