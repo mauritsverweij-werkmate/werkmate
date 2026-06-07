@@ -559,7 +559,7 @@ textarea.inp{min-height:100px;resize:vertical;line-height:1.65}
 .sel{appearance:none;-webkit-appearance:none;border:1.5px solid #E2E8F0;border-radius:9px;padding:6px 30px 6px 11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:#0F172A;outline:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236366F1' stroke-width='1.7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 9px center;cursor:pointer;transition:border-color .16s,box-shadow .18s;font-weight:400}
 .sel:hover{border-color:#CBD5E1}
 .sel:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:200;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px)}
 .modal{background:#fff;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 64px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.04)}
 .modal-lg{max-width:720px}
 .mh{padding:20px 24px;border-bottom:1px solid #F0F0F0;display:flex;justify-content:space-between;align-items:flex-start}
