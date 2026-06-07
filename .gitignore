@@ -40,3 +40,6 @@ playwright-report/
 # Claude Code
 .claude/
 .env.test
+
+# Demo video outputs
+demo-videos/*.webm
