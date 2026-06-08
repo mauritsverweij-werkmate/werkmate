@@ -541,12 +541,15 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await page.locator(".ph button.btn-dark").last().click();
     await pause(page, 800);
 
-    // Klant selecteren in planning overlay
-    const planSelect = page.locator(".overlay select").first();
-    await planSelect.waitFor({ state: "visible", timeout: 8000 }).catch(() => {
+    // Klant selecteren — gebruik de select met "-- Kies klant --" optie
+    // (het planning formulier heeft 3 selects: Categorie, Medewerker, Klant)
+    const planKlantSelect = page.locator(".overlay select").filter({
+      has: page.locator("option", { hasText: /Kies klant/i }),
+    }).first();
+    await planKlantSelect.waitFor({ state: "visible", timeout: 8000 }).catch(() => {
       console.warn("  [WARN] planning klantselect niet gevonden");
     });
-    await planSelect.selectOption({ label: "Groenservice Peters" }).catch(() => {
+    await planKlantSelect.selectOption({ value: "Groenservice Peters" }).catch(() => {
       console.warn("  [WARN] Peters niet in planning dropdown");
     });
     await pause(page, 500);
