@@ -83,7 +83,7 @@ async function cleanupDemoData(jwt: string) {
     "Prefer":        "return=minimal",
     "Content-Type":  "application/json",
   };
-  for (const tbl of ["facturen","offertes","werkbonnen","planning","ritten","uitgaven","klanten"]) {
+  for (const tbl of ["facturen","offertes","werkbonnen","planning","ritten","uitgaven","klanten","planning_categorieen"]) {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/${tbl}?user_id=eq.${USER_ID}`,
       { method: "DELETE", headers }
@@ -167,6 +167,14 @@ async function seedDemoData(jwt: string) {
     ]),
   });
   console.log(`  seed planning: ${r4.status}`);
+
+  const r5 = await fetch(`${base}/planning_categorieen`, {
+    method: "POST", headers: h,
+    body: JSON.stringify([
+      { user_id: USER_ID, naam: "Tuinonderhoud", kleur: "#22C55E" },
+    ]),
+  });
+  console.log(`  seed planning_categorieen: ${r5.status}`);
 }
 
 async function portalSign(jwt: string, token: string): Promise<boolean> {
@@ -440,15 +448,15 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     console.log("STAP: wacht op .tot-box");
     await page.waitForSelector(".tot-box", { timeout: 15_000 });
     console.log("  tot-box gevonden");
-    await pause(page, 2500, "AI resultaat geladen");
+    await pause(page, 1500, "AI resultaat geladen");
 
     const overlay = page.locator(".overlay").first();
 
     console.log("STAP: scroll door regels");
     await overlay.evaluate(el => el.scrollTo({ top: 80,  behavior: "smooth" }));
-    await pause(page, 2500);
+    await pause(page, 1500);
     await overlay.evaluate(el => el.scrollTo({ top: 200, behavior: "smooth" }));
-    await pause(page, 2500);
+    await pause(page, 2000);
 
     // Glide langs de regels — kijker herkent Tuinonderhoud/Bestrating/Snoeiwerk
     const regels = overlay.locator("tr, [class*='row']").filter({ hasText: /uur|m²|stuk/i });
@@ -465,7 +473,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
 
     console.log("STAP: glide naar totaalbox");
     await glideTo(page, ".tot-box");
-    await pause(page, 10000, "totaal €1.368,51 zichtbaar");
+    await pause(page, 7000, "totaal €1.368,51 zichtbaar");
 
     // ═════════════════════════════════════════════════════════════════════════
     // 2:05–2:20  VERSTUREN
@@ -492,13 +500,71 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await page.locator(".btn-green.btn-sm").first().hover();
     await pause(page, 3000, "WhatsApp knop");  // 1s korter dan eerder
 
-    // Portal-sign (achtergrond)
+    // ═════════════════════════════════════════════════════════════════════════
+    // KLANTPORTAAL — klant tekent digitaal (key feature)
+    // ═════════════════════════════════════════════════════════════════════════
     if (capturedPortalToken) {
-      console.log("STAP: portal-sign");
-      await portalSign(jwt, capturedPortalToken);
+      const portalUrl = `https://app.werkmate.tech/portal/${capturedPortalToken}`;
+      console.log("STAP: open klantportaal");
+      await page.goto(portalUrl);
+      await page.waitForSelector("input[placeholder='uw@email.nl']", { timeout: 15_000 });
+      await pause(page, 1500, "klant portaal — klant bekijkt offerte");
+
+      // Scroll zodat klant de offerte ziet
+      await page.evaluate(() => window.scrollTo({ top: 250, behavior: "smooth" }));
+      await pause(page, 2000);
+
+      // Vul e-mailadres in
+      console.log("STAP: portal — email invullen");
+      await page.locator("input[placeholder='uw@email.nl']").fill("peters@groenservice.nl");
+      await pause(page, 700);
+
+      // Klik "Offerte ondertekenen"
+      console.log("STAP: portal — klik Offerte ondertekenen");
+      await page.locator("button").filter({ hasText: /Offerte ondertekenen/i }).click();
+      await pause(page, 1000, "handtekening canvas geladen");
+
+      // Teken handtekening op canvas via muisbewegingen
+      console.log("STAP: portal — teken handtekening");
+      const canvas = page.locator("canvas").first();
+      const box    = await canvas.boundingBox();
+      if (box) {
+        // Vloeiende handtekeningcurve links → rechts
+        const pts: [number, number][] = [
+          [0.08, 0.55], [0.14, 0.30], [0.21, 0.65], [0.28, 0.30], [0.35, 0.65],
+          [0.42, 0.40], [0.49, 0.25], [0.56, 0.55], [0.63, 0.35], [0.70, 0.65],
+          [0.78, 0.30], [0.85, 0.55], [0.91, 0.45],
+        ];
+        await page.mouse.move(box.x + box.width * pts[0][0], box.y + box.height * pts[0][1]);
+        await page.mouse.down();
+        for (const [rx, ry] of pts.slice(1)) {
+          await page.mouse.move(box.x + box.width * rx, box.y + box.height * ry, { steps: 10 });
+          await page.waitForTimeout(55);
+        }
+        await page.mouse.up();
+      }
+      await pause(page, 1200, "handtekening gezet");
+
+      // Klik "Handtekening plaatsen"
+      console.log("STAP: portal — klik Handtekening plaatsen");
+      await glideTo(page, "button.btn-dark.btn-full");
+      await page.locator("button.btn-dark.btn-full").first().click();
+      await pause(page, 3000, "verwerken…");
+
+      // Portal toont bevestiging
+      await page.locator("text=Offerte geaccepteerd").first()
+        .waitFor({ state: "visible", timeout: 10_000 })
+        .catch(() => console.warn("  [WARN] geaccepteerd scherm niet zichtbaar"));
+      await pause(page, 3000, "Offerte geaccepteerd — factuur aangemaakt");
+
+      // Patch status naar Ondertekend en ga terug naar app
       await patchOfferteStatus(jwt, capturedPortalToken, "Ondertekend");
+      console.log("STAP: terug naar app");
+      await page.goto("https://app.werkmate.tech");
+      await page.waitForSelector("button.nb", { timeout: 15_000 });
+      await pause(page, 1500, "terug in app");
     } else {
-      console.warn("  [WARN] portal_token niet gevangen — badge mogelijk niet zichtbaar");
+      console.warn("  [WARN] portal_token niet gevangen — portal-sign overgeslagen");
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -522,31 +588,18 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
       console.warn("  [WARN] kalender niet gevonden");
     });
 
-    // Stap 1: categorie 'Tuinonderhoud' aanmaken (groene kleur)
-    console.log("STAP: planning — categorieën openen");
+    // Stap 1: toon categorie 'Tuinonderhoud' (al aangemaakt via seed)
+    console.log("STAP: planning — categorieën openen (toon Tuinonderhoud)");
     await glideTo(page, "button[title='Categorieën beheren']");
     await page.locator("button[title='Categorieën beheren']").click();
-    await pause(page, 700);
-
-    console.log("STAP: stel groene kleur in");
-    await page.locator("input.cat-inp-color").evaluate((el: HTMLInputElement) => {
-      el.value = "#22C55E";
-      el.dispatchEvent(new Event("input",  { bubbles: true }));
-      el.dispatchEvent(new Event("change", { bubbles: true }));
+    // Wacht tot de modal daadwerkelijk open is (cat-chip of modal body zichtbaar)
+    await page.waitForSelector(".overlay .mb", { timeout: 6000 }).catch(() => {
+      console.warn("  [WARN] categorie-modal niet geopend");
     });
-    await pause(page, 400);
-
-    console.log("STAP: typ categorienaam Tuinonderhoud");
-    await glideTo(page, "input[placeholder*='Installatie']");
-    await slowType(page, "input[placeholder*='Installatie']", "Tuinonderhoud");
-    await pause(page, 400);
-
-    console.log("STAP: categorie toevoegen klikken");
-    await page.locator(".overlay button.btn-dark").filter({ hasText: /Toevoegen/ }).click();
-    await pause(page, 800, "categorie aangemaakt");
+    await pause(page, 2500, "categorieën modal — Tuinonderhoud zichtbaar");
 
     // Sluit categorie-modal
-    await page.locator(".overlay button.mc").click();
+    await page.locator(".overlay button.mc").first().click();
     await pause(page, 600);
 
     // Stap 2: afspraak aanmaken voor Peters met de nieuwe categorie
