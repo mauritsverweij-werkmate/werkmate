@@ -480,8 +480,11 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     // ═════════════════════════════════════════════════════════════════════════
     console.log("STAP: Opslaan & Verstuur");
     // De save-knop zit in .overlay .modal-act — NIET de .btn-ai in de pagina-header (Slimme offerte)
+    const saveBtn = page.locator(".overlay .modal-act .btn-ai").first();
+    await saveBtn.scrollIntoViewIfNeeded();  // zorg dat sticky-bottom knop zichtbaar is
+    await saveBtn.waitFor({ state: "visible", timeout: 8000 });
     await glideTo(page, ".overlay .modal-act .btn-ai");
-    await page.locator(".overlay .modal-act .btn-ai").first().click();
+    await saveBtn.click();
 
     // Wacht tot de overlay ECHT verdwenen is (niet op .off-tbl-row.mob-hide — die zit al IN de overlay)
     console.log("STAP: wacht tot overlay gesloten");
@@ -489,13 +492,24 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
       .catch(() => console.warn("  [WARN] overlay nog zichtbaar na 15s"));
     await pause(page, 1200, "offerte opgeslagen — lijst zichtbaar");
 
+    // Mail-knop op de Peters-rij (meest recente offerte, bovenaan de tabel)
     console.log("STAP: mail knop — native alert 4s");
     page.once("dialog", async dialog => {
       await new Promise<void>(res => setTimeout(res, 4000));
       await dialog.accept();
     });
-    await glideTo(page, ".btn-blue.btn-sm");
-    await page.locator(".btn-blue.btn-sm").first().click();
+    // Peters is de net-opgeslagen offerte — selecteer mail-knop in zijn rij
+    const petersOffRij = page.locator("tr, .off-tbl-row").filter({ hasText: /Groenservice Peters/i }).first();
+    const mailKnop = petersOffRij.locator(".btn-blue.btn-sm");
+    const mailKnopExists = await mailKnop.count().then(n => n > 0).catch(() => false);
+    if (mailKnopExists) {
+      await glideTo(page, ".btn-blue.btn-sm");
+      await mailKnop.first().click();
+    } else {
+      // Fallback: eerste mail-knop in de lijst
+      await glideTo(page, ".btn-blue.btn-sm");
+      await page.locator(".btn-blue.btn-sm").first().click();
+    }
     await pause(page, 5500, "mail-alert 4s zichtbaar");
 
     console.log("STAP: WhatsApp hover");
@@ -510,62 +524,68 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
       const portalUrl = `https://app.werkmate.tech/portal/${capturedPortalToken}`;
       console.log("STAP: open klantportaal");
       await page.goto(portalUrl);
-      await page.waitForSelector("input[placeholder='uw@email.nl']", { timeout: 15_000 });
-      await pause(page, 1500, "klant portaal — klant bekijkt offerte");
 
-      // Scroll zodat klant de offerte ziet
-      await page.evaluate(() => window.scrollTo({ top: 250, behavior: "smooth" }));
-      await pause(page, 2000);
+      const portalGeladen = await page.waitForSelector("input[placeholder='uw@email.nl']", { timeout: 15_000 })
+        .then(() => true).catch(() => false);
 
-      // Vul e-mailadres in
-      console.log("STAP: portal — email invullen");
-      await page.locator("input[placeholder='uw@email.nl']").fill("peters@groenservice.nl");
-      await pause(page, 700);
+      if (portalGeladen) {
+        await pause(page, 1500, "klant portaal — klant bekijkt offerte");
 
-      // Klik "Offerte ondertekenen"
-      console.log("STAP: portal — klik Offerte ondertekenen");
-      await page.locator("button").filter({ hasText: /Offerte ondertekenen/i }).click();
-      await pause(page, 1000, "handtekening canvas geladen");
+        // Scroll zodat klant de offerte ziet
+        await page.evaluate(() => window.scrollTo({ top: 250, behavior: "smooth" }));
+        await pause(page, 2000);
 
-      // Teken handtekening op canvas via muisbewegingen
-      console.log("STAP: portal — teken handtekening");
-      const canvas = page.locator("canvas").first();
-      const box    = await canvas.boundingBox();
-      if (box) {
-        // Vloeiende handtekeningcurve links → rechts
-        const pts: [number, number][] = [
-          [0.08, 0.55], [0.14, 0.30], [0.21, 0.65], [0.28, 0.30], [0.35, 0.65],
-          [0.42, 0.40], [0.49, 0.25], [0.56, 0.55], [0.63, 0.35], [0.70, 0.65],
-          [0.78, 0.30], [0.85, 0.55], [0.91, 0.45],
-        ];
-        await page.mouse.move(box.x + box.width * pts[0][0], box.y + box.height * pts[0][1]);
-        await page.mouse.down();
-        for (const [rx, ry] of pts.slice(1)) {
-          await page.mouse.move(box.x + box.width * rx, box.y + box.height * ry, { steps: 10 });
-          await page.waitForTimeout(55);
+        // Vul e-mailadres in
+        console.log("STAP: portal — email invullen");
+        await page.locator("input[placeholder='uw@email.nl']").fill("peters@groenservice.nl");
+        await pause(page, 700);
+
+        // Klik "Offerte ondertekenen"
+        console.log("STAP: portal — klik Offerte ondertekenen");
+        await page.locator("button").filter({ hasText: /Offerte ondertekenen/i }).click();
+        await pause(page, 1000, "handtekening canvas geladen");
+
+        // Teken handtekening op canvas via muisbewegingen
+        console.log("STAP: portal — teken handtekening");
+        const sigCanvas = page.locator("canvas").first();
+        const sigBox    = await sigCanvas.boundingBox();
+        if (sigBox) {
+          const pts: [number, number][] = [
+            [0.08, 0.55], [0.14, 0.30], [0.21, 0.65], [0.28, 0.30], [0.35, 0.65],
+            [0.42, 0.40], [0.49, 0.25], [0.56, 0.55], [0.63, 0.35], [0.70, 0.65],
+            [0.78, 0.30], [0.85, 0.55], [0.91, 0.45],
+          ];
+          await page.mouse.move(sigBox.x + sigBox.width * pts[0][0], sigBox.y + sigBox.height * pts[0][1]);
+          await page.mouse.down();
+          for (const [rx, ry] of pts.slice(1)) {
+            await page.mouse.move(sigBox.x + sigBox.width * rx, sigBox.y + sigBox.height * ry, { steps: 10 });
+            await page.waitForTimeout(55);
+          }
+          await page.mouse.up();
         }
-        await page.mouse.up();
+        await pause(page, 1200, "handtekening gezet");
+
+        // Klik "Handtekening plaatsen"
+        console.log("STAP: portal — klik Handtekening plaatsen");
+        await glideTo(page, "button.btn-dark.btn-full");
+        await page.locator("button.btn-dark.btn-full").first().click();
+        await pause(page, 3000, "verwerken…");
+
+        // Portal toont bevestiging
+        await page.locator("text=Offerte geaccepteerd").first()
+          .waitFor({ state: "visible", timeout: 10_000 })
+          .catch(() => console.warn("  [WARN] geaccepteerd scherm niet zichtbaar"));
+        await pause(page, 3000, "Offerte geaccepteerd — factuur aangemaakt");
+
+        // Patch status naar Ondertekend en ga terug naar app
+        await patchOfferteStatus(jwt, capturedPortalToken, "Ondertekend");
+        console.log("STAP: terug naar app");
+        await page.goto("https://app.werkmate.tech");
+        await page.waitForSelector("button.nb", { timeout: 15_000 });
+        await pause(page, 1500, "terug in app");
+      } else {
+        console.warn("  [WARN] portal email-input niet gevonden — portal-sign overgeslagen");
       }
-      await pause(page, 1200, "handtekening gezet");
-
-      // Klik "Handtekening plaatsen"
-      console.log("STAP: portal — klik Handtekening plaatsen");
-      await glideTo(page, "button.btn-dark.btn-full");
-      await page.locator("button.btn-dark.btn-full").first().click();
-      await pause(page, 3000, "verwerken…");
-
-      // Portal toont bevestiging
-      await page.locator("text=Offerte geaccepteerd").first()
-        .waitFor({ state: "visible", timeout: 10_000 })
-        .catch(() => console.warn("  [WARN] geaccepteerd scherm niet zichtbaar"));
-      await pause(page, 3000, "Offerte geaccepteerd — factuur aangemaakt");
-
-      // Patch status naar Ondertekend en ga terug naar app
-      await patchOfferteStatus(jwt, capturedPortalToken, "Ondertekend");
-      console.log("STAP: terug naar app");
-      await page.goto("https://app.werkmate.tech");
-      await page.waitForSelector("button.nb", { timeout: 15_000 });
-      await pause(page, 1500, "terug in app");
     } else {
       console.warn("  [WARN] portal_token niet gevangen — portal-sign overgeslagen");
     }
