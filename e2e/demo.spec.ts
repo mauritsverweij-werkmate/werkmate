@@ -479,12 +479,15 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     // 2:05–2:20  VERSTUREN
     // ═════════════════════════════════════════════════════════════════════════
     console.log("STAP: Opslaan & Verstuur");
-    await glideTo(page, "button.btn-ai:not(.btn-full)");
-    await page.locator("button.btn-ai:not(.btn-full)").first().click();
+    // De save-knop zit in .overlay .modal-act — NIET de .btn-ai in de pagina-header (Slimme offerte)
+    await glideTo(page, ".overlay .modal-act .btn-ai");
+    await page.locator(".overlay .modal-act .btn-ai").first().click();
 
-    console.log("STAP: wacht op offerte in lijst");
-    await page.waitForSelector(".off-tbl-row.mob-hide, .mob-card", { timeout: 10_000 });
-    await pause(page, 1500);
+    // Wacht tot de overlay ECHT verdwenen is (niet op .off-tbl-row.mob-hide — die zit al IN de overlay)
+    console.log("STAP: wacht tot overlay gesloten");
+    await page.waitForSelector(".overlay", { state: "detached", timeout: 15_000 })
+      .catch(() => console.warn("  [WARN] overlay nog zichtbaar na 15s"));
+    await pause(page, 1200, "offerte opgeslagen — lijst zichtbaar");
 
     console.log("STAP: mail knop — native alert 4s");
     page.once("dialog", async dialog => {
@@ -498,7 +501,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     console.log("STAP: WhatsApp hover");
     await glideTo(page, ".btn-green.btn-sm");
     await page.locator(".btn-green.btn-sm").first().hover();
-    await pause(page, 3000, "WhatsApp knop");  // 1s korter dan eerder
+    await pause(page, 3000, "WhatsApp knop");
 
     // ═════════════════════════════════════════════════════════════════════════
     // KLANTPORTAAL — klant tekent digitaal (key feature)
