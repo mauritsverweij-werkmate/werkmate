@@ -490,7 +490,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     console.log("STAP: WhatsApp hover");
     await glideTo(page, ".btn-green.btn-sm");
     await page.locator(".btn-green.btn-sm").first().hover();
-    await pause(page, 4000, "WhatsApp knop");
+    await pause(page, 3000, "WhatsApp knop");  // 1s korter dan eerder
 
     // Portal-sign (achtergrond)
     if (capturedPortalToken) {
@@ -502,7 +502,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // 2:20–2:30  ONDERTEKEND
+    // ONDERTEKEND — badge zichtbaar
     // ═════════════════════════════════════════════════════════════════════════
     console.log("STAP: OFFERTES — Ondertekend badge");
     await navTab(page, /offert/i);
@@ -514,21 +514,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await pause(page, 4000, "Ondertekend badge");
 
     // ═════════════════════════════════════════════════════════════════════════
-    // 2:30–2:43  FINANCIËN
-    // ═════════════════════════════════════════════════════════════════════════
-    console.log("STAP: FINANCIËN — navTab");
-    await navTab(page, /financ/i);
-    await page.waitForSelector(".f-row, .tw tbody tr", { timeout: 10_000 }).catch(() => {
-      console.warn("  [WARN] geen factuurrows gevonden");
-    });
-    await pause(page, 1000);
-    await glide(page, 640, 340, 22);
-    await pause(page, 2000);
-    await glide(page, 960, 340, 18);
-    await pause(page, 5000, "factuur zichtbaar");
-
-    // ═════════════════════════════════════════════════════════════════════════
-    // 2:43–2:55  PLANNING
+    // PLANNING — Peters' afspraak toevoegen + tonen (5s)
     // ═════════════════════════════════════════════════════════════════════════
     console.log("STAP: PLANNING — navTab");
     await navTab(page, /planning/i);
@@ -541,8 +527,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await page.locator(".ph button.btn-dark").last().click();
     await pause(page, 800);
 
-    // Klant selecteren — gebruik de select met "-- Kies klant --" optie
-    // (het planning formulier heeft 3 selects: Categorie, Medewerker, Klant)
+    // Klant selecteren — de 3e select in het formulier (Categorie, Medewerker, Klant)
     const planKlantSelect = page.locator(".overlay select").filter({
       has: page.locator("option", { hasText: /Kies klant/i }),
     }).first();
@@ -564,54 +549,85 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await page.locator(".overlay .btn-dark.btn-full").first().click();
     await pause(page, 1500);
 
-    // Weekoverzicht
+    // Weekoverzicht — toon Peters' afspraak
     const weekBtn = page.locator(".cal-vt-btn:has-text('Week')");
     if (await weekBtn.isVisible().catch(() => false)) {
       await weekBtn.click();
-      await pause(page, 1500);
+      await pause(page, 1200);
     }
     await glide(page, 640, 440, 22);
-    await pause(page, 1000);
+    await pause(page, 800);
 
     const taskBlk = page.locator(".cal-task-blk").first();
     if (await taskBlk.isVisible().catch(() => false)) {
       await glideTo(page, ".cal-task-blk");
-      await pause(page, 1500);
     }
+    await pause(page, 5000, "afspraak Peters zichtbaar");
 
     // ═════════════════════════════════════════════════════════════════════════
-    // 2:55–3:20  BOEKHOUDING TOUR
+    // FINANCIËN — Facturen → Peters' factuur (5s)
     // ═════════════════════════════════════════════════════════════════════════
-    console.log("STAP: BOEKHOUDING — navTab Financiën");
+    console.log("STAP: FINANCIËN — navTab");
     await navTab(page, /financ/i);
-    await pause(page, 1000);
 
-    console.log("STAP: BTW tab");
-    await glideTo(page, "button:has-text('📊 BTW')");
-    await page.locator("button:has-text('📊 BTW')").click();
-    await pause(page, 6000, "BTW-overzicht");
+    console.log("STAP: Facturen tab");
+    await glideTo(page, "button:has-text('📄 Facturen')");
+    await page.locator("button:has-text('📄 Facturen')").click();
+    await page.waitForSelector(".f-row, .tw tbody tr", { timeout: 10_000 }).catch(() => {
+      console.warn("  [WARN] geen factuurrows gevonden");
+    });
+    await pause(page, 800);
 
+    // Scroll naar de Peters-factuur (meest recent, onderaan)
+    const factuurRows = page.locator(".f-row, .tw tbody tr");
+    const nFacturen   = await factuurRows.count();
+    if (nFacturen > 0) {
+      const lastRow = await factuurRows.last().boundingBox();
+      if (lastRow) await glide(page, lastRow.x + lastRow.width / 2, lastRow.y + lastRow.height / 2, 20);
+    }
+    await pause(page, 5000, "Peters factuur zichtbaar");
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Uitgaven tab (5s)
+    // ═════════════════════════════════════════════════════════════════════════
     console.log("STAP: Uitgaven tab");
     await glideTo(page, "button:has-text('💳 Uitgaven')");
     await page.locator("button:has-text('💳 Uitgaven')").click();
-    await pause(page, 6000, "Uitgaven-overzicht");
+    await pause(page, 5000, "Uitgaven-overzicht");
 
-    console.log("STAP: Scan knop hover");
-    await glideTo(page, "button.btn-ghost");
-    await page.locator("button.btn-ghost").filter({ hasText: /Scan/i }).first().hover().catch(() => {
-      console.warn("  [WARN] Scan knop niet gevonden");
-    });
-    await pause(page, 3000, "Scan-knop hover");
+    // ═════════════════════════════════════════════════════════════════════════
+    // BTW tab (5s)
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: BTW tab");
+    await glideTo(page, "button:has-text('📊 BTW')");
+    await page.locator("button:has-text('📊 BTW')").click();
+    await pause(page, 5000, "BTW-overzicht");
 
+    // ═════════════════════════════════════════════════════════════════════════
+    // Winst tab (5s)
+    // ═════════════════════════════════════════════════════════════════════════
     console.log("STAP: Winst tab");
     await glideTo(page, "button:has-text('📈 Winst')");
     await page.locator("button:has-text('📈 Winst')").click();
-    await pause(page, 6000, "Winst-grafiek");
+    await pause(page, 5000, "Winst-grafiek");
 
-    console.log("STAP: terug naar Facturen");
-    await glideTo(page, "button:has-text('📄 Facturen')");
-    await page.locator("button:has-text('📄 Facturen')").click();
-    await pause(page, 4000, "einde — facturen");
+    // ═════════════════════════════════════════════════════════════════════════
+    // Ritten tab — rittenregistratie (5s)
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: Ritten tab");
+    await glideTo(page, "button:has-text('🚗 Ritten')");
+    await page.locator("button:has-text('🚗 Ritten')").click();
+    await pause(page, 1000);
+    await glide(page, 640, 400, 22);
+    await pause(page, 5000, "Rittenregistratie zichtbaar");
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Einde op Dashboard
+    // ═════════════════════════════════════════════════════════════════════════
+    console.log("STAP: terug naar Dashboard");
+    await navTab(page, /dashboard/i);
+    await glide(page, 640, 350, 22);
+    await pause(page, 3000, "einde — dashboard");
 
     console.log("=== DEMO COMPLEET ===");
 
