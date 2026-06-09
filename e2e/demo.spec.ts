@@ -514,7 +514,7 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await pause(page, 4000, "Ondertekend badge");
 
     // ═════════════════════════════════════════════════════════════════════════
-    // PLANNING — Peters' afspraak toevoegen + tonen (5s)
+    // PLANNING — categorie aanmaken, dan Peters' afspraak toevoegen (5s)
     // ═════════════════════════════════════════════════════════════════════════
     console.log("STAP: PLANNING — navTab");
     await navTab(page, /planning/i);
@@ -522,6 +522,34 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
       console.warn("  [WARN] kalender niet gevonden");
     });
 
+    // Stap 1: categorie 'Tuinonderhoud' aanmaken (groene kleur)
+    console.log("STAP: planning — categorieën openen");
+    await glideTo(page, "button[title='Categorieën beheren']");
+    await page.locator("button[title='Categorieën beheren']").click();
+    await pause(page, 700);
+
+    console.log("STAP: stel groene kleur in");
+    await page.locator("input.cat-inp-color").evaluate((el: HTMLInputElement) => {
+      el.value = "#22C55E";
+      el.dispatchEvent(new Event("input",  { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await pause(page, 400);
+
+    console.log("STAP: typ categorienaam Tuinonderhoud");
+    await glideTo(page, "input[placeholder*='Installatie']");
+    await slowType(page, "input[placeholder*='Installatie']", "Tuinonderhoud");
+    await pause(page, 400);
+
+    console.log("STAP: categorie toevoegen klikken");
+    await page.locator(".overlay button.btn-dark").filter({ hasText: /Toevoegen/ }).click();
+    await pause(page, 800, "categorie aangemaakt");
+
+    // Sluit categorie-modal
+    await page.locator(".overlay button.mc").click();
+    await pause(page, 600);
+
+    // Stap 2: afspraak aanmaken voor Peters met de nieuwe categorie
     console.log("STAP: planning — + Opdracht");
     await glideTo(page, ".ph button.btn-dark");
     await page.locator(".ph button.btn-dark").last().click();
@@ -537,7 +565,17 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await planKlantSelect.selectOption({ value: "Groenservice Peters" }).catch(() => {
       console.warn("  [WARN] Peters niet in planning dropdown");
     });
-    await pause(page, 500);
+    await pause(page, 400);
+
+    // Categorie selecteren (eerste select in formulier)
+    console.log("STAP: selecteer categorie Tuinonderhoud");
+    const catSelect = page.locator(".overlay select").filter({
+      has: page.locator("option", { hasText: /Geen categorie/i }),
+    }).first();
+    await catSelect.selectOption({ value: "Tuinonderhoud" }).catch(() => {
+      console.warn("  [WARN] Tuinonderhoud categorie niet gevonden");
+    });
+    await pause(page, 400);
 
     console.log("STAP: typ dienst planning");
     await glideTo(page, "input[placeholder='Wat ga je doen?']");
@@ -612,12 +650,48 @@ test("🎬 WerkMate demo verkoopvideo", async ({ browser }) => {
     await pause(page, 5000, "Winst-grafiek");
 
     // ═════════════════════════════════════════════════════════════════════════
-    // Ritten tab — rittenregistratie (5s)
+    // Ritten tab — rit aanmaken + rittenregistratie (5s)
     // ═════════════════════════════════════════════════════════════════════════
     console.log("STAP: Ritten tab");
     await glideTo(page, "button:has-text('🚗 Ritten')");
     await page.locator("button:has-text('🚗 Ritten')").click();
-    await pause(page, 1000);
+    await pause(page, 800);
+
+    // Rit toevoegen — Utrecht → Bilthoven
+    console.log("STAP: + Rit knop");
+    await glideTo(page, ".ph-btns button.btn-dark");
+    await page.locator(".ph-btns button.btn-dark").first().click();
+    await pause(page, 700, "rit modal open");
+
+    console.log("STAP: typ vertrekpunt Utrecht");
+    await glideTo(page, "input[placeholder='Straat 1, Amsterdam']");
+    await slowType(page, "input[placeholder='Straat 1, Amsterdam']", "Utrecht", 70);
+    await pause(page, 400);
+
+    console.log("STAP: typ bestemming Bilthoven");
+    await glideTo(page, "input[placeholder='Straat 2, Rotterdam']");
+    await slowType(page, "input[placeholder='Straat 2, Rotterdam']", "Bilthoven", 70);
+    await pause(page, 3500, "km wordt automatisch berekend…");
+
+    // Fallback: als auto-berekening faalt, vul 15 km handmatig in
+    const kmInput = page.locator(".overlay input[type='number']");
+    const kmVal   = await kmInput.inputValue().catch(() => "");
+    if (!kmVal) {
+      console.log("  km niet berekend — handmatig 15 invullen");
+      await kmInput.fill("15");
+      await pause(page, 400);
+    } else {
+      console.log(`  km auto-berekend: ${kmVal} km`);
+    }
+    await glideTo(page, ".overlay input[type='number']");
+    await pause(page, 800);
+
+    console.log("STAP: rit opslaan");
+    await glideTo(page, ".overlay .btn-dark.btn-full");
+    await page.locator(".overlay .btn-dark.btn-full").first().click();
+    await pause(page, 1500);
+
+    // Toon de rittenregistratie met de nieuw aangemaakte rit
     await glide(page, 640, 400, 22);
     await pause(page, 5000, "Rittenregistratie zichtbaar");
 
