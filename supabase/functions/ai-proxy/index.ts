@@ -19,6 +19,11 @@ const esc = (s: unknown): string =>
 const isValidEmail = (v: unknown) =>
   typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
+const capitalize = (s: string): string => {
+  const t = s.trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+};
+
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -178,7 +183,7 @@ serve(async (req: Request) => {
       const profiel = await fetchProfiel(offerte.user_id);
       const rawCompanySign = String(profiel?.bedrijfsnaam || "WerkMate");
       const companyName = esc(rawCompanySign);
-      const safeKlant   = esc(offerte.klant || klant_naam || "klant");
+      const safeKlant   = esc(capitalize(offerte.klant || klant_naam || "klant"));
       const safeNummer  = esc(nummer);
       const sig = buildSignature(profiel);
 
@@ -397,7 +402,7 @@ serve(async (req: Request) => {
       const profiel          = await fetchProfiel(user.id);
       const rawCompanyName   = String(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
       const companyName      = esc(rawCompanyName);
-      const safeCustomer     = esc(customer_name);
+      const safeCustomer     = esc(capitalize(customer_name || ""));
       const safePortal       = portal_url ? esc(portal_url) : null;
       const sig              = buildSignature(profiel);
 
@@ -526,7 +531,7 @@ ${reviewBtn}`;
       const profiel          = await fetchProfiel(user.id);
       const rawCompanyName   = String(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
       const companyName      = esc(rawCompanyName);
-      const safeCustomer     = esc(customer_name);
+      const safeCustomer     = esc(capitalize(customer_name || ""));
       const safeNummer       = esc(factuur_nummer || "");
       const sig              = buildSignature(profiel);
 
@@ -571,7 +576,7 @@ ${reviewBtn}`;
       const profiel          = await fetchProfiel(user.id);
       const rawCompanyName   = String(body.company_name || profiel?.bedrijfsnaam || "WerkMate");
       const companyName      = esc(rawCompanyName);
-      const safeCustomer     = esc(customer_name);
+      const safeCustomer     = esc(capitalize(customer_name || ""));
       const safeNummer       = esc(factuur_nummer || "");
       const totaalFmt        = totaal != null
         ? `€ ${Number(totaal).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`

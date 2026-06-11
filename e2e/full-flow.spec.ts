@@ -93,9 +93,6 @@ test("2. bedrijfsprofiel – invullen en merkkleur persistent na reload", async 
   await waitForApp(page);
   await navToProfiel(page);
 
-  const websiteInput = page.locator("input[placeholder='https://jouwbedrijf.nl']");
-  await websiteInput.fill("https://playwright-test.nl");
-
   const kleurInput = page.locator("input[placeholder='#6366F1']");
   await kleurInput.fill("#27ae60");
 

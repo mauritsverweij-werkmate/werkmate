@@ -50,8 +50,12 @@ async function logEmail(userId, to, subject, type, body, status, htmlBody = null
   } catch(e) { console.warn("logEmail failed:", e); }
 }
 
+const capitalize = s => (s && typeof s === "string") ? s.trim().charAt(0).toUpperCase() + s.trim().slice(1) : (s ?? "");
 const fillVars = (text, vars) =>
-  text.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? `{${k}}`);
+  text.replace(/\{(\w+)\}/g, (_, k) => {
+    const v = vars[k] ?? `{${k}}`;
+    return typeof v === "string" ? (k === "klantnaam" ? capitalize(v) : v.trim()) : v;
+  });
 
 const TEMPLATE_DEFAULTS = {
   offerte:    { subject: "Offerte van {bedrijfsnaam}", body: "Geachte {klantnaam},\n\nHierbij ontvangt u de offerte in de bijlage.\n\nBij vragen kunt u altijd contact met ons opnemen." },
