@@ -413,6 +413,7 @@ const SC = {
   "Potentiële klant": { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
   "Prospect":         { bg:"#DBEAFE", text:"#1E40AF", dot:"#3B82F6" },
   "Geïnteresseerd":   { bg:"#DBEAFE", text:"#1E40AF", dot:"#3B82F6" },
+  "Klaar om te versturen": { bg:"#ECFEFF", text:"#0E7490", dot:"#06B6D4" },
   "Betaald":          { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
   "Openstaand":       { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
   "Herinnering":      { bg:"#FEE2E2", text:"#991B1B", dot:"#EF4444" },
@@ -639,6 +640,7 @@ select.pl-inp{appearance:none;-webkit-appearance:none;background-image:url("data
 .f-status-sel:hover{border-color:#CBD5E1}
 .f-status-sel:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.11)}
 .f-status-concept{border-color:#E2E8F0;color:#6B7280;background-color:#F9FAFB}
+.f-status-klaar{border-color:#A5F3FC;color:#0E7490;background-color:#ECFEFF}
 .f-status-verstuurd{border-color:#C7D2FE;color:#3730A3;background-color:#EEF2FF}
 .f-status-herinnering{border-color:#FDE68A;color:#92400E;background-color:#FFFBEB}
 .f-status-betaald{border-color:#A7F3D0;color:#065F46;background-color:#ECFDF5}
@@ -1920,7 +1922,7 @@ function DashboardTab({ openTab, bedrijf, offertes, planning, facturen, klanten,
   const openOffertes = offertes.filter(o=>o.status==="In afwachting").length;
   const td=new Date();const todayStr=`${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
   const planningVandaag = planning.filter(p=>p.datum===todayStr).length;
-  const openFacturen = facturen.filter(f=>f.status==="Openstaand"||f.status==="Herinnering"||f.status==="Verstuurd");
+  const openFacturen = facturen.filter(f=>f.status==="Openstaand"||f.status==="Herinnering"||f.status==="Verstuurd"||f.status==="Klaar om te versturen");
   const openBedrag = openFacturen.reduce((sum,f)=>{const t=f.totaal!=null?Number(f.totaal):parseFloat((f.bedrag||"0").replace(/[€\s.]/g,"").replace(",","."))||0;return sum+t;},0);
 
   const now = new Date(); now.setHours(0,0,0,0);
@@ -3497,7 +3499,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
           <div className="mob-det-section" style={{marginBottom:8}}>
             <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
             <select value={f.status||"Concept"} onChange={async e=>{await updateStatus(f.id,e.target.value);setMobDetail({...f,status:e.target.value});}} className="inp">
-              {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
+              {["Concept","Klaar om te versturen","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
             </select>
           </div>
           <button className="mob-det-action-btn" onClick={()=>createFactuurPdf(f,bedrijf).save(`Factuur-${f.nummer||f.id}.pdf`)}><span className="mob-det-action-ic"><FileDown size={18} strokeWidth={1.8} color="#EF4444"/></span>PDF downloaden</button>
@@ -3532,7 +3534,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
 
     {subTab==="facturen"&&(<>
       <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",overflowX:"hidden"}}>
-        {["Alle","Concept","Verstuurd","Herinnering","Betaald","Verlopen"].map(s=>(
+        {["Alle","Concept","Klaar om te versturen","Verstuurd","Herinnering","Betaald","Verlopen"].map(s=>(
           <button key={s} onClick={()=>setFilterStatus(s)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",background:filterStatus===s?"#0F0F14":"#fff",color:filterStatus===s?"#fff":"#555",borderColor:filterStatus===s?"#0F0F14":"#E5E7EB"}}>{s}</button>
         ))}
       </div>
@@ -3579,7 +3581,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
                       onChange={e=>updateStatus(f.id,e.target.value)}
                       className={`f-status-sel f-status-${statusKey}`}
                     >
-                      {["Concept","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
+                      {["Concept","Klaar om te versturen","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}
                     </select>
                   </td>
                   <td>
@@ -4212,7 +4214,7 @@ function FinancienTab({ userId, facturen, uitgaven, ritten, refresh, klanten, of
           <div className="ig"><label className="ilbl">Factuurdatum</label><input className="inp" type="date" value={nieuw.datum} onChange={e=>setNieuw({...nieuw,datum:e.target.value})}/></div>
           <div className="ig"><label className="ilbl">Vervaldatum</label><input className="inp" type="date" value={nieuw.vervaldatum} onChange={e=>setNieuw({...nieuw,vervaldatum:e.target.value})}/></div>
           <div className="ig"><label className="ilbl">Status</label>
-            <select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Concept","Verstuurd","Betaald"].map(s=><option key={s}>{s}</option>)}</select></div>
+            <select className="inp" value={nieuw.status} onChange={e=>setNieuw({...nieuw,status:e.target.value})}>{["Concept","Klaar om te versturen","Verstuurd","Herinnering","Betaald"].map(s=><option key={s}>{s}</option>)}</select></div>
         </div>
         <div style={{marginTop:8}}>
           {mob ? (

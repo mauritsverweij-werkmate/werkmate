@@ -169,7 +169,7 @@ serve(async (req: Request) => {
       user_id: offerte.user_id, nummer, klant: offerte.klant,
       klant_email: klant_email || offerte.klant_email || "",
       datum, vervaldatum, regels: offerte.regels || [],
-      btw: offerte.btw || 0, totaal: offerte.totaal || 0, status: "Verstuurd",
+      btw: offerte.btw || 0, totaal: offerte.totaal || 0, status: "Klaar om te versturen",
     });
 
     // Send confirmation emails (best-effort)
