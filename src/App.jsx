@@ -5529,7 +5529,7 @@ function PortalPage({ token }) {
       const { data, error: e } = await supabase.from("offertes").select("*").eq("portal_token", token).single();
       if (e || !data) { setError("Offerte niet gevonden. Controleer de link."); setLoading(false); return; }
       setOfferte(data);
-      if (data.status === "Geaccepteerd") setStep("done");
+      if (data.status === "Ondertekend") setStep("done");
       const { data: bp } = await supabase.from("bedrijfsprofiel_portal").select("bedrijfsnaam,logo,adres,email,telefoon,website").eq("user_id", data.user_id).single();
       setBedrijf(bp);
       setLoading(false);

@@ -153,9 +153,9 @@ serve(async (req: Request) => {
 
     const { data: offerte, error: fe } = await admin.from("offertes").select("*").eq("portal_token", portal_token).single();
     if (fe || !offerte) return json({ error: "Offerte niet gevonden" }, 404);
-    if (offerte.status === "Geaccepteerd") return json({ success: true, already: true });
+    if (offerte.status === "Ondertekend") return json({ success: true, already: true });
 
-    await admin.from("offertes").update({ status: "Geaccepteerd", handtekening: handtekening || null }).eq("portal_token", portal_token);
+    await admin.from("offertes").update({ status: "Ondertekend", handtekening: handtekening || null }).eq("portal_token", portal_token);
 
     // Auto-create factuur — use the atomic DB counter to avoid race conditions
     const now = new Date();
