@@ -405,8 +405,9 @@ const getPrijslijstTemplate = (sector) => {
 const SC = {
   "In afwachting":    { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
   "Ondertekend":      { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
-  "Verstuurd":        { bg:"#DBEAFE", text:"#1E40AF", dot:"#3B82F6" },
-  "Afgewezen":        { bg:"#FEE2E2", text:"#991B1B", dot:"#EF4444" },
+  "Verstuurd":           { bg:"#DBEAFE", text:"#1E40AF", dot:"#3B82F6" },
+  "Opnieuw verstuurd":  { bg:"#EDE9FE", text:"#5B21B6", dot:"#7C3AED" },
+  "Afgewezen":           { bg:"#FEE2E2", text:"#991B1B", dot:"#EF4444" },
   "Actief":           { bg:"#D1FAE5", text:"#065F46", dot:"#10B981" },
   "Lead":             { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
   "Potentiële klant": { bg:"#FFF3CD", text:"#92620A", dot:"#F59E0B" },
@@ -1685,6 +1686,7 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
 function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, emailTemplates = {} }) {
   const [step,setStep]=useState(0);const [vraag,setVraag]=useState("");const [loading,setLoading]=useState(false);const [off,setOff]=useState(null);const [selectedKlantId,setSelectedKlantId]=useState("");const [newKlantEmail,setNewKlantEmail]=useState("");
   const [isRecording,setIsRecording]=useState(false);
+  const [saved,setSaved]=useState(false);const [savedEmail,setSavedEmail]=useState("");const [savedToken,setSavedToken]=useState(null);const [savedKlant,setSavedKlant]=useState("");const [savedOff,setSavedOff]=useState(null);const [sending,setSending]=useState(false);const [sent,setSent]=useState(false);const [sendErr,setSendErr]=useState("");
   const recognitionRef=useRef(null);
 
   const startVoice=()=>{
@@ -1786,7 +1788,6 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
     const klant = selectedKlant?.naam || vraag;
     const klantEmail = selectedKlant?.email || newKlantEmail.trim();
     const vandaag = new Date().toLocaleDateString("nl-NL", {day:"numeric", month:"short"});
-    console.log("AIOfferte opslaan: klant", klant, "klantEmail", klantEmail, "offerte", updatedOff);
     const insertPayload = {
       user_id: userId,
       klant,
@@ -1800,20 +1801,14 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
       totaal: updatedOff.totaal || 0,
       opmerkingen: updatedOff.opmerkingen || null,
     };
-    console.log("offerte insert payload:", JSON.stringify(insertPayload, null, 2));
     const insertResult = await supabase.from("offertes").insert(insertPayload).select("portal_token").single();
-    console.log("AIOfferte opslaan: supabase insert result", insertResult);
     const portalToken = insertResult.data?.portal_token;
-    if (klantEmail) {
-      try {
-        await sendOfferEmail(klantEmail, klant, off.dienst, off.regels || [], off.subtotaal, off.btw, off.totaal, portalToken);
-      } catch (error) {
-        console.error("Kan offerte e-mail niet verzenden", error);
-        alert(`Offerte opgeslagen, maar de e-mail kon niet worden verzonden:\n${error?.message || error}\n\nProbeer het later opnieuw via de offertelijst.`);
-      }
-    }
+    setSavedEmail(klantEmail);
+    setSavedToken(portalToken);
+    setSavedKlant(klant);
+    setSavedOff(updatedOff);
+    setSaved(true);
     onSaved && onSaved();
-    onClose();
   };
 
   return(<div className="overlay"><div className="modal modal-lg">
@@ -1887,7 +1882,31 @@ function AIOfferte({ onClose, prijslijst, userId, onSaved, klanten, bedrijf, ema
           <div style={{fontSize:15,fontWeight:800,marginTop:3}}>Totaal: € {Number(off.totaal||0).toFixed(2)}</div>
         </div>
         <div className="ig"><label className="ilbl">Opmerkingen / garantietekst (optioneel)</label><textarea className="inp" rows={3} value={off.opmerkingen||""} onChange={e=>updateOff({opmerkingen:e.target.value})} placeholder="Bijv. 2 jaar garantie op installatie. Onderdelen inclusief. Geldigheid offerte: 30 dagen."/></div>
-        <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setStep(0);setOff(null);setVraag("");}}>Opnieuw</button><button className="btn btn-ai" style={{flex:1,justifyContent:"center"}} onClick={opslaan}><Download size={14} strokeWidth={1.8}/> Opslaan & Verstuur</button></div>
+        {saved
+          ? <div style={{padding:"4px 0"}}>
+              <div style={{background:"#D1FAE5",border:"1px solid #6EE7B7",borderRadius:10,padding:"12px 16px",marginBottom:12,fontSize:14,color:"#065F46",fontWeight:600}}>✓ Offerte opgeslagen voor {savedKlant}</div>
+              {sendErr&&<div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:13,color:"#DC2626"}}>{sendErr}</div>}
+              {sent
+                ? <div style={{background:"#EDE9FE",border:"1px solid #C4B5FD",borderRadius:10,padding:"12px 16px",marginBottom:10,fontSize:14,color:"#5B21B6",fontWeight:600}}>✓ Verstuurd naar {savedEmail}</div>
+                : null}
+              <div className="modal-act">
+                <button className="btn btn-ghost" onClick={onClose}>Sluiten</button>
+                {!sent&&savedEmail
+                  ? <button className="btn btn-blue" style={{flex:1,justifyContent:"center"}} disabled={sending} onClick={async()=>{
+                      setSending(true);setSendErr("");
+                      try{
+                        await sendOfferEmail(savedEmail,savedKlant,savedOff.dienst,savedOff.regels,savedOff.subtotaal,savedOff.btw,savedOff.totaal,savedToken);
+                        await supabase.from("offertes").update({status:"Verstuurd"}).eq("portal_token",savedToken);
+                        onSaved&&onSaved();
+                        setSent(true);
+                      }catch(e){setSendErr(e.message||"Versturen mislukt");}
+                      setSending(false);
+                    }}><Mail size={14} strokeWidth={1.8}/> {sending?"Versturen…":"Verstuur naar klant"}</button>
+                  : null}
+              </div>
+            </div>
+          : <div className="modal-act"><button className="btn btn-ghost" onClick={()=>{setStep(0);setOff(null);setVraag("");}}>Opnieuw</button><button className="btn btn-ai" style={{flex:1,justifyContent:"center"}} onClick={opslaan}><Save size={14} strokeWidth={1.8}/> Opslaan</button></div>
+        }
       </>}
     </div>
   </div></div>);
@@ -2044,8 +2063,9 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
   const [editSavedData,setEditSavedData]=useState(null);
   const [editResending,setEditResending]=useState(false);
   const [editResent,setEditResent]=useState(false);
+  const [editResendErr,setEditResendErr]=useState("");
 
-  const closeEdit = () => { setEditOff(null); setEditSaved(false); setEditSavedData(null); setEditResending(false); setEditResent(false); };
+  const closeEdit = () => { setEditOff(null); setEditSaved(false); setEditSavedData(null); setEditResending(false); setEditResent(false); setEditResendErr(""); };
   const openEdit = o => { closeEdit(); setEditOff({id:o.id,klant:o.klant||"",dienst:o.dienst||"",opmerkingen:o.opmerkingen||"",portal_token:o.portal_token||null,regels:parseOfferRules(o).map(r=>({...r}))}); };
   const setEditRegel = (i,f,v) => setEditOff(prev=>({...prev,regels:prev.regels.map((r,idx)=>idx===i?{...r,[f]:v}:r)}));
   const saveEdit = async () => {
@@ -2108,7 +2128,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
   const resendOfferEmail = async (o) => {
     const k = (klanten||[]).find(x => x.naam === o.klant);
     const email = k?.email || "";
-    if (!email) { alert("Geen e-mailadres bekend voor deze klant"); return null; }
+    if (!email) throw new Error(`Geen e-mailadres bekend voor ${o.klant}. Voeg een e-mailadres toe bij de klantgegevens.`);
     const portal_url = o.portal_token ? `https://app.werkmate.tech/portal/${o.portal_token}` : undefined;
     const tpl = emailTemplates?.offerte;
     const vars = { klantnaam: o.klant, bedrijfsnaam: bedrijf?.bedrijfsnaam || "WerkMate", nummer: "" };
@@ -2209,17 +2229,24 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
             </div>
             {editResent
               ? <div style={{textAlign:"center",padding:"10px 0 4px",color:"#15803D",fontWeight:600,fontSize:14}}>✓ Verstuurd!</div>
-              : <div className="modal-act">
-                  <button className="btn btn-ghost" onClick={closeEdit}>Sluiten</button>
-                  <button className="btn btn-dark btn-full" disabled={editResending} onClick={async()=>{
-                    setEditResending(true);
-                    try {
-                      const r = await resendOfferEmail(editSavedData);
-                      if (r !== null) { setEditResent(true); setTimeout(closeEdit, 2000); }
-                    } catch(e) { alert("Versturen mislukt: "+e.message); }
-                    setEditResending(false);
-                  }}>{editResending?"Versturen…":"↺ Opnieuw versturen naar klant"}</button>
-                </div>
+              : <>
+                  {editResendErr && <div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:13,color:"#DC2626"}}>{editResendErr}</div>}
+                  <div className="modal-act">
+                    <button className="btn btn-ghost" onClick={closeEdit}>Sluiten</button>
+                    <button className="btn btn-dark btn-full" disabled={editResending} onClick={async()=>{
+                      setEditResending(true);
+                      setEditResendErr("");
+                      try {
+                        await resendOfferEmail(editSavedData);
+                        await supabase.from("offertes").update({status:"Opnieuw verstuurd"}).eq("id",editSavedData.id);
+                        await refresh();
+                        setEditResent(true);
+                        setTimeout(closeEdit, 2000);
+                      } catch(e) { setEditResendErr(e.message); }
+                      setEditResending(false);
+                    }}>{editResending?"Versturen…":"↺ Opnieuw versturen naar klant"}</button>
+                  </div>
+                </>
             }
           </div>
         ) : (
@@ -2252,7 +2279,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
         <div style={{background:"#fff",borderRadius:14,border:"1px solid #EAECF0",padding:"14px 16px",marginBottom:8}}>
           <div style={{fontSize:13,color:"#64748B",marginBottom:8,fontWeight:600}}>Status wijzigen</div>
           <select value={mobDetail.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",mobDetail.id);refresh();setMobDetail({...mobDetail,status:e.target.value});}} className="inp">
-            {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
+            {["In afwachting","Verstuurd","Opnieuw verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
           </select>
         </div>
         <button className="mob-det-action-btn danger" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",mobDetail.id).then(()=>{refresh();setMobDetail(null);}); } }}><span className="mob-det-action-ic"><Trash2 size={18} strokeWidth={1.8} color="#EF4444"/></span>Verwijderen</button>
@@ -2261,7 +2288,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
     <div className="ph"><div><div className="pg-title">Offertes</div><div className="pg-sub">{visibleOffertes.length}{statusFilter!=="Alle"?` van ${offertes.length}`:""} offertes</div></div><div className="ph-btns" style={{display:"flex",gap:8,alignItems:"center"}}>{openTab&&<button className="btn btn-outline mob-hide" onClick={()=>openTab("prijslijst")}><TagIcon size={14} strokeWidth={1.8}/> Prijslijst</button>}<button className="btn btn-ai" onClick={()=>setShowAI(true)}><Sparkles size={14} strokeWidth={1.8}/> Slimme offerte</button></div></div>
     <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-        {["Alle","In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=>(
+        {["Alle","In afwachting","Verstuurd","Opnieuw verstuurd","Ondertekend","Afgewezen"].map(s=>(
           <button key={s} onClick={()=>setStatusFilter(s)} style={{padding:"5px 13px",borderRadius:20,border:`1.5px solid ${statusFilter===s?"#6366F1":"#E5E7EB"}`,background:statusFilter===s?"#6366F1":"#fff",color:statusFilter===s?"#fff":"#374151",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",whiteSpace:"nowrap",transition:"all .12s"}}>{s}</button>
         ))}
       </div>
@@ -2274,7 +2301,7 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
       {[
         {label:"In afwachting",val:offertes.filter(o=>o.status==="In afwachting").length,color:"#F59E0B"},
         {label:"Ondertekend",val:offertes.filter(o=>o.status==="Ondertekend").length,color:"#10B981"},
-        {label:"Verstuurd",val:offertes.filter(o=>o.status==="Verstuurd").length,color:"#3B82F6"},
+        {label:"Verstuurd",val:offertes.filter(o=>o.status==="Verstuurd"||o.status==="Opnieuw verstuurd").length,color:"#3B82F6"},
         {label:"Ondertekend waarde",val:`€ ${totaal.toLocaleString("nl-NL", {minimumFractionDigits:2, maximumFractionDigits:2})}` ,color:"#0F0F14"},
       ].map(s=><div className="sc" key={s.label}><div className="sl">{s.label}</div><div className="sv" style={{color:s.color,fontSize:19}}>{s.val}</div></div>)}
     </div>
@@ -2301,15 +2328,14 @@ function OfferteTab({ prijslijst, userId, offertes, refresh, klanten, bedrijf, e
                 <button className="btn btn-ghost btn-sm" onClick={()=>exportOfferPdf(o)}><FileText size={14} strokeWidth={1.8} color="#EF4444"/> PDF</button>
                 <button className="btn btn-blue btn-sm" onClick={async()=>{
                   try {
-                    const email = await resendOfferEmail(o);
-                    if (!email) return;
-                    await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id); refresh();
-                    alert("Verstuurd naar "+email);
+                    await resendOfferEmail(o);
+                    await supabase.from("offertes").update({status:"Verstuurd"}).eq("id",o.id);
+                    await refresh();
                   } catch(err) { alert("Versturen mislukt: "+err.message); }
                 }}><Mail size={14} strokeWidth={1.8}/> Mail</button>
                 {o.portal_token&&<button className="btn btn-green btn-sm" onClick={()=>waOfferte(o,klanten,bedrijf)}><MessageCircle size={14} strokeWidth={1.8} color="#22C55E"/> WhatsApp</button>}
                 <select value={o.status} onChange={async(e)=>{await supabase.from("offertes").update({status:e.target.value}).eq("id",o.id);refresh();}} className="sel">
-                  {["In afwachting","Verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
+                  {["In afwachting","Verstuurd","Opnieuw verstuurd","Ondertekend","Afgewezen"].map(s=><option key={s}>{s}</option>)}
                 </select>
                 <button className="btn btn-danger btn-sm" onClick={()=>{ if(window.confirm("Offerte verwijderen?")) { supabase.from("offertes").delete().eq("id",o.id).then(()=>refresh()); } }}><Trash2 size={14} strokeWidth={1.8} color="#EF4444"/></button>
               </td>
