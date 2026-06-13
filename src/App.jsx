@@ -1606,11 +1606,11 @@ function ProfielTab({ userId, bedrijf, certificaten, onSaved, certOnly=false }) 
       <div className="card cp" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:20,flexWrap:"wrap"}}>
         <div>
           <div style={{fontWeight:700,fontSize:15,color:"#111",marginBottom:4}}>WerkMate Pro — €99/maand</div>
-          <div style={{fontSize:13,color:"#64748B",lineHeight:1.5}}>14 dagen gratis uitproberen. Inclusief offertes, facturen, planning, CRM, AI assistent en meer.</div>
+          <div style={{fontSize:13,color:"#64748B",lineHeight:1.5}}>60 dagen gratis uitproberen. Inclusief offertes, facturen, planning, CRM, AI assistent en meer.</div>
         </div>
         <a href={STRIPE_URL} target="_blank" rel="noopener noreferrer"
           style={{display:"inline-block",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",color:"#fff",borderRadius:10,padding:"11px 22px",fontSize:13.5,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap",flexShrink:0}}>
-          🚀 Start 14 dagen gratis
+          🚀 Start 60 dagen gratis
         </a>
       </div>
 
@@ -4736,7 +4736,7 @@ function SubscriptieScherm({ bedrijfsnaam, onSkip, blocked, onLogout }) {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
             <div>
               <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:18}}>WerkMate Pro</div>
-              <div style={{fontSize:12.5,opacity:.85,marginTop:2}}>14 dagen gratis uitproberen</div>
+              <div style={{fontSize:12.5,opacity:.85,marginTop:2}}>60 dagen gratis uitproberen</div>
             </div>
             <div style={{textAlign:"right"}}>
               <div style={{fontWeight:800,fontSize:22}}>€99</div>
@@ -4744,7 +4744,7 @@ function SubscriptieScherm({ bedrijfsnaam, onSkip, blocked, onLogout }) {
             </div>
           </div>
           <div style={{fontSize:12,opacity:.8,borderTop:"1px solid rgba(255,255,255,.2)",paddingTop:10,marginTop:4}}>
-            Na 14 dagen automatisch €99/maand. Altijd opzegbaar.
+            Na 60 dagen automatisch €99/maand. Altijd opzegbaar.
           </div>
         </div>
 
@@ -4762,7 +4762,7 @@ function SubscriptieScherm({ bedrijfsnaam, onSkip, blocked, onLogout }) {
 
         <a href={STRIPE_URL} target="_blank" rel="noopener noreferrer"
           style={{display:"block",width:"100%",background:"linear-gradient(135deg,#6366F1,#8B5CF6)",color:"#fff",border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",textAlign:"center",textDecoration:"none",boxSizing:"border-box",marginBottom:10}}>
-          {blocked ? "Abonnement kiezen" : "🚀 Start 14 dagen gratis"}
+          {blocked ? "Abonnement kiezen" : "🚀 Start 60 dagen gratis"}
         </a>
         {!blocked && onSkip && (
           <button onClick={onSkip}
@@ -5403,7 +5403,7 @@ function WerkMateApp({ user, onLogout }) {
 
   const handleSkipTrial = async () => {
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 14);
+    trialEnd.setDate(trialEnd.getDate() + 60);
     await supabase.from("subscriptions").upsert({
       user_id: orgOwnerId,
       status: "trialing",
